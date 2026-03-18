@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -11,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, ClipboardList, Clock, Users, MessageSquare } from 'lucide-react';
+import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, ClipboardList, Clock, Users, MessageSquare, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -79,16 +80,24 @@ export default function AdminDashboardPage() {
     isVerifiedAdmin ? query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(100)) : null, 
     [db, isVerifiedAdmin]
   );
+  const deleteRequestsQuery = useMemoFirebase(() => 
+    isVerifiedAdmin ? query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), orderBy('timestamp', 'desc')) : null, 
+    [db, isVerifiedAdmin]
+  );
 
   const { data: allUsers, isLoading: loadingUsers } = useCollection(usersQuery);
   const { data: allPitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
   const { data: allRequests, isLoading: loadingRequests } = useCollection(requestsQuery);
   const { data: allMessages, isLoading: loadingMessages } = useCollection(messagesQuery);
   const { data: allLogs, isLoading: loadingLogs } = useCollection(logsQuery);
+  const { data: allDeleteRequests, isLoading: loadingDeleteRequests } = useCollection(deleteRequestsQuery);
 
-  const handleDeletePitch = (pitchId: string, name: string) => {
+  const handleDeletePitch = (pitchId: string, name: string, requestId?: string) => {
     if (confirm(`Are you sure you want to PERMANENTLY delete the pitch for "${name}"? This action cannot be undone.`)) {
       deleteDocumentNonBlocking(doc(db, 'pitches', pitchId));
+      if (requestId) {
+        updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status: 'resolved' });
+      }
       
       addDocumentNonBlocking(collection(db, 'logs'), {
         userId: user?.uid,
@@ -102,9 +111,12 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleDeleteUser = (userId: string, email: string) => {
+  const handleDeleteUser = (userId: string, email: string, requestId?: string) => {
     if (confirm(`Are you sure you want to PERMANENTLY delete the profile for "${email}"? This will remove all their access to the platform.`)) {
       deleteDocumentNonBlocking(doc(db, 'users', userId));
+      if (requestId) {
+        updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status: 'resolved' });
+      }
 
       addDocumentNonBlocking(collection(db, 'logs'), {
         userId: user?.uid,
@@ -164,6 +176,11 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleResolveDeleteRequest = (requestId: string, status: 'resolved' | 'rejected') => {
+    updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status });
+    toast({ title: `Request ${status === 'resolved' ? 'Resolved' : 'Rejected'}` });
+  };
+
   if (authLoading || verifying) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background space-y-4">
@@ -200,7 +217,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Platform Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat, i) => (
             <Card key={i} className="border-none shadow-sm relative overflow-hidden">
@@ -218,7 +234,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full md:w-auto h-auto p-1 bg-muted/50">
+          <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full md:w-auto h-auto p-1 bg-muted/50">
             <TabsTrigger value="users" className="gap-2 py-2">
               <UserCog className="w-4 h-4" /> Users
             </TabsTrigger>
@@ -227,6 +243,12 @@ export default function AdminDashboardPage() {
             </TabsTrigger>
             <TabsTrigger value="requests" className="gap-2 py-2">
               <Inbox className="w-4 h-4" /> Connections
+            </TabsTrigger>
+            <TabsTrigger value="delete-requests" className="gap-2 py-2">
+              <AlertTriangle className="w-4 h-4" /> Delete Requests
+              {allDeleteRequests && allDeleteRequests.length > 0 && (
+                <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center rounded-full text-[10px]">{allDeleteRequests.length}</Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="logs" className="gap-2 py-2">
               <ClipboardList className="w-4 h-4" /> Audit Logs
@@ -346,6 +368,67 @@ export default function AdminDashboardPage() {
                             onClick={() => handleDeletePitch(p.id, p.startupName)}
                           >
                             <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="delete-requests">
+            <Card className="border-none shadow-sm overflow-hidden bg-white">
+              <CardHeader className="bg-muted/10 border-b">
+                <CardTitle>Data Removal Requests</CardTitle>
+                <CardDescription>Review and process user requests to delete their data.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Target ID / User</TableHead>
+                      <TableHead>Requested On</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingDeleteRequests ? (
+                      <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                    ) : allDeleteRequests?.length === 0 ? (
+                      <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground italic">No pending deletion requests.</TableCell></TableRow>
+                    ) : allDeleteRequests?.map((req) => (
+                      <TableRow key={req.id}>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">{req.targetType}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-mono text-[10px] text-muted-foreground">{req.targetId}</span>
+                            <span className="text-xs">User: {req.userId?.substring(0, 8)}...</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {req.timestamp?.toDate ? format(req.timestamp.toDate(), 'MMM d, HH:mm') : 'Recently'}
+                        </TableCell>
+                        <TableCell className="text-right flex items-center justify-end gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200"
+                            onClick={() => req.targetType === 'account' ? handleDeleteUser(req.targetId, 'Account deletion request', req.id) : handleDeletePitch(req.targetId, 'Pitch deletion request', req.id)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" /> Approve & Delete
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-muted-foreground"
+                            onClick={() => handleResolveDeleteRequest(req.id, 'rejected')}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" /> Dismiss
                           </Button>
                         </TableCell>
                       </TableRow>

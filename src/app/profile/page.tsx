@@ -3,15 +3,15 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Save, User, ArrowLeft, Camera, Briefcase, Mail, Shield, ShieldCheck } from 'lucide-react';
+import { Loader2, Save, User, ArrowLeft, Camera, Briefcase, Mail, Shield, ShieldCheck, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
@@ -51,11 +51,8 @@ export default function ProfilePage() {
     if (!user) return;
     setSaving(true);
     try {
-      // Convert fundingNeeded to a number if it exists
       const numericFunding = formData.fundingNeeded ? parseFloat(formData.fundingNeeded) : 0;
       
-      // SECURITY: Explicitly exclude 'role' from the update payload
-      // Roles can only be changed by an Administrator through the Admin Dashboard.
       const updateData = {
         name: formData.name,
         company: formData.company,
@@ -78,6 +75,30 @@ export default function ProfilePage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleRequestAccountDeletion = () => {
+    if (!user) return;
+    if (confirm("Are you sure you want to request account deletion? An administrator will review your request and contact you. This action cannot be undone.")) {
+      addDocumentNonBlocking(collection(db, 'deleteRequests'), {
+        userId: user.uid,
+        targetType: 'account',
+        targetId: user.uid,
+        status: 'pending',
+        timestamp: serverTimestamp(),
+        details: `User requested account deletion: ${user.email}`
+      });
+
+      addDocumentNonBlocking(collection(db, 'logs'), {
+        userId: user.uid,
+        action: 'delete_request_created',
+        targetId: user.uid,
+        timestamp: serverTimestamp(),
+        details: `Account deletion request submitted for ${user.email}`
+      });
+
+      toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });
     }
   };
 
@@ -124,6 +145,17 @@ export default function ProfilePage() {
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                   <span>Verified Identity</span>
                 </div>
+              </div>
+
+              <div className="pt-4 mt-4 border-t border-dashed">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="w-full text-destructive hover:bg-red-50 hover:text-red-700 font-medium"
+                  onClick={handleRequestAccountDeletion}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" /> Request Account Deletion
+                </Button>
               </div>
             </Card>
 

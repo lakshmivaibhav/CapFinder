@@ -9,7 +9,7 @@ import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, MessageSquare, TrendingUp, Globe, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ShieldCheck, ExternalLink, DollarSign, Building2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, MessageSquare, TrendingUp, Globe, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ShieldCheck, ExternalLink, DollarSign, Building2, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -110,10 +110,35 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
     toast({ title: "Contact Request Sent", description: "The startup will review your request shortly." });
   };
 
+  const handleRequestDeletion = () => {
+    if (!user || !pitch || pitch.ownerId !== user.uid) return;
+    if (confirm("Are you sure you want to request deletion of this pitch? An administrator will review your request.")) {
+      addDocumentNonBlocking(collection(db, 'deleteRequests'), {
+        userId: user.uid,
+        targetType: 'pitch',
+        targetId: pitch.id,
+        status: 'pending',
+        timestamp: serverTimestamp(),
+        details: `Startup owner requested deletion of pitch: ${pitch.startupName}`
+      });
+      
+      addDocumentNonBlocking(collection(db, 'logs'), {
+        userId: user.uid,
+        action: 'delete_request_created',
+        targetId: pitch.id,
+        timestamp: serverTimestamp(),
+        details: `Deletion request submitted for pitch ${pitch.startupName}`
+      });
+
+      toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });
+    }
+  };
+
   if (loadingPitch || authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
   if (!pitch) return <div className="p-20 text-center font-bold text-destructive">Pitch not found.</div>;
 
   const isInvestor = profile?.role === 'investor';
+  const isOwner = user?.uid === pitch.ownerId;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -133,20 +158,32 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                       {pitch.industry}
                     </Badge>
                   </div>
-                  {isInvestor && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleToggleFavorite} 
-                      className={`gap-2 rounded-full border-muted-foreground/20 font-bold transition-all ${isFavorited ? "text-accent bg-accent/5 border-accent/20" : "text-muted-foreground hover:text-accent"}`}
-                    >
-                      {isFavorited ? (
-                        <><BookmarkCheck className="w-4 h-4 fill-current" /> Saved</>
-                      ) : (
-                        <><Bookmark className="w-4 h-4" /> Save Pitch</>
-                      )}
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isOwner && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={handleRequestDeletion}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" /> Request Deletion
+                      </Button>
+                    )}
+                    {isInvestor && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleToggleFavorite} 
+                        className={`gap-2 rounded-full border-muted-foreground/20 font-bold transition-all ${isFavorited ? "text-accent bg-accent/5 border-accent/20" : "text-muted-foreground hover:text-accent"}`}
+                      >
+                        {isFavorited ? (
+                          <><BookmarkCheck className="w-4 h-4 fill-current" /> Saved</>
+                        ) : (
+                          <><Bookmark className="w-4 h-4" /> Save Pitch</>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-2">

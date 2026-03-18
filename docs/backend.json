@@ -243,6 +243,22 @@
         "details": { "type": "string", "description": "Additional context or description of the action." }
       },
       "required": ["userId", "action", "timestamp"]
+    },
+    "DeleteRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DeleteRequest",
+      "type": "object",
+      "description": "Represents a user's request to delete their account or a specific pitch.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "targetType": { "type": "string", "enum": ["account", "pitch"] },
+        "targetId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "resolved", "rejected"] },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "details": { "type": "string" }
+      },
+      "required": ["userId", "targetType", "targetId", "status", "timestamp"]
     }
   },
   "auth": {
@@ -321,6 +337,16 @@
             "$ref": "#/backend/entities/Log"
           },
           "description": "System audit logs."
+        }
+      },
+      {
+        "path": "/deleteRequests/{requestId}",
+        "definition": {
+          "entityName": "DeleteRequest",
+          "schema": {
+            "$ref": "#/backend/entities/DeleteRequest"
+          },
+          "description": "User requests for data deletion."
         }
       }
     ]

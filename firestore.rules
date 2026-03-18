@@ -16,7 +16,7 @@ service cloud.firestore {
     }
 
     function isDisabled() {
-      return isSignedIn() && getProfile().disabled == true;
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getProfile().disabled == true;
     }
 
     function isAuthorized() {
@@ -100,6 +100,13 @@ service cloud.firestore {
     match /logs/{logId} {
       allow read: if isAdmin();
       allow create: if isAuthorized();
+    }
+
+    match /deleteRequests/{requestId} {
+      allow read: if isAdmin() || (isAuthorized() && resource.data.userId == request.auth.uid);
+      allow create: if isAuthorized() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }
