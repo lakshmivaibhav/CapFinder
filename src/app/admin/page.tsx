@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, ClipboardList, Clock } from 'lucide-react';
+import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, ClipboardList, Clock, Users, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -60,15 +60,19 @@ export default function AdminDashboardPage() {
   }, [user, authLoading, db, router, toast]);
 
   const usersQuery = useMemoFirebase(() => 
-    isVerifiedAdmin ? query(collection(db, 'users'), limit(100)) : null, 
+    isVerifiedAdmin ? query(collection(db, 'users'), limit(500)) : null, 
     [db, isVerifiedAdmin]
   );
   const pitchesQuery = useMemoFirebase(() => 
-    isVerifiedAdmin ? query(collection(db, 'pitches'), limit(100)) : null, 
+    isVerifiedAdmin ? query(collection(db, 'pitches'), limit(500)) : null, 
     [db, isVerifiedAdmin]
   );
   const requestsQuery = useMemoFirebase(() => 
-    isVerifiedAdmin ? query(collection(db, 'contactRequests'), limit(100)) : null, 
+    isVerifiedAdmin ? query(collection(db, 'contactRequests'), limit(500)) : null, 
+    [db, isVerifiedAdmin]
+  );
+  const messagesQuery = useMemoFirebase(() => 
+    isVerifiedAdmin ? query(collection(db, 'messages'), limit(500)) : null, 
     [db, isVerifiedAdmin]
   );
   const logsQuery = useMemoFirebase(() => 
@@ -79,6 +83,7 @@ export default function AdminDashboardPage() {
   const { data: allUsers, isLoading: loadingUsers } = useCollection(usersQuery);
   const { data: allPitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
   const { data: allRequests, isLoading: loadingRequests } = useCollection(requestsQuery);
+  const { data: allMessages, isLoading: loadingMessages } = useCollection(messagesQuery);
   const { data: allLogs, isLoading: loadingLogs } = useCollection(logsQuery);
 
   const handleDeletePitch = (pitchId: string, name: string) => {
@@ -170,6 +175,13 @@ export default function AdminDashboardPage() {
 
   if (!isVerifiedAdmin) return null;
 
+  const stats = [
+    { label: 'Total Users', value: allUsers?.length || 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Live Pitches', value: allPitches?.length || 0, icon: Megaphone, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Connections', value: allRequests?.length || 0, icon: Inbox, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Messages', value: allMessages?.length || 0, icon: MessageSquare, color: 'text-purple-600', bg: 'bg-purple-50' },
+  ];
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -186,6 +198,23 @@ export default function AdminDashboardPage() {
           <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border border-emerald-200 font-bold text-xs">
             <ShieldCheck className="w-4 h-4" /> Secure Admin Session
           </div>
+        </div>
+
+        {/* Platform Statistics Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, i) => (
+            <Card key={i} className="border-none shadow-sm relative overflow-hidden">
+              <CardHeader className="pb-2">
+                <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</CardDescription>
+                <CardTitle className="text-3xl font-black">{stat.value}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`absolute right-4 bottom-4 p-3 rounded-2xl ${stat.bg}`}>
+                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
