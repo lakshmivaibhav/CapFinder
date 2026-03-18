@@ -3,15 +3,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useFirestore } from '@/firebase';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Briefcase, TrendingUp, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function OnboardingPage() {
   const { user, refreshProfile } = useAuth();
+  const db = useFirestore();
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -21,6 +21,7 @@ export default function OnboardingPage() {
     setLoading(true);
     try {
       await setDoc(doc(db, 'users', user.uid), {
+        id: user.uid,
         role,
         email: user.email,
         createdAt: new Date(),

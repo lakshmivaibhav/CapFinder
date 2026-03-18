@@ -3,20 +3,22 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { useAuth } from '@/components/auth-provider';
+import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Save, User, ArrowLeft, Camera, Briefcase, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
+import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 
 export default function ProfilePage() {
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
+  const db = useFirestore();
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -97,7 +99,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
                   <Mail className="w-3 h-3" />
-                  Verified Investor
+                  Verified {profile?.role === 'investor' ? 'Investor' : 'Startup'}
                 </div>
               </div>
             </Card>
@@ -105,10 +107,10 @@ export default function ProfilePage() {
 
           <div className="md:col-span-2">
             <Card className="border-none shadow-sm bg-white overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b p-8">
+              <div className="bg-muted/30 border-b p-8">
                 <CardTitle className="text-2xl font-bold">Profile Settings</CardTitle>
                 <CardDescription>Update your professional information seen by other users.</CardDescription>
-              </CardHeader>
+              </div>
               <CardContent className="p-8">
                 <form onSubmit={handleSave} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
@@ -182,14 +184,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
-    </div>
-  );
-}
-
-function Badge({ children, variant, className }: { children: React.ReactNode, variant?: string, className?: string }) {
-  return (
-    <div className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2", className)}>
-      {children}
     </div>
   );
 }
