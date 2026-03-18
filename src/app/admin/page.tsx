@@ -41,6 +41,7 @@ export default function AdminDashboardPage() {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = userDoc.data();
         
+        // Strict role verification from Firestore on every mount
         if (userDoc.exists() && userData?.role === 'admin') {
           setIsVerifiedAdmin(true);
         } else {
@@ -61,6 +62,7 @@ export default function AdminDashboardPage() {
     verifyAdminStatus();
   }, [user, authLoading, db, router, toast]);
 
+  // Queries are strictly tied to isVerifiedAdmin state to prevent unauthorized rule evaluation
   const usersQuery = useMemoFirebase(() => 
     isVerifiedAdmin ? query(collection(db, 'users'), limit(500)) : null, 
     [db, isVerifiedAdmin]
