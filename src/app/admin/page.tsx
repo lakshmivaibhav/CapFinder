@@ -115,7 +115,6 @@ function AdminDashboardContent() {
    */
   const logsQuery = useMemoFirebase(() => {
     // CRITICAL: Guard against unauthorized access and ensure identity filter is applied.
-    // This query strictly fetches logs where the current user is the actor to satisfy 'isAuthorized' rule.
     if (!user || !profile || profile.role !== 'admin' || profile.disabled === true) return null;
     return query(
       collection(db, 'logs'), 
