@@ -105,35 +105,51 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
 
     setResolving(true);
     try {
-      // 1. Delete Interests for this pitch and user (investorId field)
+      // 1. Delete Interests for this pitch and user (filtered by investorId to avoid index issues)
       const intSnap = await getDocs(query(
         collection(db, 'interests'), 
-        where('investorId', '==', user.uid), 
-        where('pitchId', '==', pitch.id)
+        where('investorId', '==', user.uid)
       ));
-      intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
+      intSnap.docs.forEach(d => {
+        if (d.data().pitchId === pitch.id) {
+          console.log('Resolving interest doc:', d.id);
+          deleteDocumentNonBlocking(doc(db, 'interests', d.id));
+        }
+      });
 
-      // 2. Delete ContactRequest document (senderId field) - only if accepted
+      // 2. Delete ContactRequest documents (filtered by senderId to avoid index issues)
       const reqSnap = await getDocs(query(
         collection(db, 'contactRequests'), 
-        where('senderId', '==', user.uid), 
-        where('pitchId', '==', pitch.id),
-        where('status', '==', 'accepted')
+        where('senderId', '==', user.uid)
       ));
-      reqSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id)));
+      reqSnap.docs.forEach(d => {
+        if (d.data().pitchId === pitch.id) {
+          console.log('Resolving request doc:', d.id);
+          deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id));
+        }
+      });
 
       // 3. Remove all chat messages for this pitch between these users
       const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
       msgsSnap.docs.forEach(d => {
         const m = d.data();
         if ((m.senderId === user.uid && m.receiverId === pitch.ownerId) || (m.senderId === pitch.ownerId && m.receiverId === user.uid)) {
+          console.log('Resolving message doc:', d.id);
           deleteDocumentNonBlocking(doc(db, 'messages', d.id));
         }
       });
 
-      toast({ title: "Connection resolved successfully", description: "Records for this pitch are being cleared." });
+      toast({ 
+        title: "Connection resolved successfully", 
+        description: "Records for this pitch have been cleared." 
+      });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Resolve failed", description: error.message || "Could not fully resolve connection." });
+      console.error("Resolve error:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "Resolve failed", 
+        description: error.message || "Could not fully resolve connection." 
+      });
     } finally {
       setResolving(false);
     }
