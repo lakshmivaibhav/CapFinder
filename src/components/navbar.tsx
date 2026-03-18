@@ -26,25 +26,27 @@ export function Navbar() {
   };
 
   const unreadMessagesQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    // CRITICAL: Guard with profile to satisfy security rules (isAuthorized)
+    if (!user || !profile) return null;
     return query(
       collection(db, 'messages'),
       where('receiverId', '==', user.uid),
       where('read', '==', false)
     );
-  }, [db, user]);
+  }, [db, user, profile]);
 
   const { data: unreadMessages } = useCollection(unreadMessagesQuery);
   const unreadCount = unreadMessages?.length || 0;
 
   const pendingRequestsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    // CRITICAL: Guard with profile to satisfy security rules (isAuthorized)
+    if (!user || !profile) return null;
     return query(
       collection(db, 'contactRequests'),
       where('receiverId', '==', user.uid),
       where('status', '==', 'pending')
     );
-  }, [db, user]);
+  }, [db, user, profile]);
 
   const { data: pendingRequests } = useCollection(pendingRequestsQuery);
   const requestCount = pendingRequests?.length || 0;

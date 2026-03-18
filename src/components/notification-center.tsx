@@ -14,19 +14,20 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 export function NotificationCenter() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
   const notificationsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    // CRITICAL: Only query if BOTH user and profile exist to satisfy security rules (isAuthorized)
+    if (!user || !profile) return null;
     return query(
       collection(db, 'notifications'),
       where('userId', '==', user.uid),
       orderBy('timestamp', 'desc'),
       limit(50)
     );
-  }, [db, user]);
+  }, [db, user, profile]);
 
   const { data: notifications, isLoading } = useCollection(notificationsQuery);
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
