@@ -81,27 +81,31 @@ export default function DashboardPage() {
 
   const handleResolveConnection = async (pitchId: string, startupOwnerId: string, startupName: string) => {
     if (!user || !isInvestor) return;
-    if (!confirm(`Resolve connection with ${startupName}? This will clear your interest, requests, and messages.`)) return;
+    if (!confirm(`Resolve connection with ${startupName}? This will clear your interest, requests, and associated data.`)) return;
 
     setResolving(pitchId);
     try {
-      // 1. Delete Interest documents
+      // 1. Delete Interest documents (using investorId field)
       const intSnap = await getDocs(query(
         collection(db, 'interests'), 
         where('investorId', '==', user.uid), 
         where('pitchId', '==', pitchId)
       ));
+      console.log(`Found ${intSnap.size} interests to delete for pitch ${pitchId}`);
       intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
 
-      // 2. Delete Connection (Contact Request) documents
+      // 2. Delete Connection documents (using senderId field for investor)
       const reqSnap = await getDocs(query(
         collection(db, 'contactRequests'), 
         where('senderId', '==', user.uid), 
         where('pitchId', '==', pitchId)
       ));
+      console.log(`Found ${reqSnap.size} contact requests to delete for pitch ${pitchId}`);
       reqSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id)));
 
       // 3. Remove chat messages for this pitch between these users
+      // Note: Rules restrict message deletion to Admin, so this may trigger permission errors for non-admins
+      // but we attempt it as requested by the user flow.
       const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitchId)));
       msgsSnap.docs.forEach(d => {
         const m = d.data();
@@ -110,8 +114,9 @@ export default function DashboardPage() {
         }
       });
 
-      toast({ title: "Connection resolved successfully", description: "All records for this pitch have been cleared." });
+      toast({ title: "Connection resolved successfully", description: "Your records for this pitch are being cleared." });
     } catch (e: any) {
+      console.error("Resolve failed:", e);
       toast({ variant: "destructive", title: "Resolve failed", description: e.message || "Failed to clear connection records." });
     } finally {
       setResolving(null);

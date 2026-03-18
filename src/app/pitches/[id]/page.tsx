@@ -105,20 +105,22 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
 
     setResolving(true);
     try {
-      // 1. Delete Interests for this pitch and user
+      // 1. Delete Interests for this pitch and user (investorId field)
       const intSnap = await getDocs(query(
         collection(db, 'interests'), 
         where('investorId', '==', user.uid), 
         where('pitchId', '==', pitch.id)
       ));
+      console.log(`Deleting ${intSnap.size} interests`);
       intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
 
-      // 2. Delete Connection (Contact Request) document
+      // 2. Delete Connection (Contact Request) document (senderId field)
       const reqSnap = await getDocs(query(
         collection(db, 'contactRequests'), 
         where('senderId', '==', user.uid), 
         where('pitchId', '==', pitch.id)
       ));
+      console.log(`Deleting ${reqSnap.size} requests`);
       reqSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id)));
 
       // 3. Remove all chat messages for this pitch between these users
@@ -130,8 +132,9 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
         }
       });
 
-      toast({ title: "Connection resolved successfully", description: "All records for this pitch have been cleared." });
+      toast({ title: "Connection resolved successfully", description: "Records for this pitch are being cleared." });
     } catch (error: any) {
+      console.error("Resolve failed:", error);
       toast({ variant: "destructive", title: "Resolve failed", description: error.message || "Could not fully resolve connection." });
     } finally {
       setResolving(false);

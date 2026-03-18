@@ -300,9 +300,9 @@ function AdminDashboardContent() {
                     </TableHeader>
                     <TableBody>
                       {loadingDeleteRequests ? (
-                        <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                        <TableRow><TableCell colSpan={3} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
                       ) : allDeleteRequests?.length === 0 ? (
-                        <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground italic">No pending requests.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground italic">No pending requests.</TableCell></TableRow>
                       ) : allDeleteRequests?.map((req) => (
                         <TableRow key={req.id}>
                           <TableCell><Badge variant="outline" className="capitalize">{req.targetType}</Badge></TableCell>
