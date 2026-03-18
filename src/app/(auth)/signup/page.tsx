@@ -1,10 +1,12 @@
+
 "use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { doc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function SignupPage() {
   const auth = useAuth();
+  const db = useFirestore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,7 +27,15 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Initialize profile with lastActive
+      updateDocumentNonBlocking(doc(db, 'users', userCredential.user.uid), {
+        id: userCredential.user.uid,
+        email: userCredential.user.email,
+        lastActive: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      });
+
       toast({ title: "Account created!", description: "Welcome to CapFinder." });
       router.push('/onboarding');
     } catch (error: any) {

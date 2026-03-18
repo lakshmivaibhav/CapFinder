@@ -39,6 +39,11 @@
         "fundingNeeded": {
           "type": "number",
           "description": "The total amount of funding the startup is currently seeking, in a numerical format. (Relevant for 'Startup' role)."
+        },
+        "lastActive": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The last time the user was active on the platform."
         }
       },
       "required": [

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { use, useEffect } from 'react';
+import { use, useEffect, useState } from 'react';
 import { doc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
@@ -9,16 +9,23 @@ import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, User, Briefcase, Mail, Globe, ShieldCheck, TrendingUp, Sparkles } from 'lucide-react';
+import { Loader2, ArrowLeft, User, Briefcase, Mail, Globe, ShieldCheck, TrendingUp, Sparkles, Clock, Circle } from 'lucide-react';
 import Link from 'next/link';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function UserProfileViewPage({ params }: { params: Promise<{ uid: string }> }) {
   const { uid } = use(params);
   const { user: currentUser, profile: currentProfile, loading: authLoading } = useAuth();
   const db = useFirestore();
+  const [now, setNow] = useState(new Date());
 
   const userRef = useMemoFirebase(() => doc(db, 'users', uid), [db, uid]);
   const { data: targetProfile, isLoading: loadingProfile } = useDoc(userRef);
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   if (loadingProfile || authLoading) {
     return (
@@ -50,6 +57,9 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ uid:
   const isStartup = targetProfile.role === 'startup';
   const isInvestor = targetProfile.role === 'investor';
 
+  const lastActiveDate = targetProfile.lastActive?.toDate ? targetProfile.lastActive.toDate() : null;
+  const isOnline = lastActiveDate && (now.getTime() - lastActiveDate.getTime()) < 300000; // 5 minutes
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
@@ -70,7 +80,24 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ uid:
                   <ShieldCheck className="w-4 h-4" />
                 </div>
               </div>
-              <h1 className="text-2xl font-bold leading-tight mb-1">{targetProfile.name || 'Anonymous'}</h1>
+
+              <div className="space-y-2 mb-4">
+                <h1 className="text-2xl font-bold leading-tight mb-1">{targetProfile.name || 'Anonymous'}</h1>
+                <div className="flex items-center justify-center gap-2">
+                  {isOnline ? (
+                    <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none px-3 py-0.5 gap-1.5">
+                      <Circle className="w-2 h-2 fill-current animate-pulse" /> Online
+                    </Badge>
+                  ) : lastActiveDate ? (
+                    <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1 justify-center">
+                      <Clock className="w-3 h-3" /> Active {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground font-medium italic">Status unknown</span>
+                  )}
+                </div>
+              </div>
+
               <p className="text-sm font-bold text-primary uppercase tracking-widest mb-4">
                 {targetProfile.role}
               </p>
