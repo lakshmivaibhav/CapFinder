@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -115,8 +114,8 @@ function AdminDashboardContent() {
     return query(collection(db, 'messages'), limit(500));
   }, [db, profile]);
   
-  // SAFE LOG QUERY: Strictly includes userId filter to match first path of security rules.
-  // Even for admins, this "safe query" avoids reliance on potentially slow rule-side get() calls.
+  // SAFE LOG QUERY: Strictly includes userId filter to match identity-based security rules.
+  // This ensures that even admins use a constrained query pattern for "My Activity".
   const logsQuery = useMemoFirebase(() => {
     if (!user || !profile) return null;
     return query(
