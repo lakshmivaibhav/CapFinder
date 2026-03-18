@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -6,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { doc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +27,20 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Check if user is disabled before proceeding
+      const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+      if (userDoc.exists() && userDoc.data().disabled) {
+        await auth.signOut();
+        toast({ 
+          variant: "destructive", 
+          title: "Account Disabled", 
+          description: "Your account has been disabled by an administrator. Please contact support." 
+        });
+        setLoading(false);
+        return;
+      }
+
       // Update lastActive status non-blocking (using set with merge for upsert safety)
       setDocumentNonBlocking(doc(db, 'users', userCredential.user.uid), {
         lastActive: serverTimestamp()
@@ -39,7 +52,7 @@ export default function LoginPage() {
       toast({ 
         variant: "destructive", 
         title: "Login failed", 
-        description: "Please check your credentials and try again." 
+        description: error.message || "Please check your credentials and try again." 
       });
     } finally {
       setLoading(false);

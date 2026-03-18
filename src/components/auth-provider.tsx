@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 
@@ -14,6 +14,7 @@ interface Profile {
   bio?: string;
   investmentInterest?: string;
   fundingNeeded?: number;
+  disabled?: boolean;
 }
 
 interface AuthContextType {
@@ -44,7 +45,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const docRef = doc(db, 'users', uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        setProfile({ uid, ...docSnap.data() } as Profile);
+        const data = docSnap.data();
+        // If account is disabled, sign out immediately
+        if (data.disabled) {
+          await signOut(auth);
+          setProfile(null);
+          setUser(null);
+          return;
+        }
+        setProfile({ uid, ...data } as Profile);
       } else {
         setProfile(null);
       }

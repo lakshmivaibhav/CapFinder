@@ -3,15 +3,15 @@
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, limit, doc, orderBy } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, limit, doc } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, User, Megaphone, Inbox, MessageSquare, ShieldAlert, AlertTriangle } from 'lucide-react';
+import { Loader2, Trash2, User, Megaphone, Inbox, MessageSquare, ShieldAlert, AlertTriangle, UserX, UserCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -52,6 +52,14 @@ export default function AdminDashboardPage() {
       deleteDocumentNonBlocking(doc(db, 'users', userId));
       toast({ title: "User Profile Deleted", description: `The Firestore profile for ${email} has been removed.` });
     }
+  };
+
+  const toggleUserStatus = (userId: string, currentStatus: boolean) => {
+    updateDocumentNonBlocking(doc(db, 'users', userId), { disabled: !currentStatus });
+    toast({ 
+      title: currentStatus ? "User Enabled" : "User Disabled", 
+      description: "The user account status has been updated." 
+    });
   };
 
   if (authLoading || (user && !profile)) {
@@ -110,7 +118,7 @@ export default function AdminDashboardPage() {
                     <TableRow>
                       <TableHead>User / Organization</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Contact</TableHead>
+                      <TableHead>Status</TableHead>
                       <TableHead>Last Active</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -123,22 +131,38 @@ export default function AdminDashboardPage() {
                         <TableCell>
                           <div className="flex flex-col">
                             <Link href={`/profile/${u.id}`} className="font-bold hover:underline">{u.name || 'Anonymous'}</Link>
-                            <span className="text-xs text-muted-foreground">{u.company || 'Individual'}</span>
+                            <span className="text-xs text-muted-foreground">{u.email}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="capitalize">{u.role}</Badge>
                         </TableCell>
-                        <TableCell className="text-sm">{u.email}</TableCell>
+                        <TableCell>
+                          {u.disabled ? (
+                            <Badge variant="destructive">Disabled</Badge>
+                          ) : (
+                            <Badge variant="secondary" className="bg-green-50 text-green-700">Active</Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {u.lastActive?.toDate ? format(u.lastActive.toDate(), 'MMM d, p') : 'Never'}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right flex items-center justify-end gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className={u.disabled ? "text-green-600 hover:bg-green-100" : "text-amber-600 hover:bg-amber-100"}
+                            onClick={() => toggleUserStatus(u.id, !!u.disabled)}
+                            title={u.disabled ? "Enable User" : "Disable User"}
+                          >
+                            {u.disabled ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                          </Button>
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             className="text-destructive hover:bg-destructive/10"
                             onClick={() => handleDeleteUser(u.id, u.email)}
+                            title="Delete Profile"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

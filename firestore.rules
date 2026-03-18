@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,8 +14,16 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function isDisabled() {
+      return isSignedIn() && getProfile().disabled == true;
+    }
+
+    function isAuthorized() {
+      return isSignedIn() && !isDisabled();
+    }
+
     function hasRole(role) {
-      return isSignedIn() && getProfile().role == role;
+      return isAuthorized() && getProfile().role == role;
     }
 
     function isAdmin() {
@@ -38,50 +45,50 @@ service cloud.firestore {
     }
 
     match /pitches/{pitchId} {
-      allow read: if isSignedIn();
-      allow create: if isSignedIn() && (hasRole('startup') || isAdmin()) && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
-      allow delete: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow read: if isAuthorized();
+      allow create: if isAuthorized() && (hasRole('startup') || isAdmin()) && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isAuthorized() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      allow delete: if isAuthorized() && (resource.data.ownerId == request.auth.uid || isAdmin());
     }
 
     match /interests/{interestId} {
-      allow read: if isSignedIn() && (
+      allow read: if isAuthorized() && (
         resource.data.investorId == request.auth.uid || 
         resource.data.startupOwnerId == request.auth.uid ||
         isAdmin()
       );
-      allow create: if isSignedIn() && (hasRole('investor') || isAdmin()) && request.resource.data.investorId == request.auth.uid;
-      allow delete: if isSignedIn() && (resource.data.investorId == request.auth.uid || isAdmin());
+      allow create: if isAuthorized() && (hasRole('investor') || isAdmin()) && request.resource.data.investorId == request.auth.uid;
+      allow delete: if isAuthorized() && (resource.data.investorId == request.auth.uid || isAdmin());
     }
 
     match /favorites/{favoriteId} {
-      allow read: if isSignedIn() && (resource.data.investorId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && (hasRole('investor') || isAdmin()) && request.resource.data.investorId == request.auth.uid;
-      allow delete: if isSignedIn() && (resource.data.investorId == request.auth.uid || isAdmin());
+      allow read: if isAuthorized() && (resource.data.investorId == request.auth.uid || isAdmin());
+      allow create: if isAuthorized() && (hasRole('investor') || isAdmin()) && request.resource.data.investorId == request.auth.uid;
+      allow delete: if isAuthorized() && (resource.data.investorId == request.auth.uid || isAdmin());
     }
 
     match /contactRequests/{requestId} {
-      allow read: if isSignedIn() && (
+      allow read: if isAuthorized() && (
         resource.data.senderId == request.auth.uid || 
         resource.data.receiverId == request.auth.uid ||
         isAdmin()
       );
-      allow create: if isSignedIn() && (hasRole('investor') || isAdmin()) && request.resource.data.senderId == request.auth.uid;
-      allow update: if isSignedIn() && (
+      allow create: if isAuthorized() && (hasRole('investor') || isAdmin()) && request.resource.data.senderId == request.auth.uid;
+      allow update: if isAuthorized() && (
         (resource.data.receiverId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
         isAdmin()
       );
-      allow delete: if isSignedIn() && (resource.data.senderId == request.auth.uid || isAdmin());
+      allow delete: if isAuthorized() && (resource.data.senderId == request.auth.uid || isAdmin());
     }
 
     match /messages/{messageId} {
-      allow create: if isSignedIn() && 
+      allow create: if isAuthorized() && 
         request.resource.data.senderId == request.auth.uid &&
         isContactAccepted(request.resource.data.senderId, request.resource.data.receiverId, request.resource.data.pitchId);
       
-      allow read: if isSignedIn();
+      allow read: if isAuthorized();
 
-      allow update: if isSignedIn() && (
+      allow update: if isAuthorized() && (
         (resource.data.receiverId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])) ||
         isAdmin()
       );
