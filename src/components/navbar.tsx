@@ -54,8 +54,21 @@ export function Navbar() {
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { label: pathname === '/pitches' ? 'Marketplace' : 'Browse', href: '/pitches', icon: Search },
-    { label: 'Requests', href: '/requests', icon: Inbox, badge: requestCount, show: profile?.role === 'startup' },
-    { label: 'Messages', href: '/messages', icon: MessageSquare, badge: unreadCount },
+    { 
+      label: 'Requests', 
+      href: '/requests', 
+      icon: Inbox, 
+      // Badge is removed when the requests page is opened
+      badge: pathname === '/requests' ? 0 : requestCount, 
+      show: profile?.role === 'startup' 
+    },
+    { 
+      label: 'Messages', 
+      href: '/messages', 
+      icon: MessageSquare, 
+      // Badge is removed when the messages page is opened
+      badge: pathname === '/messages' ? 0 : unreadCount 
+    },
     { label: 'Profile', href: '/profile', icon: User },
   ];
 
