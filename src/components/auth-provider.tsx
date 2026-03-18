@@ -46,10 +46,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (docSnap.exists()) {
         setProfile({ uid, ...docSnap.data() } as Profile);
       } else {
-        setProfile({ uid } as Profile);
+        // If document doesn't exist, we don't have a profile yet (e.g. during onboarding)
+        setProfile(null);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
+      setProfile(null);
     }
   };
 
