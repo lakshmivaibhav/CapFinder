@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -34,7 +33,7 @@ export default function SignupPage() {
         email: userCredential.user.email,
         lastActive: serverTimestamp(),
         createdAt: serverTimestamp(),
-        disabled: false, // Explicitly set for isAuthorized() rule
+        disabled: false,
       }, { merge: true });
 
       toast({ title: "Account created!", description: "Welcome to CapFinder." });

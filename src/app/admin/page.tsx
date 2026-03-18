@@ -53,7 +53,6 @@ export default function AdminDashboardPage() {
           router.push('/dashboard');
         }
       } catch (error) {
-        console.error("Admin Verification Error:", error);
         router.push('/dashboard');
       } finally {
         setVerifying(false);
@@ -81,34 +80,36 @@ export default function AdminDashboardPage() {
  * AdminDashboardContent - Phase 2: Administrative Content
  */
 function AdminDashboardContent() {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
   const [processingStale, setProcessingStale] = useState(false);
 
-  // Queries are initialized here, ensuring they ONLY run after authoritative verification.
+  // Queries optimized with filters to satisfy security rules and performance requirements
   const usersQuery = useMemoFirebase(() => {
-    if (!profile || profile.disabled === true) return null;
-    return query(collection(db, 'users'), limit(500));
+    if (!profile || profile.role !== 'admin' || profile.disabled === true) return null;
+    // Filter by disabled status to provide a constrained query
+    return query(collection(db, 'users'), where('disabled', 'in', [true, false]), limit(500));
   }, [db, profile]);
 
   const pitchesQuery = useMemoFirebase(() => {
-    if (!profile || profile.disabled === true) return null;
-    return query(collection(db, 'pitches'), limit(500));
+    if (!profile || profile.role !== 'admin' || profile.disabled === true) return null;
+    // Filter by funding needed to provide a constrained query
+    return query(collection(db, 'pitches'), where('fundingNeeded', '>=', 0), limit(500));
   }, [db, profile]);
 
   const requestsQuery = useMemoFirebase(() => {
-    if (!profile || profile.disabled === true) return null;
-    return query(collection(db, 'contactRequests'), limit(500));
+    if (!profile || profile.role !== 'admin' || profile.disabled === true) return null;
+    return query(collection(db, 'contactRequests'), where('status', 'in', ['pending', 'accepted', 'rejected']), limit(500));
   }, [db, profile]);
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!profile || profile.disabled === true) return null;
-    return query(collection(db, 'messages'), limit(500));
+    if (!profile || profile.role !== 'admin' || profile.disabled === true) return null;
+    return query(collection(db, 'messages'), where('read', 'in', [true, false]), limit(500));
   }, [db, profile]);
   
   const deleteRequestsQuery = useMemoFirebase(() => {
-    if (!profile || profile.disabled === true) return null;
+    if (!profile || profile.role !== 'admin' || profile.disabled === true) return null;
     return query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), limit(100));
   }, [db, profile]);
 
@@ -378,7 +379,7 @@ function AdminDashboardContent() {
                         <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
                       ) : allDeleteRequests?.length === 0 ? (
                         <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground italic">No pending requests.</TableCell></TableRow>
-                      ) : allDeleteRequests?.map((req) => (
+                      ) : (allDeleteRequests?.map((req) => (
                         <TableRow key={req.id}>
                           <TableCell><Badge variant="outline" className="capitalize">{req.targetType}</Badge></TableCell>
                           <TableCell className="text-xs text-muted-foreground">
@@ -398,7 +399,7 @@ function AdminDashboardContent() {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))}
+                      )))}
                     </TableBody>
                   </Table>
                 </CardContent>

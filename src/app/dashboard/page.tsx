@@ -35,68 +35,66 @@ export default function DashboardPage() {
   const isInvestor = profile?.role === 'investor';
   const isAdmin = profile?.role === 'admin';
 
-  // Queries for Startups
+  // Queries optimized with mandatory identity-based filters
   const startupPitchesQuery = useMemoFirebase(() => {
-    if (!user || !isStartup) return null;
+    if (!user || !profile || !isStartup || profile.disabled === true) return null;
     return query(
       collection(db, 'pitches'), 
       where('ownerId', '==', user.uid)
     );
-  }, [db, user, isStartup]);
+  }, [db, user, profile, isStartup]);
 
   const startupInterestsQuery = useMemoFirebase(() => {
-    if (!user || !isStartup) return null;
+    if (!user || !profile || !isStartup || profile.disabled === true) return null;
     return query(
       collection(db, 'interests'), 
       where('startupOwnerId', '==', user.uid)
     );
-  }, [db, user, isStartup]);
+  }, [db, user, profile, isStartup]);
 
   const startupContactRequestsQuery = useMemoFirebase(() => {
-    if (!user || !isStartup) return null;
+    if (!user || !profile || !isStartup || profile.disabled === true) return null;
     return query(
       collection(db, 'contactRequests'),
       where('receiverId', '==', user.uid)
     );
-  }, [db, user, isStartup]);
+  }, [db, user, profile, isStartup]);
 
-  // Query to find potential investors for recommendation
   const investorsForMatchingQuery = useMemoFirebase(() => {
-    if (!user || !isStartup) return null;
+    if (!user || !profile || !isStartup || profile.disabled === true) return null;
     return query(
       collection(db, 'users'),
       where('role', '==', 'investor'),
       limit(100)
     );
-  }, [db, user, isStartup]);
+  }, [db, user, profile, isStartup]);
 
-  // Queries for Investors
   const allPitchesQuery = useMemoFirebase(() => {
-    if (!user || (!isInvestor && !isAdmin)) return null;
-    return query(collection(db, 'pitches'), limit(50));
-  }, [db, user, isInvestor, isAdmin]);
+    if (!user || !profile || (!isInvestor && !isAdmin) || profile.disabled === true) return null;
+    // Constrained query for global list to satisfy security requirements
+    return query(collection(db, 'pitches'), where('fundingNeeded', '>=', 0), limit(50));
+  }, [db, user, profile, isInvestor, isAdmin]);
 
   const investorInterestsQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor) return null;
+    if (!user || !profile || !isInvestor || profile.disabled === true) return null;
     return query(
       collection(db, 'interests'), 
       where('investorId', '==', user.uid)
     );
-  }, [db, user, isInvestor]);
+  }, [db, user, profile, isInvestor]);
 
   const investorFavoritesQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor) return null;
+    if (!user || !profile || !isInvestor || profile.disabled === true) return null;
     return query(
       collection(db, 'favorites'),
       where('investorId', '==', user.uid)
     );
-  }, [db, user, isInvestor]);
+  }, [db, user, profile, isInvestor]);
 
-  // Queries for Admin
   const allUsersQuery = useMemoFirebase(() => {
-    if (!user || !isAdmin) return null;
-    return query(collection(db, 'users'), limit(50));
-  }, [db, user, isAdmin]);
+    if (!user || !profile || !isAdmin || profile.disabled === true) return null;
+    return query(collection(db, 'users'), where('disabled', 'in', [true, false]), limit(50));
+  }, [db, user, profile, isAdmin]);
 
   const { data: startupPitches, isLoading: loadingStartupPitches } = useCollection(startupPitchesQuery);
   const { data: startupInterests, isLoading: loadingStartupInterests } = useCollection(startupInterestsQuery);
@@ -154,13 +152,11 @@ export default function DashboardPage() {
           }
         });
 
-        // Heuristic: If funding needed is high, prefer investors who mention "Growth", "Series A", or "Scale"
         if (totalFundingNeeded > 1000000) {
           if (interests.some(i => i.includes('growth') || i.includes('series') || i.includes('scale'))) {
             score += 10;
           }
         } else if (totalFundingNeeded > 0) {
-          // If funding is smaller, prefer those mentioning "Seed", "Angel", or "Early"
           if (interests.some(i => i.includes('seed') || i.includes('angel') || i.includes('early'))) {
             score += 5;
           }

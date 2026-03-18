@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -29,44 +28,41 @@ export default function PitchesFeedPage() {
   const isStartup = profile?.role === 'startup';
   const isAdmin = profile?.role === 'admin';
 
-  // 1. Fetch Pitches (For Investors and Admins)
+  // Optimized marketplace queries with filters to ensure compliance and performance
   const pitchesQuery = useMemoFirebase(() => {
-    if (!isAdmin && !isInvestor) return null;
-    return query(collection(db, 'pitches'));
-  }, [db, isAdmin, isInvestor]);
+    if (!profile || (!isAdmin && !isInvestor) || profile.disabled === true) return null;
+    return query(collection(db, 'pitches'), where('fundingNeeded', '>=', 0));
+  }, [db, profile, isAdmin, isInvestor]);
   const { data: pitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
 
-  // 2. Fetch Investors (For Startups and Admins)
   const investorsQuery = useMemoFirebase(() => {
-    if (!isAdmin && !isStartup) return null;
-    return query(collection(db, 'users'), where('role', '==', 'investor'));
-  }, [db, isAdmin, isStartup]);
+    if (!profile || (!isAdmin && !isStartup) || profile.disabled === true) return null;
+    return query(collection(db, 'users'), where('role', '==', 'investor'), where('disabled', '==', false));
+  }, [db, profile, isAdmin, isStartup]);
   const { data: investors, isLoading: loadingInvestors } = useCollection(investorsQuery);
 
-  // 3. User Interactions Data (Favorites, Interests, Requests)
   const interestsQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor) return null;
+    if (!user || !profile || !isInvestor || profile.disabled === true) return null;
     return query(collection(db, 'interests'), where('investorId', '==', user.uid));
-  }, [db, user, isInvestor]);
+  }, [db, user, profile, isInvestor]);
   const { data: userInterestsData } = useCollection(interestsQuery);
 
   const favoritesQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor) return null;
+    if (!user || !profile || !isInvestor || profile.disabled === true) return null;
     return query(collection(db, 'favorites'), where('investorId', '==', user.uid));
-  }, [db, user, isInvestor]);
+  }, [db, user, profile, isInvestor]);
   const { data: userFavoritesData } = useCollection(favoritesQuery);
 
   const contactRequestsQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor) return null;
+    if (!user || !profile || !isInvestor || profile.disabled === true) return null;
     return query(collection(db, 'contactRequests'), where('senderId', '==', user.uid));
-  }, [db, user, isInvestor]);
+  }, [db, user, profile, isInvestor]);
   const { data: userContactRequestsData } = useCollection(contactRequestsQuery);
 
   const userInterests = userInterestsData?.map(i => i.pitchId) || [];
   const favoritePitchIds = userFavoritesData?.map(f => f.pitchId) || [];
   const contactRequests = userContactRequestsData || [];
 
-  // 4. Filtering Logic for Pitches
   const industries = Array.from(new Set(pitches?.map(p => p.industry) || [])).filter(Boolean);
   const filteredPitches = pitches?.filter(p => {
     const searchLower = search.toLowerCase();
@@ -83,13 +79,11 @@ export default function PitchesFeedPage() {
     return matchesSearch && matchesIndustry && matchesFunding;
   }) || [];
 
-  // 5. Filtering Logic for Investors
   const filteredInvestors = investors?.filter(i => {
     const searchLower = search.toLowerCase();
     return (i.name?.toLowerCase() || "").includes(searchLower) || (i.company?.toLowerCase() || "").includes(searchLower) || (i.investmentInterest?.toLowerCase() || "").includes(searchLower);
   }) || [];
 
-  // 6. Actions
   const handleToggleFavorite = async (pitch: any) => {
     if (!user || !isInvestor) return;
     const existingFavorite = userFavoritesData?.find(f => f.pitchId === pitch.id);

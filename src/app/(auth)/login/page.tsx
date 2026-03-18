@@ -40,7 +40,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Ensure disabled status is explicitly set if missing to prevent isAuthorized() failures
+      // Sync active timestamp without logging sensitive system actions
       setDocumentNonBlocking(doc(db, 'users', userCredential.user.uid), {
         lastActive: serverTimestamp(),
         disabled: userDoc.exists() ? (userDoc.data().disabled || false) : false
