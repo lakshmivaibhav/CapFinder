@@ -20,6 +20,7 @@ export function NotificationCenter() {
 
   // CRITICAL: Load notifications ONLY when the panel is open to avoid global unauthorized list queries.
   const notificationsQuery = useMemoFirebase(() => {
+    // Strictly wait for the panel to be open AND a verified profile to be loaded
     if (!open || authLoading || !user?.uid || !profile || profile.disabled === true) return null;
     
     return query(

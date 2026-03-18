@@ -94,7 +94,7 @@ function AdminDashboardContent() {
 
   const pitchesQuery = useMemoFirebase(() => {
     if (!profile || profile.role !== 'admin' || profile.disabled === true) return null;
-    return query(collection(db, 'pitches'), where('fundingNeeded', '>=', 0), limit(500));
+    return query(collection(db, 'pitches'), limit(500));
   }, [db, profile]);
 
   const requestsQuery = useMemoFirebase(() => {
@@ -104,7 +104,7 @@ function AdminDashboardContent() {
 
   const messagesQuery = useMemoFirebase(() => {
     if (!profile || profile.role !== 'admin' || profile.disabled === true) return null;
-    return query(collection(db, 'messages'), where('read', 'in', [true, false]), limit(500));
+    return query(collection(db, 'messages'), limit(500));
   }, [db, profile]);
   
   const deleteRequestsQuery = useMemoFirebase(() => {

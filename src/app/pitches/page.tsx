@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -30,13 +31,16 @@ export default function PitchesFeedPage() {
 
   // Optimized marketplace queries with filters to ensure compliance and performance
   const pitchesQuery = useMemoFirebase(() => {
-    if (!profile || (!isAdmin && !isInvestor) || profile.disabled === true) return null;
-    return query(collection(db, 'pitches'), where('fundingNeeded', '>=', 0));
+    // Strictly wait for authorized profile
+    if (!profile || profile.disabled === true || (!isAdmin && !isInvestor)) return null;
+    // Standard marketplace list query
+    return query(collection(db, 'pitches'));
   }, [db, profile, isAdmin, isInvestor]);
   const { data: pitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
 
   const investorsQuery = useMemoFirebase(() => {
-    if (!profile || (!isAdmin && !isStartup) || profile.disabled === true) return null;
+    // Strictly wait for authorized profile
+    if (!profile || profile.disabled === true || (!isAdmin && !isStartup)) return null;
     return query(collection(db, 'users'), where('role', '==', 'investor'), where('disabled', '==', false));
   }, [db, profile, isAdmin, isStartup]);
   const { data: investors, isLoading: loadingInvestors } = useCollection(investorsQuery);
@@ -295,7 +299,7 @@ export default function PitchesFeedPage() {
                         <p className="text-sm text-muted-foreground italic line-clamp-2 mb-4">&quot;{investor.bio || "Active investor looking for the next big disruption."}&quot;</p>
                         <div className="flex flex-wrap gap-1.5">
                           {investor.investmentInterest?.split(',').slice(0, 3).map((tag: string, i: number) => (
-                            <Badge key={i} variant="secondary" className="text-[9px] bg-muted/30">{tag.trim()}</Badge>
+                            <Badge key={i} variant="secondary" className="bg-muted/30">{tag.trim()}</Badge>
                           ))}
                         </div>
                       </CardContent>
