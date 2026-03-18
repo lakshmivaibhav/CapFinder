@@ -12,14 +12,25 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, User, Briefcase, Mail, Globe, ShieldCheck, TrendingUp, Sparkles, Clock, Circle } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import { useRouter } from 'next/navigation';
 
 export default function UserProfileViewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user: currentUser, profile: currentProfile, loading: authLoading } = useAuth();
   const db = useFirestore();
+  const router = useRouter();
   const [now, setNow] = useState(new Date());
 
-  const userRef = useMemoFirebase(() => doc(db, 'users', id), [db, id]);
+  useEffect(() => {
+    if (!authLoading && !currentUser) {
+      router.push('/login');
+    }
+  }, [currentUser, authLoading, router]);
+
+  const userRef = useMemoFirebase(() => {
+    if (!currentUser) return null;
+    return doc(db, 'users', id);
+  }, [db, id, currentUser]);
   const { data: targetProfile, isLoading: loadingProfile } = useDoc(userRef);
 
   useEffect(() => {
@@ -37,6 +48,8 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
       </div>
     );
   }
+
+  if (!currentUser) return null;
 
   if (!targetProfile) {
     return (
@@ -58,7 +71,7 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
   const isInvestor = targetProfile.role === 'investor';
 
   const lastActiveDate = targetProfile.lastActive?.toDate ? targetProfile.lastActive.toDate() : null;
-  const isOnline = lastActiveDate && (now.getTime() - lastActiveDate.getTime()) < 300000; // 5 minutes
+  const isOnline = lastActiveDate && (now.getTime() - lastActiveDate.getTime()) < 300000;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -69,7 +82,6 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
         </Link>
 
         <div className="grid md:grid-cols-3 gap-8">
-          {/* Sidebar / Identity Card */}
           <div className="md:col-span-1 space-y-6">
             <Card className="border-none shadow-sm text-center p-8 bg-white overflow-hidden">
               <div className="relative inline-block mx-auto mb-6">
@@ -131,7 +143,6 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
             </Card>
           </div>
 
-          {/* Main Profile Content */}
           <div className="md:col-span-2 space-y-6">
             <Card className="border-none shadow-sm bg-white overflow-hidden">
               <CardHeader className="bg-muted/30 border-b p-8">
@@ -193,20 +204,6 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
                 </div>
               </CardContent>
             </Card>
-
-            {isStartup && (
-              <Card className="border-none shadow-sm bg-white overflow-hidden">
-                <CardHeader className="p-8 pb-4">
-                  <CardTitle className="text-xl font-bold">Latest Ventures</CardTitle>
-                  <CardDescription>Active investment pitches posted by this founder</CardDescription>
-                </CardHeader>
-                <CardContent className="p-8 pt-2">
-                  <p className="text-sm text-muted-foreground italic">
-                    Visit the <Link href="/pitches" className="text-primary hover:underline">Marketplace</Link> to view all active pitches from {targetProfile.name}.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
           </div>
         </div>
       </main>

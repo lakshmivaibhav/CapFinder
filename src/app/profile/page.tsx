@@ -83,7 +83,6 @@ export default function ProfilePage() {
     try {
       const isInvestor = profile.role === 'investor';
       
-      // Check for active connections
       const interestsQuery = isInvestor 
         ? query(collection(db, 'interests'), where('investorId', '==', user.uid))
         : query(collection(db, 'interests'), where('startupOwnerId', '==', user.uid));
@@ -94,7 +93,7 @@ export default function ProfilePage() {
 
       const [interestsSnap, requestsSnap] = await Promise.all([
         getDocs(interestsQuery),
-        getDocs(requestsSnap)
+        getDocs(requestsQuery)
       ]);
 
       if (!interestsSnap.empty || !requestsSnap.empty) {
@@ -104,7 +103,6 @@ export default function ProfilePage() {
           description: "You have active connections. We've notified your partners to resolve these first."
         });
 
-        // Notify counterparts
         const snaps = [...interestsSnap.docs, ...requestsSnap.docs];
         snaps.forEach(d => {
           const data = d.data();
