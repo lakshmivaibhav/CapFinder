@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -18,11 +17,11 @@ export function NotificationCenter() {
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
+  // CRITICAL: Robust guard to prevent unauthorized list attempts.
+  // We only run the query if we have a valid UID and a profile that matches
+  // the 'isAuthorized()' requirement in security rules.
   const notificationsQuery = useMemoFirebase(() => {
-    // CRITICAL: Strictly guard the query to ensure the user is fully authorized.
-    // The 'notifications' security rules require isAuthorized() (profile document exists and disabled == false).
-    // Also, we MUST filter by userId to satisfy the identity-based read rule for list operations.
-    if (!user || !profile || !profile.role || profile.disabled === true) return null;
+    if (!user?.uid || !profile || profile.disabled === true) return null;
     
     return query(
       collection(db, 'notifications'),
@@ -30,7 +29,7 @@ export function NotificationCenter() {
       orderBy('timestamp', 'desc'),
       limit(50)
     );
-  }, [db, user, profile]);
+  }, [db, user?.uid, profile]);
 
   const { data: notifications, isLoading } = useCollection(notificationsQuery);
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
