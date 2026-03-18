@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -15,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 
 export default function ProfilePage() {
