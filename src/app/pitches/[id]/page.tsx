@@ -20,33 +20,42 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const { toast } = useToast();
   const [checking, setChecking] = useState(false);
 
-  const pitchRef = useMemoFirebase(() => doc(db, 'pitches', id), [db, id]);
+  // Critical: Guard the pitch reference with both authentication and profile readiness
+  const pitchRef = useMemoFirebase(() => {
+    if (!user || !profile || profile.disabled) return null;
+    return doc(db, 'pitches', id);
+  }, [db, id, user, profile]);
+
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
 
-  const ownerRef = useMemoFirebase(() => pitch ? doc(db, 'users', pitch.ownerId) : null, [db, pitch]);
+  const ownerRef = useMemoFirebase(() => {
+    if (!pitch || !user || !profile) return null;
+    return doc(db, 'users', pitch.ownerId);
+  }, [db, pitch, user, profile]);
+
   const { data: ownerProfile, isLoading: loadingOwner } = useDoc(ownerRef);
 
   const isInvestor = profile?.role === 'investor';
   const isOwner = user?.uid === pitch?.ownerId;
 
   const interestsQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor) return null;
+    if (!user || !profile || !isInvestor || !pitch) return null;
     return query(collection(db, 'interests'), where('investorId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, isInvestor, id]);
+  }, [db, user, profile, isInvestor, id, pitch]);
   const { data: interests } = useCollection(interestsQuery);
   const isInterested = interests && interests.length > 0;
 
   const favoritesQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor) return null;
+    if (!user || !profile || !isInvestor || !pitch) return null;
     return query(collection(db, 'favorites'), where('investorId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, isInvestor, id]);
+  }, [db, user, profile, isInvestor, id, pitch]);
   const { data: favorites } = useCollection(favoritesQuery);
   const isFavorited = favorites && favorites.length > 0;
 
   const contactRequestsQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor) return null;
+    if (!user || !profile || !isInvestor || !pitch) return null;
     return query(collection(db, 'contactRequests'), where('senderId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, isInvestor, id]);
+  }, [db, user, profile, isInvestor, id, pitch]);
   const { data: contactRequests } = useCollection(contactRequestsQuery);
   const contactRequest = contactRequests?.[0];
 
@@ -119,7 +128,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
     
     setChecking(true);
     try {
-      // 1. Check for active interests
       const interestsSnap = await getDocs(query(collection(db, 'interests'), where('pitchId', '==', pitch.id)));
       const requestsSnap = await getDocs(query(collection(db, 'contactRequests'), where('pitchId', '==', pitch.id)));
       const messagesSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
@@ -131,7 +139,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
           description: "This pitch has active connections. We've notified connected investors to resolve their interests."
         });
 
-        // Notify investors
         interestsSnap.docs.forEach(d => {
           const interestData = d.data();
           addDocumentNonBlocking(collection(db, 'notifications'), {
