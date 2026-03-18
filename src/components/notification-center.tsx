@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -18,10 +17,10 @@ export function NotificationCenter() {
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
-  // CRITICAL: Load notifications ONLY when the panel is open to avoid global unauthorized list queries.
+  // CRITICAL: Load notifications ONLY when the panel is open to avoid background permission errors.
+  // Rule requires isAuthorized() which checks for a verified profile.
   const notificationsQuery = useMemoFirebase(() => {
-    // Strictly wait for the panel to be open AND a verified profile to be loaded
-    if (!open || authLoading || !user?.uid || !profile || profile.disabled === true) return null;
+    if (!open || !user || !profile || profile.disabled === true) return null;
     
     return query(
       collection(db, 'notifications'),
@@ -29,7 +28,7 @@ export function NotificationCenter() {
       orderBy('timestamp', 'desc'),
       limit(50)
     );
-  }, [db, user?.uid, profile, authLoading, open]);
+  }, [db, user, profile, open]);
 
   const { data: notifications, isLoading } = useCollection(notificationsQuery);
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
@@ -64,7 +63,6 @@ export function NotificationCenter() {
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary transition-colors">
           <Bell className="w-5 h-5" />
-          {/* Badge is only visible if sheet was previously opened or if we have notifications */}
           {unreadCount > 0 && (
             <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-red-500 text-white border-white border-2 animate-in zoom-in duration-300">
               {unreadCount > 9 ? '9+' : unreadCount}

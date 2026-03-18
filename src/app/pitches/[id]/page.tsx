@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect } from 'react';
+import { use, useState } from 'react';
 import { doc, collection, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -8,7 +8,7 @@ import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, MessageSquare, TrendingUp, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ExternalLink, DollarSign, Building2, Trash2, AlertTriangle } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ExternalLink, DollarSign, Building2, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -19,18 +19,19 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const { toast } = useToast();
   const [checking, setChecking] = useState(false);
 
-  // Guard the pitch reference with basic authentication check to satisfy security rules
+  // CRITICAL: Pitch reference must be strictly guarded by auth to satisfy security rules
+  // Rule requires isAuthorized() which checks for a signed-in user with an active profile.
   const pitchRef = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !profile || profile.disabled === true) return null;
     return doc(db, 'pitches', id);
-  }, [db, id, user]);
+  }, [db, id, user, profile]);
 
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
 
   const ownerRef = useMemoFirebase(() => {
-    if (!pitch || !user) return null;
+    if (!pitch || !user || !profile || profile.disabled === true) return null;
     return doc(db, 'users', pitch.ownerId);
-  }, [db, pitch, user]);
+  }, [db, pitch, user, profile]);
 
   const { data: ownerProfile, isLoading: loadingOwner } = useDoc(ownerRef);
 
@@ -38,23 +39,23 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const isOwner = user?.uid === pitch?.ownerId;
 
   const interestsQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor || !pitch) return null;
+    if (!user || !isInvestor || !pitch || profile?.disabled === true) return null;
     return query(collection(db, 'interests'), where('investorId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, isInvestor, id, pitch]);
+  }, [db, user, isInvestor, id, pitch, profile]);
   const { data: interests } = useCollection(interestsQuery);
   const isInterested = interests && interests.length > 0;
 
   const favoritesQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor || !pitch) return null;
+    if (!user || !isInvestor || !pitch || profile?.disabled === true) return null;
     return query(collection(db, 'favorites'), where('investorId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, isInvestor, id, pitch]);
+  }, [db, user, isInvestor, id, pitch, profile]);
   const { data: favorites } = useCollection(favoritesQuery);
   const isFavorited = favorites && favorites.length > 0;
 
   const contactRequestsQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor || !pitch) return null;
+    if (!user || !isInvestor || !pitch || profile?.disabled === true) return null;
     return query(collection(db, 'contactRequests'), where('senderId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, isInvestor, id, pitch]);
+  }, [db, user, isInvestor, id, pitch, profile]);
   const { data: contactRequests } = useCollection(contactRequestsQuery);
   const contactRequest = contactRequests?.[0];
 

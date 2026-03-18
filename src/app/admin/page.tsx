@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, Users, MessageSquare, AlertTriangle, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours } from 'date-fns';
-import Link from 'next/link';
 
 export default function AdminDashboardPage() {
   const { user, profile, loading: authLoading } = useAuth();
