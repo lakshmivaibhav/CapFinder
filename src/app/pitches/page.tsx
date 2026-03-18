@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, where, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, where, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -28,7 +27,7 @@ export default function PitchesFeedPage() {
   const [industryFilter, setIndustryFilter] = useState('all');
 
   useEffect(() => {
-    const fetchPitches = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
         const q = query(collection(db, 'pitches'), orderBy('createdAt', 'desc'));
@@ -36,19 +35,20 @@ export default function PitchesFeedPage() {
         const fetchedPitches = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setPitches(fetchedPitches);
 
+        // Explicitly guard interest fetch with role check to avoid permission errors
         if (user && profile?.role === 'investor') {
           const interestQuery = query(collection(db, 'interests'), where('investorId', '==', user.uid));
           const interestSnap = await getDocs(interestQuery);
           setUserInterests(interestSnap.docs.map(doc => doc.data().pitchId));
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching marketplace data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPitches();
+    fetchData();
   }, [db, user, profile]);
 
   const industries = Array.from(new Set(pitches.map(p => p.industry))).filter(Boolean);
@@ -62,7 +62,7 @@ export default function PitchesFeedPage() {
   });
 
   const handleShowInterest = async (pitch: any) => {
-    if (!user || !profile) return;
+    if (!user || !profile || profile.role !== 'investor') return;
     if (userInterests.includes(pitch.id)) return;
 
     try {
@@ -71,7 +71,7 @@ export default function PitchesFeedPage() {
         investorId: user.uid,
         investorEmail: user.email,
         startupOwnerId: pitch.ownerId,
-        startupName: pitch.startupName, // Denormalized for dashboard convenience
+        startupName: pitch.startupName,
         timestamp: serverTimestamp(),
       });
       

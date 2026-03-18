@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, limit } from 'firebase/firestore';
@@ -18,9 +17,9 @@ export default function DashboardPage() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Memoized Queries
+  // Memoized Queries with explicit role guards to prevent permission errors
   const pitchesQuery = useMemoFirebase(() => {
-    if (!user || !profile) return null;
+    if (!user || !profile || !profile.role) return null;
     if (profile.role === 'startup') {
       return query(collection(db, 'pitches'), where('ownerId', '==', user.uid), orderBy('createdAt', 'desc'));
     }
@@ -28,11 +27,14 @@ export default function DashboardPage() {
   }, [db, user, profile]);
 
   const interestsQuery = useMemoFirebase(() => {
-    if (!user || !profile) return null;
+    if (!user || !profile || !profile.role) return null;
     if (profile.role === 'startup') {
       return query(collection(db, 'interests'), where('startupOwnerId', '==', user.uid), orderBy('timestamp', 'desc'));
     }
-    return query(collection(db, 'interests'), where('investorId', '==', user.uid), orderBy('timestamp', 'desc'));
+    if (profile.role === 'investor') {
+      return query(collection(db, 'interests'), where('investorId', '==', user.uid), orderBy('timestamp', 'desc'));
+    }
+    return null;
   }, [db, user, profile]);
 
   const { data: pitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
@@ -82,7 +84,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">My Role</p>
-                <p className="text-xl font-bold capitalize">{profile?.role}</p>
+                <p className="text-xl font-bold capitalize">{profile?.role || 'User'}</p>
               </div>
             </CardContent>
           </Card>

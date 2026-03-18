@@ -29,12 +29,9 @@ service cloud.firestore {
     }
 
     match /interests/{interestId} {
-      // Split list rules into separate statements. Firestore additive logic is more reliable 
-      // for the optimizer when queries filter by one specific field in a multi-field permission set.
-      allow list: if isSignedIn() && resource.data.investorId == request.auth.uid;
-      allow list: if isSignedIn() && resource.data.startupOwnerId == request.auth.uid;
-      
-      allow get: if isSignedIn() && (
+      // Unify read permissions to ensure Firestore queries with OR logic are correctly authorized.
+      // This covers both 'get' and 'list' operations.
+      allow read: if isSignedIn() && (
         resource.data.investorId == request.auth.uid || 
         resource.data.startupOwnerId == request.auth.uid
       );
