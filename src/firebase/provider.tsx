@@ -54,6 +54,7 @@ export const FirebaseContext = createContext<FirebaseContextState | undefined>(u
 
 /**
  * FirebaseProvider manages and provides Firebase services and user authentication state.
+ * It is now clean of any data-fetching logic or global collection subscriptions.
  */
 export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   children,

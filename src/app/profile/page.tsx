@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/tabs';
 import { format } from 'date-fns';
 
 export default function ProfilePage() {
@@ -42,8 +42,10 @@ export default function ProfilePage() {
     }
   }, [user, authLoading, router]);
 
-  // SAFE LOG QUERY: Strictly wait for verified profile AND include userId filter.
-  // This ensures that the query matches the identity-based read rule for non-administrative list operations.
+  /**
+   * SAFE LOG QUERY: Strictly wait for verified profile AND include userId filter.
+   * This ensures that the query matches the identity-based read rule for non-administrative list operations.
+   */
   const myLogsQuery = useMemoFirebase(() => {
     if (!user || !profile || profile.disabled === true) return null;
     return query(
@@ -53,6 +55,7 @@ export default function ProfilePage() {
       limit(50)
     );
   }, [db, user, profile]);
+  
   const { data: myLogs, isLoading: loadingLogs } = useCollection(myLogsQuery);
 
   useEffect(() => {
