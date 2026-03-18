@@ -46,8 +46,8 @@ export default function AdminDashboardPage() {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = userDoc.data();
         
-        // Ensure exact string match for 'admin'
-        if (userDoc.exists() && userData?.role === 'admin') {
+        // Ensure exact string match for 'admin' and that profile is synchronized
+        if (userDoc.exists() && userData?.role === 'admin' && !userData.disabled) {
           setIsVerifiedAdmin(true);
         } else {
           toast({
@@ -77,7 +77,7 @@ export default function AdminDashboardPage() {
     );
   }
 
-  if (!isVerifiedAdmin) return null;
+  if (!isVerifiedAdmin || !profile) return null;
 
   // Render the content component which only now initializes sensitive collection hooks
   return <AdminDashboardContent />;
@@ -88,22 +88,49 @@ export default function AdminDashboardPage() {
  * This component is only rendered after Phase 1 confirmation.
  */
 function AdminDashboardContent() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
   const [processingStale, setProcessingStale] = useState(false);
 
-  // Queries are initialized here, ensuring they ONLY run after authoritative verification
-  const usersQuery = useMemoFirebase(() => query(collection(db, 'users'), limit(500)), [db]);
-  const pitchesQuery = useMemoFirebase(() => query(collection(db, 'pitches'), limit(500)), [db]);
-  const requestsQuery = useMemoFirebase(() => query(collection(db, 'contactRequests'), limit(500)), [db]);
-  const messagesQuery = useMemoFirebase(() => query(collection(db, 'messages'), limit(500)), [db]);
+  // Queries are initialized here, ensuring they ONLY run after authoritative verification.
+  // All list queries are strictly guarded by profile existence to satisfy isAuthorized() rules.
+  const usersQuery = useMemoFirebase(() => {
+    if (!profile) return null;
+    return query(collection(db, 'users'), limit(500));
+  }, [db, profile]);
+
+  const pitchesQuery = useMemoFirebase(() => {
+    if (!profile) return null;
+    return query(collection(db, 'pitches'), limit(500));
+  }, [db, profile]);
+
+  const requestsQuery = useMemoFirebase(() => {
+    if (!profile) return null;
+    return query(collection(db, 'contactRequests'), limit(500));
+  }, [db, profile]);
+
+  const messagesQuery = useMemoFirebase(() => {
+    if (!profile) return null;
+    return query(collection(db, 'messages'), limit(500));
+  }, [db, profile]);
   
-  // Use a simpler query for logs and requests during initial stabilization
-  const logsQuery = useMemoFirebase(() => query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(100)), [db]);
+  // SAFE LOG QUERY: Strictly includes userId filter to match first path of security rules.
+  // Even for admins, this "safe query" avoids reliance on potentially slow rule-side get() calls.
+  const logsQuery = useMemoFirebase(() => {
+    if (!user || !profile) return null;
+    return query(
+      collection(db, 'logs'), 
+      where('userId', '==', user.uid),
+      orderBy('timestamp', 'desc'), 
+      limit(100)
+    );
+  }, [db, user, profile]);
   
-  // Simplified query to avoid immediate requirement for complex composite indexes if not yet created
-  const deleteRequestsQuery = useMemoFirebase(() => query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), limit(100)), [db]);
+  const deleteRequestsQuery = useMemoFirebase(() => {
+    if (!profile) return null;
+    return query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), limit(100));
+  }, [db, profile]);
 
   const { data: allUsers, isLoading: loadingUsers } = useCollection(usersQuery);
   const { data: allPitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
@@ -294,7 +321,7 @@ function AdminDashboardContent() {
               )}
             </TabsTrigger>
             <TabsTrigger value="logs" className="gap-2 py-2">
-              <ClipboardList className="w-4 h-4" /> Audit Logs
+              <ClipboardList className="w-4 h-4" /> My Audit
             </TabsTrigger>
           </TabsList>
 
@@ -565,22 +592,23 @@ function AdminDashboardContent() {
           <TabsContent value="logs">
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>System Audit Logs</CardTitle>
-                <CardDescription>Track all major platform activities and security events.</CardDescription>
+                <CardTitle>My Administrative Activity</CardTitle>
+                <CardDescription>Review your personal system interactions and security actions.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow>
                       <TableHead>Timestamp</TableHead>
-                      <TableHead>User</TableHead>
                       <TableHead>Action</TableHead>
                       <TableHead>Details</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingLogs ? (
-                      <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={3} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                    ) : allLogs?.length === 0 ? (
+                      <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground italic">No recent activity logs found.</TableCell></TableRow>
                     ) : allLogs?.map((log) => (
                       <TableRow key={log.id} className="hover:bg-muted/5 transition-colors">
                         <TableCell className="text-xs whitespace-nowrap font-mono text-muted-foreground">
@@ -588,9 +616,6 @@ function AdminDashboardContent() {
                             <Clock className="w-3 h-3" />
                             {log.timestamp?.toDate ? format(log.timestamp.toDate(), 'MMM d, HH:mm:ss') : 'Just now'}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-xs font-medium">
-                          {log.userId?.substring(0, 8)}...
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-[10px] uppercase font-bold bg-primary/5 text-primary border-primary/10">

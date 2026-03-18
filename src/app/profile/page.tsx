@@ -47,15 +47,15 @@ export default function ProfilePage() {
   // Fetch user's pitches for deletion management
   const myPitchesQuery = useMemoFirebase(() => {
     // Wait for profile to satisfy isAuthorized() rule
-    if (!user || !profile) return null;
+    if (!user || !profile || profile.disabled === true) return null;
     return query(collection(db, 'pitches'), where('ownerId', '==', user.uid));
   }, [db, user, profile]);
   const { data: myPitches, isLoading: loadingPitches } = useCollection(myPitchesQuery);
 
-  // Fetch user's personal logs for Activity History
+  // SAFE LOG QUERY: Strictly wait for verified profile AND include userId filter.
+  // This satisfies both the identity-based security rule and prevents premature rule evaluation errors.
   const myLogsQuery = useMemoFirebase(() => {
-    // CRITICAL: Must wait for both user AND profile to satisfy security rules (isAuthorized)
-    if (!user || !profile) return null;
+    if (!user || !profile || profile.disabled === true) return null;
     return query(
       collection(db, 'logs'), 
       where('userId', '==', user.uid),
