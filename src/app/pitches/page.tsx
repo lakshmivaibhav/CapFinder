@@ -24,11 +24,11 @@ export default function PitchesFeedPage() {
   const [industryFilter, setIndustryFilter] = useState('all');
   const [fundingFilter, setFundingFilter] = useState('all');
 
-  // Fetch all pitches
+  // Fetch all pitches - we fetch all and filter client-side for "keyword" flexibility
   const pitchesQuery = useMemoFirebase(() => query(collection(db, 'pitches')), [db]);
   const { data: pitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
 
-  // Fetch interests for current investor to prevent double-interest
+  // Fetch interests for current investor
   const interestsQuery = useMemoFirebase(() => {
     if (!user || profile?.role !== 'investor') return null;
     return query(collection(db, 'interests'), where('investorId', '==', user.uid));
@@ -56,8 +56,16 @@ export default function PitchesFeedPage() {
   const industries = Array.from(new Set(pitches?.map(p => p.industry) || [])).filter(Boolean);
 
   const filteredPitches = pitches?.filter(p => {
-    const matchesSearch = (p.startupName?.toLowerCase() || "").includes(search.toLowerCase());
+    const searchLower = search.toLowerCase();
+    
+    // Keyword search across multiple fields
+    const matchesSearch = 
+      (p.startupName?.toLowerCase() || "").includes(searchLower) ||
+      (p.description?.toLowerCase() || "").includes(searchLower) ||
+      (p.industry?.toLowerCase() || "").includes(searchLower);
+
     const matchesIndustry = industryFilter === 'all' || p.industry === industryFilter;
+    
     const fundingVal = parseFloat(p.fundingNeeded?.toString().replace(/,/g, '') || "0");
     const matchesFunding = fundingFilter === 'all' || (() => {
       if (fundingFilter === '0-100k') return fundingVal <= 100000;
@@ -122,7 +130,6 @@ export default function PitchesFeedPage() {
     const existing = contactRequests.find(r => r.pitchId === pitch.id);
     if (existing) return;
 
-    // Use a deterministic ID for security rules lookup: investorId_startupOwnerId_pitchId
     const requestId = `${user.uid}_${pitch.ownerId}_${pitch.id}`;
     
     setDocumentNonBlocking(doc(db, 'contactRequests', requestId), {
@@ -217,18 +224,18 @@ export default function PitchesFeedPage() {
             </p>
           </div>
 
-          <div className="p-6 bg-white rounded-2xl shadow-sm border space-y-4">
-            <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+          <div className="p-6 bg-white rounded-2xl shadow-sm border space-y-6">
+            <div className="flex items-center gap-2 text-sm font-bold text-primary uppercase tracking-widest">
               <Landmark className="w-4 h-4" />
-              Filter Opportunities
+              Advanced Opportunity Search
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-5 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input 
-                  placeholder="Search by startup name..." 
-                  className="pl-10 h-11 bg-muted/30 border-none"
+                  placeholder="Search by name, industry or keywords..." 
+                  className="pl-10 h-11 bg-muted/30 border-none focus-visible:ring-primary"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -241,7 +248,7 @@ export default function PitchesFeedPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Industries</SelectItem>
-                    {industries.map(ind => (
+                    {industries.sort().map(ind => (
                       <SelectItem key={ind as string} value={ind as string}>{ind as string}</SelectItem>
                     ))}
                   </SelectContent>
@@ -251,7 +258,7 @@ export default function PitchesFeedPage() {
               <div className="md:col-span-3">
                 <Select value={fundingFilter} onValueChange={setFundingFilter}>
                   <SelectTrigger className="h-11 bg-muted/30 border-none">
-                    <SelectValue placeholder="Funding Amount" />
+                    <SelectValue placeholder="Funding Goal" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Any Funding Amount</SelectItem>
@@ -267,9 +274,9 @@ export default function PitchesFeedPage() {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-11 w-full text-muted-foreground hover:text-primary transition-colors"
+                  className="h-11 w-full text-muted-foreground hover:text-primary transition-colors border-2 border-transparent hover:border-primary/10"
                   onClick={() => { setSearch(''); setIndustryFilter('all'); setFundingFilter('all'); }}
-                  title="Clear Filters"
+                  title="Reset Search"
                 >
                   <FilterX className="w-5 h-5" />
                 </Button>
@@ -280,50 +287,50 @@ export default function PitchesFeedPage() {
 
         {loadingPitches ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-64 w-full bg-muted animate-pulse rounded-2xl" />)}
+            {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-80 w-full bg-muted animate-pulse rounded-2xl" />)}
           </div>
         ) : filteredPitches.length > 0 ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in duration-500">
             {filteredPitches.map((pitch) => (
               <Card key={pitch.id} className="flex flex-col group hover:shadow-xl transition-all border-none shadow-sm overflow-hidden rounded-2xl bg-white relative">
                 <Link href={`/pitches/${pitch.id}`} className="absolute inset-0 z-0" />
                 <CardHeader className="space-y-4 relative z-10 pointer-events-none">
                   <div className="flex justify-between items-start pointer-events-auto">
-                    <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-3 py-1">
+                    <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-3 py-1 font-bold uppercase tracking-tighter text-[10px]">
                       {pitch.industry}
                     </Badge>
                     {profile?.role === 'investor' && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className={`h-8 w-8 rounded-full ${favoritePitchIds.includes(pitch.id) ? 'text-accent' : 'text-muted-foreground hover:text-accent'}`}
+                        className={`h-8 w-8 rounded-full shadow-sm bg-white/50 backdrop-blur-sm ${favoritePitchIds.includes(pitch.id) ? 'text-accent' : 'text-muted-foreground hover:text-accent'}`}
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleFavorite(pitch); }}
                       >
                         {favoritePitchIds.includes(pitch.id) ? <BookmarkCheck className="w-5 h-5 fill-current" /> : <Bookmark className="w-5 h-5" />}
                       </Button>
                     )}
                   </div>
-                  <CardTitle className="text-2xl font-bold group-hover:text-primary transition-colors">{pitch.startupName}</CardTitle>
+                  <CardTitle className="text-2xl font-bold group-hover:text-primary transition-colors leading-tight">{pitch.startupName}</CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1 space-y-6 relative z-10 pointer-events-none">
-                  <div className="text-muted-foreground text-sm line-clamp-4 leading-relaxed bg-muted/30 p-4 rounded-xl italic">
+                  <div className="text-muted-foreground text-sm line-clamp-3 leading-relaxed bg-muted/20 p-4 rounded-xl italic border-l-2 border-primary/10">
                     &quot;{pitch.description}&quot;
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1">
-                        <TrendingUp className="w-3 h-3" /> Target
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-black flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3 text-primary" /> Target
                       </p>
-                      <p className="text-lg font-bold text-primary">
+                      <p className="text-lg font-black text-primary">
                         ${typeof pitch.fundingNeeded === 'number' ? pitch.fundingNeeded.toLocaleString() : pitch.fundingNeeded}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1">
-                        <ArrowRight className="w-3 h-3" /> Details
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-black flex items-center gap-1">
+                        <ArrowRight className="w-3 h-3 text-accent" /> Opportunity
                       </p>
-                      <p className="text-sm font-bold flex items-center gap-1">Learn More <ArrowRight className="w-3 h-3" /></p>
+                      <p className="text-sm font-bold flex items-center gap-1 text-accent group-hover:translate-x-1 transition-transform">Details <ArrowRight className="w-3 h-3" /></p>
                     </div>
                   </div>
                 </CardContent>
@@ -331,14 +338,14 @@ export default function PitchesFeedPage() {
                   <div className="flex-1">{getContactButton(pitch)}</div>
                   {profile?.role === 'investor' && (
                     <Button 
-                      className={`flex-1 h-10 shadow-sm ${userInterests.includes(pitch.id) ? 'bg-green-600 hover:bg-green-600' : 'bg-primary'}`}
+                      className={`flex-1 h-10 shadow-md font-bold transition-all ${userInterests.includes(pitch.id) ? 'bg-green-600 hover:bg-green-600' : 'bg-primary hover:bg-primary/90'}`}
                       onClick={() => handleShowInterest(pitch)}
                       disabled={userInterests.includes(pitch.id)}
                     >
                       {userInterests.includes(pitch.id) ? (
-                        <>Interested <CheckCircle2 className="ml-2 w-4 h-4" /></>
+                        <><CheckCircle2 className="mr-2 w-4 h-4" /> Interested</>
                       ) : (
-                        <>Show Interest <Sparkles className="ml-2 w-4 h-4" /></>
+                        <><Sparkles className="mr-2 w-4 h-4" /> Show Interest</>
                       )}
                     </Button>
                   )}
@@ -347,11 +354,15 @@ export default function PitchesFeedPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-40 bg-white rounded-3xl shadow-sm border border-dashed">
-            <FilterX className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-            <h3 className="text-2xl font-bold mb-2">No matching startups</h3>
-            <p className="text-muted-foreground">Try broadening your search or adjusting your filters.</p>
-            <Button variant="link" onClick={() => { setSearch(''); setIndustryFilter('all'); setFundingFilter('all'); }} className="mt-4 text-primary">
+          <div className="text-center py-40 bg-white rounded-3xl shadow-sm border-2 border-dashed border-muted flex flex-col items-center">
+            <div className="w-20 h-20 bg-muted/20 rounded-full flex items-center justify-center mb-6">
+              <Search className="w-10 h-10 text-muted-foreground opacity-30" />
+            </div>
+            <h3 className="text-2xl font-bold mb-2">No results for your criteria</h3>
+            <p className="text-muted-foreground max-w-sm mx-auto mb-6">
+              Try adjusting your keywords or clearing filters to see more innovation opportunities.
+            </p>
+            <Button variant="outline" onClick={() => { setSearch(''); setIndustryFilter('all'); setFundingFilter('all'); }} className="text-primary border-primary/20 hover:bg-primary/5">
               Reset all filters
             </Button>
           </div>
