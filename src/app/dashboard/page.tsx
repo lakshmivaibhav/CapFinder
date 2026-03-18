@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Briefcase, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search } from 'lucide-react';
+import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Unified guards for queries to prevent permission errors
+  // Unified guards for queries
   const isStartup = profile?.role === 'startup';
   const isInvestor = profile?.role === 'investor';
 
@@ -62,8 +62,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
+    } else if (!authLoading && user && !profile) {
+      router.push('/onboarding');
     }
-  }, [user, authLoading, router]);
+  }, [user, profile, authLoading, router]);
 
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
   if (!user || !profile) return null;
@@ -76,18 +78,18 @@ export default function DashboardPage() {
         <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight">Welcome, {profile.name || user.email}</h1>
-            <p className="text-muted-foreground">Here's what's happening with your {profile.role} account today.</p>
+            <p className="text-muted-foreground">Logged in as <span className="font-bold text-primary capitalize">{profile.role}</span></p>
           </div>
           <div className="flex gap-3">
             {isStartup ? (
               <Link href="/pitches/new">
-                <Button className="h-11 px-6 shadow-md gap-2">
-                  <Plus className="w-5 h-5" /> New Pitch
+                <Button className="h-11 px-6 shadow-md gap-2 bg-primary">
+                  <Plus className="w-5 h-5" /> Create New Pitch
                 </Button>
               </Link>
             ) : (
               <Link href="/pitches">
-                <Button className="h-11 px-6 shadow-md gap-2">
+                <Button className="h-11 px-6 shadow-md gap-2 variant-outline">
                   <Search className="w-5 h-5" /> Browse Marketplace
                 </Button>
               </Link>
@@ -103,7 +105,7 @@ export default function DashboardPage() {
                 {isStartup ? <Megaphone className="w-6 h-6" /> : <LayoutGrid className="w-6 h-6" />}
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'My Pitches' : 'Market Opportunities'}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'My Live Pitches' : 'Market Pitches'}</p>
                 <p className="text-2xl font-bold">{isStartup ? (startupPitches?.length || 0) : (allPitches?.length || 0)}</p>
               </div>
             </CardContent>
@@ -114,7 +116,7 @@ export default function DashboardPage() {
                 <Users className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Total Interests' : 'My Interactions'}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Investor Leads' : 'My Interests'}</p>
                 <p className="text-2xl font-bold">{isStartup ? (startupInterests?.length || 0) : (investorInterests?.length || 0)}</p>
               </div>
             </CardContent>
@@ -125,14 +127,14 @@ export default function DashboardPage() {
                 <DollarSign className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Funding Goal' : 'Avg. Pitch Size'}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Total Goal' : 'Avg. Opportunity'}</p>
                 <p className="text-2xl font-bold">${isStartup ? (profile.fundingNeeded || '0') : '1.2M'}</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Tabbed Content */}
+        {/* Role-Based Tabbed Content */}
         <Tabs defaultValue="primary" className="space-y-6">
           <TabsList className="bg-muted/50 p-1">
             <TabsTrigger value="primary" className="px-6 py-2 gap-2">
@@ -145,7 +147,7 @@ export default function DashboardPage() {
                 </>
               ) : (
                 <>
-                  <LayoutGrid className="w-4 h-4" /> All Pitches
+                  <LayoutGrid className="w-4 h-4" /> Market Feed
                   <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary border-none">
                     {allPitches?.length || 0}
                   </Badge>
@@ -162,7 +164,7 @@ export default function DashboardPage() {
                 </>
               ) : (
                 <>
-                  <Star className="w-4 h-4" /> Interested Pitches
+                  <Star className="w-4 h-4" /> My Watchlist
                   <Badge variant="secondary" className="ml-2 bg-accent/10 text-accent border-none">
                     {investorInterests?.length || 0}
                   </Badge>
@@ -174,7 +176,7 @@ export default function DashboardPage() {
           <TabsContent value="primary">
             {isStartup ? (
               <div className="grid gap-6">
-                {(loadingStartupPitches) ? (
+                {loadingStartupPitches ? (
                   <div className="flex justify-center p-12"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>
                 ) : (startupPitches && startupPitches.length > 0) ? (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -208,20 +210,17 @@ export default function DashboardPage() {
                             <Calendar className="w-3 h-3" />
                             {pitch.createdAt?.toDate ? pitch.createdAt.toDate().toLocaleDateString() : 'Just now'}
                           </div>
-                          <Link href="/pitches" className="text-primary text-sm font-bold hover:underline inline-flex items-center gap-1">
-                            Details <ArrowRight className="w-3 h-3" />
-                          </Link>
                         </CardFooter>
                       </Card>
                     ))}
                   </div>
                 ) : (
-                  <Card className="border-dashed border-2 py-16 text-center">
+                  <Card className="border-dashed border-2 py-16 text-center bg-white">
                     <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-bold">No pitches yet</h3>
-                    <p className="text-muted-foreground mb-6">Start by creating your first startup pitch to attract investors.</p>
+                    <h3 className="text-lg font-bold">No pitches posted yet</h3>
+                    <p className="text-muted-foreground mb-6 max-w-sm mx-auto">Founders can create multiple pitches to showcase different products or ventures.</p>
                     <Link href="/pitches/new">
-                      <Button variant="outline">Create My First Pitch</Button>
+                      <Button variant="outline" className="border-primary text-primary hover:bg-primary/5">Create Your First Pitch</Button>
                     </Link>
                   </Card>
                 )}
@@ -301,8 +300,8 @@ export default function DashboardPage() {
                   ) : (
                     <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
                        <Users className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
-                       <h3 className="font-bold">No interests yet</h3>
-                       <p className="text-sm text-muted-foreground">Your pitches haven't received any investor interest yet. Try refining your description!</p>
+                       <h3 className="font-bold">No interest leads yet</h3>
+                       <p className="text-sm text-muted-foreground">Try refining your pitches or posting new ones to attract investors.</p>
                     </div>
                   )
                 ) : (
@@ -331,7 +330,7 @@ export default function DashboardPage() {
                           <CardFooter className="pt-0">
                             <Link href="/pitches" className="w-full">
                               <Button variant="ghost" className="w-full text-xs justify-between group-hover:bg-primary/5">
-                                View Pitch Details <ArrowRight className="w-3 h-3" />
+                                View Details <ArrowRight className="w-3 h-3" />
                               </Button>
                             </Link>
                           </CardFooter>
@@ -341,10 +340,10 @@ export default function DashboardPage() {
                   ) : (
                     <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
                        <Star className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
-                       <h3 className="font-bold">No marked interests</h3>
-                       <p className="text-sm text-muted-foreground">You haven't shown interest in any pitches yet. Start exploring the marketplace!</p>
+                       <h3 className="font-bold">Watchlist is empty</h3>
+                       <p className="text-sm text-muted-foreground">You haven't marked any pitches of interest yet.</p>
                        <Link href="/pitches">
-                         <Button variant="link" className="mt-2 text-primary">Browse Pitches</Button>
+                         <Button variant="link" className="mt-2 text-primary">Browse Marketplace</Button>
                        </Link>
                     </div>
                   )
