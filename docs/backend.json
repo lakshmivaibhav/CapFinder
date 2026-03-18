@@ -203,6 +203,21 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["senderId", "receiverId", "pitchId", "status", "timestamp"]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "A private message between an investor and a startup for a specific pitch.",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "pitchId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "receiverId", "pitchId", "text", "timestamp"]
     }
   },
   "auth": {
@@ -261,6 +276,16 @@
             "$ref": "#/backend/entities/ContactRequest"
           },
           "description": "Manages introduction requests between investors and startups."
+        }
+      },
+      {
+        "path": "/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Stores private messages between partners."
         }
       }
     ]

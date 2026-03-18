@@ -19,6 +19,13 @@ service cloud.firestore {
       return isSignedIn() && getProfile().role == role;
     }
 
+    function isContactAccepted(senderId, receiverId, pitchId) {
+      // Deterministic ID pattern: senderId_receiverId_pitchId
+      let reqId = senderId + "_" + receiverId + "_" + pitchId;
+      return exists(/databases/$(database)/documents/contactRequests/$(reqId)) && 
+             get(/databases/$(database)/documents/contactRequests/$(reqId)).data.status == 'accepted';
+    }
+
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isOwner(userId);
@@ -66,10 +73,20 @@ service cloud.firestore {
       );
       allow create: if isSignedIn() && hasRole('investor') && request.resource.data.senderId == request.auth.uid;
       allow update: if isSignedIn() && (
-        // Startups can update status (accept/reject)
         (resource.data.receiverId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
       );
       allow delete: if isSignedIn() && resource.data.senderId == request.auth.uid;
+    }
+
+    match /messages/{messageId} {
+      allow create: if isSignedIn() && 
+        request.resource.data.senderId == request.auth.uid &&
+        isContactAccepted(request.resource.data.senderId, request.resource.data.receiverId, request.resource.data.pitchId);
+      
+      allow read: if isSignedIn() && (
+        resource.data.senderId == request.auth.uid || 
+        resource.data.receiverId == request.auth.uid
+      );
     }
   }
 }

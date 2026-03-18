@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { collection, query, serverTimestamp, where, doc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -122,7 +122,10 @@ export default function PitchesFeedPage() {
     const existing = contactRequests.find(r => r.pitchId === pitch.id);
     if (existing) return;
 
-    addDocumentNonBlocking(collection(db, 'contactRequests'), {
+    // Use a deterministic ID for security rules lookup: investorId_startupOwnerId_pitchId
+    const requestId = `${user.uid}_${pitch.ownerId}_${pitch.id}`;
+    
+    setDocumentNonBlocking(doc(db, 'contactRequests', requestId), {
       senderId: user.uid,
       receiverId: pitch.ownerId,
       pitchId: pitch.id,
@@ -130,7 +133,7 @@ export default function PitchesFeedPage() {
       investorEmail: user.email,
       status: 'pending',
       timestamp: serverTimestamp(),
-    });
+    }, { merge: true });
 
     toast({
       title: "Contact Request Sent",
@@ -173,11 +176,18 @@ export default function PitchesFeedPage() {
 
     if (request.status === 'accepted') {
       return (
-        <Link href={`mailto:${pitch.contactEmail}`} className="flex-1">
-          <Button variant="outline" className="w-full h-10 border-green-500/20 bg-green-50 text-green-700 hover:bg-green-100">
-            <ShieldCheck className="mr-2 w-4 h-4 text-green-600" /> Send Email
-          </Button>
-        </Link>
+        <div className="flex-1 flex gap-2">
+          <Link href={`mailto:${pitch.contactEmail}`} className="flex-1">
+            <Button variant="outline" className="w-full h-10 border-green-500/20 bg-green-50 text-green-700 hover:bg-green-100">
+              <Mail className="mr-2 w-4 h-4 text-green-600" /> Email
+            </Button>
+          </Link>
+          <Link href="/messages" className="flex-1">
+            <Button variant="default" className="w-full h-10 bg-primary">
+              Chat
+            </Button>
+          </Link>
+        </div>
       );
     }
 

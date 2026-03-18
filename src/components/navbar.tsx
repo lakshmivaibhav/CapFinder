@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
-import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2 } from 'lucide-react';
+import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
@@ -25,6 +25,7 @@ export function Navbar() {
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { label: pathname === '/pitches' ? 'Marketplace' : 'Browse', href: '/pitches', icon: Search },
+    { label: 'Messages', href: '/messages', icon: MessageSquare },
     { label: 'Profile', href: '/profile', icon: User },
   ];
 
