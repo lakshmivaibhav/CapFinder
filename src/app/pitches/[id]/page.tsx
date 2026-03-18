@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import { doc, collection, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -19,21 +19,13 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const { toast } = useToast();
   const [checking, setChecking] = useState(false);
 
-  // CRITICAL: Pitch reference must be strictly guarded by auth to satisfy security rules
-  // Rule requires isAuthorized() which checks for a signed-in user with an active profile.
+  // Directly load the pitch by ID once auth is ready to ensure the page is never blocked unnecessarily
   const pitchRef = useMemoFirebase(() => {
-    if (!user || !profile || profile.disabled === true) return null;
+    if (!user || !profile) return null;
     return doc(db, 'pitches', id);
   }, [db, id, user, profile]);
 
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
-
-  const ownerRef = useMemoFirebase(() => {
-    if (!pitch || !user || !profile || profile.disabled === true) return null;
-    return doc(db, 'users', pitch.ownerId);
-  }, [db, pitch, user, profile]);
-
-  const { data: ownerProfile, isLoading: loadingOwner } = useDoc(ownerRef);
 
   const isInvestor = profile?.role === 'investor';
   const isOwner = user?.uid === pitch?.ownerId;
@@ -136,7 +128,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
         toast({
           variant: "destructive",
           title: "Deletion Blocked",
-          description: "This pitch has active connections. We've notified connected investors to resolve their interests."
+          description: "This pitch has active connections. We've notified connected investors to resolve their interests first."
         });
 
         interestsSnap.docs.forEach(d => {
@@ -297,30 +289,9 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
-                {loadingOwner ? (
-                  <div className="flex justify-center p-4"><Loader2 className="animate-spin w-6 h-6 text-muted-foreground" /></div>
-                ) : ownerProfile ? (
-                  <>
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center border-2 border-primary/10 overflow-hidden shrink-0">
-                        <User className="w-8 h-8 text-primary/40" />
-                      </div>
-                      <div className="space-y-0.5 min-w-0">
-                        <Link href={`/profile/${pitch.ownerId}`} className="group block">
-                          <h4 className="font-black text-lg text-foreground truncate group-hover:text-primary transition-colors">{ownerProfile.name || 'Founder'}</h4>
-                        </Link>
-                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">{ownerProfile.company || 'Organization'}</p>
-                      </div>
-                    </div>
-                    <Link href={`/profile/${pitch.ownerId}`} className="w-full block">
-                      <Button variant="outline" className="w-full gap-2 text-xs font-black uppercase tracking-widest">
-                        Professional Profile <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    </Link>
-                  </>
-                ) : (
-                  <div className="text-center py-6 text-sm text-muted-foreground italic">Profile is private.</div>
-                )}
+                <p className="text-sm text-muted-foreground italic">
+                  Information regarding the founder is available in the <Link href="/pitches" className="text-primary hover:underline font-bold">Marketplace</Link>.
+                </p>
               </CardContent>
             </Card>
           </div>
