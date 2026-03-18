@@ -3,16 +3,16 @@
 
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, limit, doc } from 'firebase/firestore';
+import { collection, query, limit, doc, getDoc } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, User, Megaphone, Inbox, MessageSquare, ShieldAlert, AlertTriangle, UserX, UserCheck } from 'lucide-react';
+import { Loader2, Trash2, User, Megaphone, Inbox, MessageSquare, ShieldAlert, AlertTriangle, UserX, UserCheck, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -23,19 +23,62 @@ export default function AdminDashboardPage() {
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
+  
+  const [verifying, setVerifying] = useState(true);
+  const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
 
-  const isAdmin = profile?.role === 'admin';
-
+  // Mandatory Firestore role check on every page load
   useEffect(() => {
-    if (!authLoading && (!user || profile?.role !== 'admin')) {
-      router.push('/dashboard');
-    }
-  }, [user, profile, authLoading, router]);
+    async function verifyAdminStatus() {
+      if (authLoading) return;
+      
+      if (!user) {
+        router.push('/login');
+        return;
+      }
 
-  const usersQuery = useMemoFirebase(() => query(collection(db, 'users'), limit(100)), [db]);
-  const pitchesQuery = useMemoFirebase(() => query(collection(db, 'pitches'), limit(100)), [db]);
-  const requestsQuery = useMemoFirebase(() => query(collection(db, 'contactRequests'), limit(100)), [db]);
-  const messagesQuery = useMemoFirebase(() => query(collection(db, 'messages'), limit(100)), [db]);
+      try {
+        // Fetch fresh document from Firestore to verify role
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+        
+        if (userDoc.exists() && userData?.role === 'admin') {
+          setIsVerifiedAdmin(true);
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Access Denied",
+            description: "You do not have administrative privileges."
+          });
+          router.push('/dashboard');
+        }
+      } catch (error) {
+        router.push('/dashboard');
+      } finally {
+        setVerifying(false);
+      }
+    }
+
+    verifyAdminStatus();
+  }, [user, authLoading, db, router, toast]);
+
+  // Queries only activate if verification passes
+  const usersQuery = useMemoFirebase(() => 
+    isVerifiedAdmin ? query(collection(db, 'users'), limit(100)) : null, 
+    [db, isVerifiedAdmin]
+  );
+  const pitchesQuery = useMemoFirebase(() => 
+    isVerifiedAdmin ? query(collection(db, 'pitches'), limit(100)) : null, 
+    [db, isVerifiedAdmin]
+  );
+  const requestsQuery = useMemoFirebase(() => 
+    isVerifiedAdmin ? query(collection(db, 'contactRequests'), limit(100)) : null, 
+    [db, isVerifiedAdmin]
+  );
+  const messagesQuery = useMemoFirebase(() => 
+    isVerifiedAdmin ? query(collection(db, 'messages'), limit(100)) : null, 
+    [db, isVerifiedAdmin]
+  );
 
   const { data: allUsers, isLoading: loadingUsers } = useCollection(usersQuery);
   const { data: allPitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
@@ -72,15 +115,16 @@ export default function AdminDashboardPage() {
     });
   };
 
-  if (authLoading || (user && !profile)) {
+  if (authLoading || verifying) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background space-y-4">
         <Loader2 className="animate-spin w-12 h-12 text-primary" />
+        <p className="text-sm font-medium text-muted-foreground animate-pulse">Verifying Security Credentials...</p>
       </div>
     );
   }
 
-  if (!isAdmin) return null;
+  if (!isVerifiedAdmin) return null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -95,8 +139,8 @@ export default function AdminDashboardPage() {
             </h1>
             <p className="text-muted-foreground">Global oversight and platform management.</p>
           </div>
-          <div className="flex items-center gap-2 bg-destructive/10 text-destructive px-4 py-2 rounded-lg border border-destructive/20 font-bold text-sm">
-            <AlertTriangle className="w-4 h-4" /> High Privilege Access
+          <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border border-emerald-200 font-bold text-xs">
+            <ShieldCheck className="w-4 h-4" /> Security Verified Session
           </div>
         </div>
 
@@ -117,7 +161,7 @@ export default function AdminDashboardPage() {
           </TabsList>
 
           <TabsContent value="users">
-            <Card className="border-none shadow-sm overflow-hidden">
+            <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
                 <CardTitle>Global User Directory</CardTitle>
                 <CardDescription>View and manage all registered accounts.</CardDescription>
@@ -198,7 +242,7 @@ export default function AdminDashboardPage() {
           </TabsContent>
 
           <TabsContent value="pitches">
-            <Card className="border-none shadow-sm overflow-hidden">
+            <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
                 <CardTitle>Investment Marketplace Pitches</CardTitle>
                 <CardDescription>Monitor all active startup proposals.</CardDescription>
@@ -244,7 +288,7 @@ export default function AdminDashboardPage() {
           </TabsContent>
 
           <TabsContent value="requests">
-            <Card className="border-none shadow-sm overflow-hidden">
+            <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
                 <CardTitle>Contact Requests Log</CardTitle>
                 <CardDescription>Oversight of platform connections and networking activity.</CardDescription>
@@ -288,7 +332,7 @@ export default function AdminDashboardPage() {
           </TabsContent>
 
           <TabsContent value="messages">
-            <Card className="border-none shadow-sm overflow-hidden">
+            <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
                 <CardTitle>System Messages Log</CardTitle>
                 <CardDescription>Compliance oversight of private platform communications.</CardDescription>
