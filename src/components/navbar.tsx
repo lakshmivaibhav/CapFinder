@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -9,7 +8,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { auth as firebaseAuth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { collection, query, where } from 'firebase/firestore';
-import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, MessageSquare } from 'lucide-react';
+import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, MessageSquare, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -37,11 +36,25 @@ export function Navbar() {
   const { data: unreadMessages } = useCollection(unreadMessagesQuery);
   const unreadCount = unreadMessages?.length || 0;
 
+  // Fetch pending requests count
+  const pendingRequestsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(db, 'contactRequests'),
+      where('receiverId', '==', user.uid),
+      where('status', '==', 'pending')
+    );
+  }, [db, user]);
+
+  const { data: pendingRequests } = useCollection(pendingRequestsQuery);
+  const requestCount = pendingRequests?.length || 0;
+
   if (!user) return null;
 
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { label: pathname === '/pitches' ? 'Marketplace' : 'Browse', href: '/pitches', icon: Search },
+    { label: 'Requests', href: '/requests', icon: Inbox, badge: requestCount, show: profile?.role === 'startup' },
     { label: 'Messages', href: '/messages', icon: MessageSquare, badge: unreadCount },
     { label: 'Profile', href: '/profile', icon: User },
   ];
@@ -57,7 +70,7 @@ export function Navbar() {
         </Link>
 
         <div className="hidden md:flex items-center gap-1">
-          {navItems.map((item) => (
+          {navItems.filter(item => item.show !== false).map((item) => (
             <Link key={item.href} href={item.href}>
               <Button
                 variant="ghost"
