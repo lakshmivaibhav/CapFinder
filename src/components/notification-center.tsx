@@ -17,7 +17,7 @@ export function NotificationCenter() {
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
-  // Strictly identities-filtered query to comply with security rules and satisfy permissions.
+  // Strictly identity-filtered query to comply with security rules.
   // The query only runs when the panel is opened and the user is authenticated.
   const notificationsQuery = useMemoFirebase(() => {
     if (!open || !user?.uid) return null;
