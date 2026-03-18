@@ -105,12 +105,16 @@ export default function AdminDashboardPage() {
     });
   };
 
-  const handleChangeRole = (userId: string, newRole: string) => {
-    updateDocumentNonBlocking(doc(db, 'users', userId), { role: newRole });
-    toast({ 
-      title: "Role Updated", 
-      description: `User role has been changed to ${newRole}.` 
-    });
+  const handleChangeRole = (userId: string, userEmail: string, currentRole: string, newRole: string) => {
+    if (currentRole === newRole) return;
+
+    if (confirm(`Security Confirmation: Are you sure you want to change the role for ${userEmail} to "${newRole.toUpperCase()}"? This will immediately modify their platform permissions and access levels.`)) {
+      updateDocumentNonBlocking(doc(db, 'users', userId), { role: newRole });
+      toast({ 
+        title: "Role Updated", 
+        description: `User ${userEmail} has been assigned the ${newRole} role.` 
+      });
+    }
   };
 
   if (authLoading || verifying) {
@@ -188,8 +192,8 @@ export default function AdminDashboardPage() {
                         </TableCell>
                         <TableCell>
                           <Select 
-                            defaultValue={u.role || 'startup'} 
-                            onValueChange={(val) => handleChangeRole(u.id, val)}
+                            value={u.role || 'startup'} 
+                            onValueChange={(val) => handleChangeRole(u.id, u.email, u.role || 'startup', val)}
                           >
                             <SelectTrigger className="h-9 w-32 bg-white border-primary/20 text-xs font-semibold focus:ring-primary">
                               <SelectValue />
