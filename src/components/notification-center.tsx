@@ -13,12 +13,12 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 export function NotificationCenter() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
-  // Robustly defer the query until the panel is opened and the user UID is verified.
-  // Use a strictly identity-filtered query to comply with security rules.
+  // Strictly identities-filtered query to comply with security rules and satisfy permissions.
+  // The query only runs when the panel is opened and the user is authenticated.
   const notificationsQuery = useMemoFirebase(() => {
     if (!open || !user?.uid) return null;
     
