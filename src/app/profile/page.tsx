@@ -10,8 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, ArrowLeft, Save, User } from 'lucide-react';
+import { Loader2, Save, User, ArrowLeft, Camera, Briefcase, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Navbar } from '@/components/navbar';
 import Link from 'next/link';
 
 export default function ProfilePage() {
@@ -63,88 +64,132 @@ export default function ProfilePage() {
   if (!user) { router.push('/login'); return null; }
 
   return (
-    <div className="max-w-3xl mx-auto py-10 px-6 space-y-6">
-      <Link href="/dashboard" className="flex items-center gap-2 text-primary font-medium hover:underline">
-        <ArrowLeft className="w-4 h-4" /> Back to Dashboard
-      </Link>
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navbar />
 
-      <Card className="shadow-lg">
-        <CardHeader className="border-b bg-muted/30">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-inner">
-              <User className="text-white w-8 h-8" />
-            </div>
-            <div>
-              <CardTitle className="text-2xl">User Profile</CardTitle>
-              <CardDescription>Role: <span className="capitalize font-semibold text-primary">{profile?.role}</span></CardDescription>
-            </div>
+      <main className="max-w-4xl mx-auto py-12 px-6 w-full space-y-8">
+        <div className="flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+          </Link>
+          <Badge variant="secondary" className="px-3 py-1 capitalize bg-primary/10 text-primary font-bold">
+            {profile?.role} Account
+          </Badge>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-1 space-y-6">
+            <Card className="border-none shadow-sm text-center p-6 bg-white">
+              <div className="relative inline-block mx-auto mb-4">
+                <div className="w-32 h-32 bg-primary/5 rounded-3xl flex items-center justify-center border-2 border-primary/10 shadow-inner">
+                  <User className="text-primary w-16 h-16" />
+                </div>
+                <Button size="icon" variant="secondary" className="absolute -bottom-2 -right-2 rounded-full h-8 w-8 shadow-md">
+                  <Camera className="w-4 h-4" />
+                </Button>
+              </div>
+              <h2 className="text-xl font-bold">{formData.name || 'Anonymous User'}</h2>
+              <p className="text-sm text-muted-foreground mb-4">{user.email}</p>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
+                  <Briefcase className="w-3 h-3" />
+                  {formData.company || 'No Company'}
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center">
+                  <Mail className="w-3 h-3" />
+                  Verified Investor
+                </div>
+              </div>
+            </Card>
           </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          <form onSubmit={handleSave} className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input 
-                  id="name" 
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="John Doe"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="company">Company Name</Label>
-                <Input 
-                  id="company" 
-                  value={formData.company}
-                  onChange={(e) => setFormData({...formData, company: e.target.value})}
-                  placeholder="Acme Inc."
-                />
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="bio">Professional Bio</Label>
-              <Textarea 
-                id="bio" 
-                className="min-h-[120px]"
-                value={formData.bio}
-                onChange={(e) => setFormData({...formData, bio: e.target.value})}
-                placeholder="Tell others about yourself or your startup mission..."
-              />
-            </div>
+          <div className="md:col-span-2">
+            <Card className="border-none shadow-sm bg-white overflow-hidden">
+              <CardHeader className="bg-muted/30 border-b p-8">
+                <CardTitle className="text-2xl font-bold">Profile Settings</CardTitle>
+                <CardDescription>Update your professional information seen by other users.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8">
+                <form onSubmit={handleSave} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Display Name</Label>
+                      <Input 
+                        id="name" 
+                        value={formData.name}
+                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        placeholder="John Doe"
+                        className="h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="company">Organization</Label>
+                      <Input 
+                        id="company" 
+                        value={formData.company}
+                        onChange={(e) => setFormData({...formData, company: e.target.value})}
+                        placeholder="Innovate Ventures"
+                        className="h-11"
+                      />
+                    </div>
+                  </div>
 
-            {profile?.role === 'startup' && (
-              <div className="space-y-2">
-                <Label htmlFor="fundingNeeded">Target Funding Amount ($)</Label>
-                <Input 
-                  id="fundingNeeded" 
-                  value={formData.fundingNeeded}
-                  onChange={(e) => setFormData({...formData, fundingNeeded: e.target.value})}
-                  placeholder="e.g. 500,000"
-                />
-              </div>
-            )}
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">About Me</Label>
+                    <Textarea 
+                      id="bio" 
+                      className="min-h-[140px] resize-none"
+                      value={formData.bio}
+                      onChange={(e) => setFormData({...formData, bio: e.target.value})}
+                      placeholder="Share your background or startup vision..."
+                    />
+                  </div>
 
-            {profile?.role === 'investor' && (
-              <div className="space-y-2">
-                <Label htmlFor="investmentInterest">Investment Interests</Label>
-                <Input 
-                  id="investmentInterest" 
-                  value={formData.investmentInterest}
-                  onChange={(e) => setFormData({...formData, investmentInterest: e.target.value})}
-                  placeholder="e.g. AI, Clean Energy, Fintech"
-                />
-              </div>
-            )}
+                  {profile?.role === 'startup' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="fundingNeeded">Target Funding ($)</Label>
+                      <Input 
+                        id="fundingNeeded" 
+                        type="text"
+                        value={formData.fundingNeeded}
+                        onChange={(e) => setFormData({...formData, fundingNeeded: e.target.value})}
+                        placeholder="e.g. 1.5M"
+                        className="h-11 font-mono"
+                      />
+                    </div>
+                  )}
 
-            <Button type="submit" className="w-full h-12 text-lg bg-primary" disabled={saving}>
-              {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 w-5 h-5" />}
-              Save Profile
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+                  {profile?.role === 'investor' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="investmentInterest">Interests (Tags)</Label>
+                      <Input 
+                        id="investmentInterest" 
+                        value={formData.investmentInterest}
+                        onChange={(e) => setFormData({...formData, investmentInterest: e.target.value})}
+                        placeholder="AI, SaaS, BioTech"
+                        className="h-11"
+                      />
+                    </div>
+                  )}
+
+                  <Button type="submit" className="w-full h-12 shadow-md bg-primary hover:bg-primary/90" disabled={saving}>
+                    {saving ? <Loader2 className="animate-spin mr-2" /> : <Save className="mr-2 w-5 h-5" />}
+                    Save Profile Changes
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function Badge({ children, variant, className }: { children: React.ReactNode, variant?: string, className?: string }) {
+  return (
+    <div className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2", className)}>
+      {children}
     </div>
   );
 }

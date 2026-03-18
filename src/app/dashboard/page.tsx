@@ -4,13 +4,13 @@ import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { auth, db } from '@/lib/firebase';
-import { signOut } from 'firebase/auth';
+import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, TrendingUp, Plus, User, LogOut, Search, Megaphone, Calendar } from 'lucide-react';
+import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Briefcase, Users, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Navbar } from '@/components/navbar';
 
 export default function DashboardPage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -33,8 +33,7 @@ export default function DashboardPage() {
         if (profile.role === 'startup') {
           q = query(collection(db, 'pitches'), where('ownerId', '==', user.uid), orderBy('createdAt', 'desc'));
         } else {
-          // Investors see recently added pitches
-          q = query(collection(db, 'pitches'), orderBy('createdAt', 'desc'), limit(10));
+          q = query(collection(db, 'pitches'), orderBy('createdAt', 'desc'), limit(5));
         }
         const querySnapshot = await getDocs(q);
         const fetchedPitches = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -49,95 +48,118 @@ export default function DashboardPage() {
     if (user && profile) fetchPitches();
   }, [user, profile]);
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/');
-  };
-
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
   if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="px-6 h-20 flex items-center justify-between border-b bg-white shadow-sm">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-            <TrendingUp className="text-white w-6 h-6" />
-          </div>
-          <span className="text-2xl font-bold text-primary hidden sm:inline">CapFinder</span>
-        </Link>
-        <div className="flex items-center gap-4">
-          <Link href="/profile">
-            <Button variant="ghost" className="gap-2">
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Profile</span>
-            </Button>
-          </Link>
-          <Button variant="ghost" className="gap-2 text-destructive hover:text-destructive" onClick={handleLogout}>
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </Button>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full">
-        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Welcome, {profile?.name || user.email}</h1>
-            <p className="text-muted-foreground">Here is what is happening with your {profile?.role} account.</p>
+        <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">Welcome back, {profile?.name || user.email}</p>
           </div>
-          {profile?.role === 'startup' && (
-            <Link href="/pitches/new">
-              <Button className="bg-primary h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all">
-                <Plus className="mr-2 w-5 h-5" /> Post New Pitch
-              </Button>
+          <div className="flex gap-3">
+            {profile?.role === 'startup' && (
+              <Link href="/pitches/new">
+                <Button className="h-11 px-6 shadow-md">
+                  <Plus className="mr-2 w-5 h-5" /> Create Pitch
+                </Button>
+              </Link>
+            )}
+            <Link href="/profile">
+              <Button variant="outline" className="h-11 px-6">Edit Profile</Button>
             </Link>
-          )}
-          {profile?.role === 'investor' && (
-            <Link href="/pitches">
-              <Button className="bg-accent text-white h-12 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all">
-                <Search className="mr-2 w-5 h-5" /> Explore All Pitches
-              </Button>
-            </Link>
-          )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          <Card className="border-none shadow-sm">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                <Briefcase className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">My Role</p>
+                <p className="text-xl font-bold capitalize">{profile?.role}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-sm">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600">
+                <Megaphone className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Active Pitches</p>
+                <p className="text-xl font-bold">{pitches.length}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-sm">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
+                <Users className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Connections</p>
+                <p className="text-xl font-bold">12</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-sm">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
+                <DollarSign className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Target Capital</p>
+                <p className="text-xl font-bold">${profile?.fundingNeeded || '0'}</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <Megaphone className="w-5 h-5 text-primary" />
-                {profile?.role === 'startup' ? "Your Pitches" : "Recent Opportunities"}
+              <h2 className="text-xl font-bold">
+                {profile?.role === 'startup' ? "Recent Pitches" : "Latest Opportunities"}
               </h2>
+              <Link href="/pitches" className="text-sm text-primary font-medium hover:underline flex items-center gap-1">
+                View all <ArrowRight className="w-4 h-4" />
+              </Link>
             </div>
 
             {loadingPitches ? (
-              <div className="grid gap-4">
+              <div className="space-y-4">
                 {[1, 2, 3].map(i => <div key={i} className="h-32 w-full bg-muted animate-pulse rounded-xl" />)}
               </div>
             ) : pitches.length > 0 ? (
-              <div className="grid gap-4">
+              <div className="space-y-4">
                 {pitches.map((pitch) => (
-                  <Card key={pitch.id} className="hover:shadow-md transition-all border-l-4 border-l-primary overflow-hidden">
-                    <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+                  <Card key={pitch.id} className="group hover:shadow-md transition-all overflow-hidden border-none shadow-sm">
+                    <CardHeader className="flex flex-row items-start justify-between pb-2">
                       <div>
-                        <CardTitle className="text-lg font-bold">{pitch.startupName}</CardTitle>
+                        <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">{pitch.startupName}</CardTitle>
                         <CardDescription>{pitch.industry}</CardDescription>
                       </div>
-                      <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
-                        ${pitch.fundingNeeded} Needed
+                      <Badge variant="secondary" className="bg-primary/5 text-primary">
+                        ${pitch.fundingNeeded}
                       </Badge>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm line-clamp-2 text-muted-foreground">{pitch.description}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{pitch.description}</p>
                     </CardContent>
                     <CardFooter className="pt-0 flex justify-between items-center text-xs text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        {pitch.createdAt?.toDate ? pitch.createdAt.toDate().toLocaleDateString() : 'Just now'}
+                        {pitch.createdAt?.toDate ? pitch.createdAt.toDate().toLocaleDateString() : 'Recent'}
                       </div>
-                      <Link href={`/pitches/${pitch.id}`} className="text-primary font-semibold hover:underline">
-                        View Details
+                      <Link href={`/pitches`} className="text-primary font-semibold hover:underline">
+                        Details
                       </Link>
                     </CardFooter>
                   </Card>
@@ -164,47 +186,39 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-6">
-            <h2 className="text-xl font-bold">Quick Insights</h2>
-            <Card className="bg-primary text-white overflow-hidden relative">
-              <div className="absolute right-[-20px] top-[-20px] w-32 h-32 bg-white/10 rounded-full" />
+            <h2 className="text-xl font-bold">Recommended for You</h2>
+            <Card className="border-none shadow-sm bg-primary text-white">
               <CardHeader>
-                <CardTitle className="text-lg">Network Stats</CardTitle>
-                <CardDescription className="text-white/70">Performance across CapFinder</CardDescription>
+                <CardTitle className="text-lg">Pro Tip</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex justify-between items-center border-b border-white/20 pb-2">
-                  <span>Views</span>
-                  <span className="text-xl font-bold">128</span>
-                </div>
-                <div className="flex justify-between items-center border-b border-white/20 pb-2">
-                  <span>Inquiries</span>
-                  <span className="text-xl font-bold">12</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Trust Score</span>
-                  <span className="text-xl font-bold">98%</span>
-                </div>
+              <CardContent>
+                <p className="text-sm text-primary-foreground/90 leading-relaxed">
+                  Keeping your pitch description concise and problem-focused increases investor engagement by up to 40%. Use our AI assistant to refine your message!
+                </p>
+                <Link href="/pitches/new">
+                  <Button variant="secondary" className="w-full mt-4 bg-white text-primary hover:bg-white/90">
+                    Try AI Refiner
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-none shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Profile Status</CardTitle>
+                <CardTitle className="text-lg">Network Activity</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Completion</span>
-                  <span className="font-medium text-green-600">85%</span>
-                </div>
-                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-green-500 rounded-full" style={{ width: '85%' }} />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Complete your profile to increase visibility to {profile?.role === 'startup' ? 'investors' : 'founders'}.
-                </p>
-                <Link href="/profile">
-                  <Button variant="outline" className="w-full mt-2">Edit Profile</Button>
-                </Link>
+                {[1, 2].map(i => (
+                  <div key={i} className="flex gap-3 items-center">
+                    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                      <Users className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div className="text-sm">
+                      <p className="font-medium">Investor viewed your pitch</p>
+                      <p className="text-xs text-muted-foreground">2 hours ago</p>
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </div>
