@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -203,10 +202,10 @@ export default function DashboardPage() {
         <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight">Welcome, {profile.name || user.email}</h1>
-            <p className="text-muted-foreground flex items-center gap-2">
+            <div className="text-muted-foreground flex items-center gap-2 text-sm">
               Dashboard for <span className="font-bold text-primary capitalize">{profile.role}</span>
               {isAdmin && <Badge className="bg-destructive hover:bg-destructive/90 text-white border-none">System Admin</Badge>}
-            </p>
+            </div>
           </div>
           <div className="flex gap-3">
             {isStartup && (
