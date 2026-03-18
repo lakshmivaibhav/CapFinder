@@ -108,11 +108,17 @@ export default function AdminDashboardPage() {
   const handleChangeRole = (userId: string, userEmail: string, currentRole: string, newRole: string) => {
     if (currentRole === newRole) return;
 
-    if (confirm(`Security Confirmation: Are you sure you want to change the role for ${userEmail} to "${newRole.toUpperCase()}"? This will immediately modify their platform permissions and access levels.`)) {
-      updateDocumentNonBlocking(doc(db, 'users', userId), { role: newRole });
+    const confirmationMessage = `SECURITY CONFIRMATION:\n\nAre you sure you want to change the role for ${userEmail} from "${currentRole.toUpperCase()}" to "${newRole.toUpperCase()}"?\n\nThis will immediately modify their platform permissions, access levels, and dashboard interface.`;
+
+    if (confirm(confirmationMessage)) {
+      updateDocumentNonBlocking(doc(db, 'users', userId), { 
+        role: newRole,
+        updatedAt: new Date()
+      });
+      
       toast({ 
-        title: "Role Updated", 
-        description: `User ${userEmail} has been assigned the ${newRole} role.` 
+        title: "Role Updated Successfully", 
+        description: `${userEmail} is now a platform ${newRole}.` 
       });
     }
   };
@@ -166,7 +172,7 @@ export default function AdminDashboardPage() {
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
                 <CardTitle>User Directory & Role Control</CardTitle>
-                <CardDescription>Assign roles and manage account status for all platform members.</CardDescription>
+                <CardDescription>Assign roles and manage account status for all platform members. All role changes require manual confirmation.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
