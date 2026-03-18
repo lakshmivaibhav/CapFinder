@@ -108,21 +108,6 @@ function AdminDashboardContent() {
     return query(collection(db, 'messages'), limit(500));
   }, [db, profile]);
   
-  /**
-   * SAFE LOG QUERY: Strictly includes userId filter to match identity-based security rules.
-   * Even as an admin, to view personal logs or list logs under the current rules, we use the filter
-   * to satisfy the 'request.query.filters.userId == request.auth.uid' condition in firestore.rules.
-   */
-  const logsQuery = useMemoFirebase(() => {
-    if (!user || !profile || profile.role !== 'admin' || profile.disabled === true) return null;
-    return query(
-      collection(db, 'logs'), 
-      where('userId', '==', user.uid),
-      orderBy('timestamp', 'desc'), 
-      limit(100)
-    );
-  }, [db, user, profile]);
-  
   const deleteRequestsQuery = useMemoFirebase(() => {
     if (!profile || profile.disabled === true) return null;
     return query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), limit(100));
@@ -132,7 +117,6 @@ function AdminDashboardContent() {
   const { data: allPitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
   const { data: allRequests, isLoading: loadingRequests } = useCollection(requestsQuery);
   const { data: allMessages, isLoading: loadingMessages } = useCollection(messagesQuery);
-  const { data: allLogs, isLoading: loadingLogs } = useCollection(logsQuery);
   const { data: allDeleteRequests, isLoading: loadingDeleteRequests } = useCollection(deleteRequestsQuery);
 
   const staleRequests = useMemo(() => {
@@ -280,7 +264,7 @@ function AdminDashboardContent() {
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full md:w-auto h-auto p-1 bg-muted/50">
+          <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full md:w-auto h-auto p-1 bg-muted/50">
             <TabsTrigger value="users" className="gap-2 py-2">
               <UserCog className="w-4 h-4" /> Users
             </TabsTrigger>
@@ -295,9 +279,6 @@ function AdminDashboardContent() {
               {allDeleteRequests && allDeleteRequests.length > 0 && (
                 <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center rounded-full text-[10px]">{allDeleteRequests.length}</Badge>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="logs" className="gap-2 py-2">
-              <ClipboardList className="w-4 h-4" /> My Audit
             </TabsTrigger>
           </TabsList>
 
@@ -460,46 +441,6 @@ function AdminDashboardContent() {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-
-          <TabsContent value="logs">
-            <Card className="border-none shadow-sm overflow-hidden bg-white">
-              <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>My Administrative Activity</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow>
-                      <TableHead>Timestamp</TableHead>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Details</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loadingLogs ? (
-                      <TableRow><TableCell colSpan={3} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
-                    ) : allLogs?.length === 0 ? (
-                      <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground italic">No recent logs.</TableCell></TableRow>
-                    ) : allLogs?.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="text-xs whitespace-nowrap font-mono text-muted-foreground">
-                          {log.timestamp?.toDate ? format(log.timestamp.toDate(), 'MMM d, HH:mm') : 'Just now'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary">
-                            {log.action}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground max-w-md truncate">
-                          {log.details}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
       </main>

@@ -43,24 +43,6 @@ export default function ProfilePage() {
     }
   }, [user, authLoading, router]);
 
-  /**
-   * SAFE LOG QUERY: Strictly wait for verified profile AND include userId filter.
-   * This ensures that the query matches the identity-based read rule for non-administrative list operations.
-   */
-  const myLogsQuery = useMemoFirebase(() => {
-    // CRITICAL: Ensure profile is loaded and authorized. 
-    // The security rules for 'logs' list require 'isAuthorized' which depends on the user's profile existence.
-    if (!user || !profile || !profile.role || profile.disabled === true) return null;
-    return query(
-      collection(db, 'logs'), 
-      where('userId', '==', user.uid),
-      orderBy('timestamp', 'desc'),
-      limit(50)
-    );
-  }, [db, user, profile]);
-  
-  const { data: myLogs, isLoading: loadingLogs } = useCollection(myLogsQuery);
-
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -172,88 +154,35 @@ export default function ProfilePage() {
           </div>
 
           <div className="md:col-span-8 space-y-8">
-            <Tabs defaultValue="settings" className="space-y-6">
-              <TabsList className="bg-muted/50 p-1">
-                <TabsTrigger value="settings" className="px-6 py-2 gap-2">
-                  <User className="w-4 h-4" /> Settings
-                </TabsTrigger>
-                <TabsTrigger value="activity" className="px-6 py-2 gap-2">
-                  <History className="w-4 h-4" /> Activity
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="settings" className="space-y-8">
-                <Card className="border-none shadow-sm bg-white overflow-hidden">
-                  <CardHeader className="bg-primary/5 border-b p-8">
-                    <CardTitle className="text-2xl font-bold">Profile Settings</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-8">
-                    <form onSubmit={handleSave} className="space-y-6">
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <Label htmlFor="name">Legal Name / Representative</Label>
-                          <Input id="name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="company">Official Organization</Label>
-                          <Input id="company" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="bio">Professional Bio</Label>
-                        <Textarea id="bio" value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})} />
-                      </div>
-
-                      <Button type="submit" className="w-full h-12 bg-primary font-bold gap-2" disabled={saving}>
-                        {saving ? <Loader2 className="animate-spin" /> : <Save className="w-5 h-5" />}
-                        Sync Profile Changes
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="activity">
-                <Card className="border-none shadow-sm bg-white overflow-hidden">
-                  <CardHeader className="bg-primary/5 border-b p-8">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Activity className="w-5 h-5 text-primary" />
-                      <CardTitle className="text-xl font-bold">Activity History</CardTitle>
+            <Card className="border-none shadow-sm bg-white overflow-hidden">
+              <CardHeader className="bg-primary/5 border-b p-8">
+                <CardTitle className="text-2xl font-bold">Profile Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="p-8">
+                <form onSubmit={handleSave} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Legal Name / Representative</Label>
+                      <Input id="name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
                     </div>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    {loadingLogs ? (
-                      <div className="flex justify-center p-12"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>
-                    ) : myLogs && myLogs.length > 0 ? (
-                      <div className="divide-y">
-                        {myLogs.map((log) => (
-                          <div key={log.id} className="p-6 hover:bg-muted/10 transition-colors flex gap-4 items-start">
-                            <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center shrink-0">
-                              {log.action.includes('pitch') ? <FileText className="w-4 h-4 text-primary" /> : <Activity className="w-4 h-4 text-muted-foreground" />}
-                            </div>
-                            <div className="flex-1 space-y-1">
-                              <div className="flex items-center justify-between">
-                                <Badge variant="outline" className="text-[10px] uppercase font-bold">
-                                  {log.action.replace('_', ' ')}
-                                </Badge>
-                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {log.timestamp?.toDate ? format(log.timestamp.toDate(), 'MMM d, HH:mm') : 'Just now'}
-                                </span>
-                              </div>
-                              <p className="text-sm text-foreground/80">{log.details}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-20 text-center"><p className="text-sm text-muted-foreground">No activity yet.</p></div>
-                    )}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            </Tabs>
+                    <div className="space-y-2">
+                      <Label htmlFor="company">Official Organization</Label>
+                      <Input id="company" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Professional Bio</Label>
+                    <Textarea id="bio" value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})} />
+                  </div>
+
+                  <Button type="submit" className="w-full h-12 bg-primary font-bold gap-2" disabled={saving}>
+                    {saving ? <Loader2 className="animate-spin" /> : <Save className="w-5 h-5" />}
+                    Sync Profile Changes
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </main>
