@@ -13,15 +13,14 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 export function NotificationCenter() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
-  // CRITICAL: Robust guard to prevent unauthorized list attempts.
-  // We only run the query if we have a valid UID and a profile that matches
-  // the 'isAuthorized()' requirement in security rules.
+  // CRITICAL: Ensure profile is fully loaded and not disabled before querying.
+  // The query must strictly match the identity-based filter required by security rules.
   const notificationsQuery = useMemoFirebase(() => {
-    if (!user?.uid || !profile || profile.disabled === true) return null;
+    if (authLoading || !user?.uid || !profile || profile.disabled === true) return null;
     
     return query(
       collection(db, 'notifications'),
@@ -29,7 +28,7 @@ export function NotificationCenter() {
       orderBy('timestamp', 'desc'),
       limit(50)
     );
-  }, [db, user?.uid, profile]);
+  }, [db, user?.uid, profile, authLoading]);
 
   const { data: notifications, isLoading } = useCollection(notificationsQuery);
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
@@ -83,7 +82,7 @@ export function NotificationCenter() {
         </SheetHeader>
 
         <ScrollArea className="flex-1 bg-white">
-          {isLoading ? (
+          {isLoading || authLoading ? (
             <div className="p-10 text-center flex flex-col items-center gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
               <p className="text-xs text-muted-foreground">Loading alerts...</p>
