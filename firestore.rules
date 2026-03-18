@@ -7,16 +7,16 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function getProfile() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
+    function profileExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function isDisabled() {
-      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getProfile().disabled == true;
+      return isSignedIn() && profileExists() && getProfile().get('disabled', false) == true;
     }
 
     function isAuthorized() {
@@ -24,11 +24,11 @@ service cloud.firestore {
     }
 
     function hasRole(role) {
-      return isAuthorized() && getProfile().role == role;
+      return isAuthorized() && profileExists() && getProfile().get('role', '') == role;
     }
 
     function isAdmin() {
-      return isSignedIn() && getProfile().role == 'admin';
+      return isSignedIn() && profileExists() && getProfile().get('role', '') == 'admin';
     }
 
     function isContactAccepted(senderId, receiverId, pitchId) {
@@ -41,6 +41,9 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isOwner(userId);
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
     }
