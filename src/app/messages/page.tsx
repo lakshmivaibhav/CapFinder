@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { collection, query, where, serverTimestamp, doc, addDoc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
@@ -18,9 +19,17 @@ import Link from 'next/link';
 export default function MessagesPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const db = useFirestore();
+  const router = useRouter();
   const [selectedConnection, setSelectedConnection] = useState<any>(null);
   const [messageText, setMessageText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Route protection
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
 
   const connectionsQuery = useMemoFirebase(() => {
     if (!user || !profile) return null;

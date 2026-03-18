@@ -22,6 +22,15 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  // Route protection
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    } else if (!authLoading && user && !profile) {
+      router.push('/onboarding');
+    }
+  }, [user, profile, authLoading, router]);
+
   // Unified guards for queries - strictly derived from Firestore profile
   const isStartup = profile?.role === 'startup';
   const isInvestor = profile?.role === 'investor';
@@ -164,14 +173,6 @@ export default function DashboardPage() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
   }, [isStartup, investorsForMatching, startupPitches]);
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    } else if (!authLoading && user && !profile) {
-      router.push('/onboarding');
-    }
-  }, [user, profile, authLoading, router]);
 
   const handleUpdateRequestStatus = (requestId: string, status: 'accepted' | 'rejected') => {
     updateDocumentNonBlocking(doc(db, 'contactRequests', requestId), { status });

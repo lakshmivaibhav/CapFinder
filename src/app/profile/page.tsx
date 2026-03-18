@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -19,6 +20,9 @@ import Link from 'next/link';
 export default function ProfilePage() {
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const db = useFirestore();
+  const router = useRouter();
+  const { toast } = useToast();
+
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
   const [checkingPitch, setCheckingPitch] = useState<string | null>(null);
@@ -31,8 +35,12 @@ export default function ProfilePage() {
     role: '',
   });
 
-  const router = useRouter();
-  const { toast } = useToast();
+  // Route protection
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
 
   // Fetch user's pitches for deletion management
   const myPitchesQuery = useMemoFirebase(() => {
@@ -243,7 +251,7 @@ export default function ProfilePage() {
   };
 
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
-  if (!user) { router.push('/login'); return null; }
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

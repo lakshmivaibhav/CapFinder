@@ -1,6 +1,8 @@
 
 "use client";
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
@@ -16,15 +18,32 @@ import Link from 'next/link';
 export default function RequestsPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const db = useFirestore();
+  const router = useRouter();
   const { toast } = useToast();
 
+  // Route protection
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.push('/login');
+      } else if (profile && profile.role !== 'startup') {
+        toast({
+          variant: "destructive",
+          title: "Access Restricted",
+          description: "This page is reserved for startups to manage incoming requests."
+        });
+        router.push('/dashboard');
+      }
+    }
+  }, [user, profile, authLoading, router, toast]);
+
   const requestsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || profile?.role !== 'startup') return null;
     return query(
       collection(db, 'contactRequests'),
       where('receiverId', '==', user.uid)
     );
-  }, [db, user]);
+  }, [db, user, profile]);
 
   const { data: requests, isLoading: loadingRequests } = useCollection(requestsQuery);
 
