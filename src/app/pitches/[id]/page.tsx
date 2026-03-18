@@ -77,7 +77,8 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const handleToggleFavorite = () => {
     if (!user || !pitch) return;
     if (isFavorited) {
-      deleteDocumentNonBlocking(doc(db, 'favorites', favorites![0].id));
+      const existingFav = favorites?.find(f => f.pitchId === pitch.id);
+      if (existingFav) deleteDocumentNonBlocking(doc(db, 'favorites', existingFav.id));
       toast({ title: "Removed from favorites" });
     } else {
       addDocumentNonBlocking(collection(db, 'favorites'), {

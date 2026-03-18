@@ -255,7 +255,7 @@ function AdminDashboardContent() {
                       <TableHead>Startup</TableHead>
                       <TableHead>Goal</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
-                    </TableHeader>
+                    </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingPitches ? (
