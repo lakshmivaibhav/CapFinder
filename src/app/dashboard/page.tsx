@@ -347,13 +347,17 @@ export default function DashboardPage() {
                                   {interest.timestamp?.toDate ? interest.timestamp.toDate().toLocaleDateString() : 'Just now'}
                                </Badge>
                             </div>
-                            <CardTitle className="text-lg font-bold truncate">{interest.investorEmail}</CardTitle>
+                            <CardTitle className="text-lg font-bold truncate">
+                              <Link href={`/profile/${interest.investorId}`} className="hover:text-primary transition-colors">
+                                {interest.investorEmail}
+                              </Link>
+                            </CardTitle>
                             <CardDescription className="text-xs">
                                Interested in: <span className="font-semibold text-foreground">{interest.startupName}</span>
                             </CardDescription>
                           </CardHeader>
                           <CardFooter className="pt-4 flex flex-col gap-2">
-                            <Link href={`/users/${interest.investorId}`} className="w-full">
+                            <Link href={`/profile/${interest.investorId}`} className="w-full">
                               <Button variant="outline" size="sm" className="w-full gap-2 border-primary/20 text-primary hover:bg-primary/5">
                                 <User className="w-3 h-3" /> View Investor Profile
                               </Button>
@@ -440,7 +444,7 @@ export default function DashboardPage() {
                                </span>
                            </div>
                            <CardTitle className="text-lg font-bold truncate">
-                             <Link href={`/users/${req.senderId}`} className="hover:text-primary transition-colors">
+                             <Link href={`/profile/${req.senderId}`} className="hover:text-primary transition-colors">
                                {req.investorEmail}
                              </Link>
                            </CardTitle>
@@ -473,7 +477,7 @@ export default function DashboardPage() {
                                Introduction {req.status}
                              </Button>
                            )}
-                           <Link href={`/users/${req.senderId}`} className="w-full">
+                           <Link href={`/profile/${req.senderId}`} className="w-full">
                              <Button variant="ghost" size="sm" className="w-full text-xs font-bold text-muted-foreground hover:text-primary">
                                View Investor Profile <ArrowRight className="ml-1 w-3 h-3" />
                              </Button>

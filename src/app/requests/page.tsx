@@ -75,8 +75,10 @@ export default function RequestsPage() {
                       </span>
                     </div>
                     <CardTitle className="text-xl font-bold mb-2 flex items-center gap-2">
-                      {req.investorEmail}
-                      <Link href={`/users/${req.senderId}`}>
+                      <Link href={`/profile/${req.senderId}`} className="hover:text-primary transition-colors">
+                        {req.investorEmail}
+                      </Link>
+                      <Link href={`/profile/${req.senderId}`}>
                         <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
                           <ExternalLink className="w-4 h-4" />
                         </Button>
@@ -86,7 +88,7 @@ export default function RequestsPage() {
                       Interested in your pitch: <span className="font-semibold text-foreground">{req.startupName}</span>
                     </CardDescription>
                     <div className="mt-4">
-                       <Link href={`/users/${req.senderId}`}>
+                       <Link href={`/profile/${req.senderId}`}>
                          <Button variant="link" size="sm" className="p-0 h-auto text-xs text-primary gap-1">
                            <User className="w-3 h-3" /> View Investor Profile
                          </Button>
@@ -135,7 +137,7 @@ export default function RequestsPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-40 bg-white rounded-3xl border border-dashed flex flex-col items-center">
+          <div className="text-center py-40 bg-white rounded-3xl shadow-sm border border-dashed flex flex-col items-center">
             <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mb-6">
               <Inbox className="w-10 h-10 text-muted-foreground opacity-30" />
             </div>

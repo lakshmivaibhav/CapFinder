@@ -179,7 +179,7 @@ export default function MessagesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Link href={`/users/${getPartnerId(selectedConnection)}`}>
+                  <Link href={`/profile/${getPartnerId(selectedConnection)}`}>
                     <Button variant="ghost" size="sm" className="gap-2 text-xs font-bold text-muted-foreground hover:text-primary">
                       <User className="w-4 h-4" /> Partner Profile
                     </Button>

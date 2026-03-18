@@ -213,14 +213,16 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                 ) : ownerProfile ? (
                   <>
                     <div className="space-y-1">
-                      <h4 className="font-bold text-xl text-foreground leading-tight">{ownerProfile.name || 'Anonymous Founder'}</h4>
+                      <Link href={`/profile/${pitch.ownerId}`} className="hover:text-primary transition-colors">
+                        <h4 className="font-bold text-xl text-foreground leading-tight">{ownerProfile.name || 'Anonymous Founder'}</h4>
+                      </Link>
                       <p className="text-xs font-bold text-primary uppercase tracking-wider">{ownerProfile.company || 'Venture Lead'}</p>
                     </div>
                     <div className="text-sm text-muted-foreground leading-relaxed italic bg-muted/20 p-4 rounded-xl">
                       &quot;{ownerProfile.bio || "This founder focuses on high-impact innovation and strategic growth."}&quot;
                     </div>
                     <div className="pt-6 border-t space-y-4">
-                       <Link href={`/users/${pitch.ownerId}`} className="w-full">
+                       <Link href={`/profile/${pitch.ownerId}`} className="w-full">
                          <Button variant="outline" size="sm" className="w-full gap-2 text-xs font-bold">
                            View Full Profile <ExternalLink className="w-3 h-3" />
                          </Button>
