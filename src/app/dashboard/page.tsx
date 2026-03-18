@@ -9,7 +9,7 @@ import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark, Inbox, CheckCircle2, XCircle, User, ShieldAlert, BarChart3, Sparkles } from 'lucide-react';
+import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark, Inbox, CheckCircle2, XCircle, User, ShieldAlert, BarChart3, Sparkles, Building2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -52,6 +52,16 @@ export default function DashboardPage() {
     );
   }, [db, user, isStartup]);
 
+  // Query to find potential investors for recommendation
+  const investorsForMatchingQuery = useMemoFirebase(() => {
+    if (!user || !isStartup) return null;
+    return query(
+      collection(db, 'users'),
+      where('role', '==', 'investor'),
+      limit(100)
+    );
+  }, [db, user, isStartup]);
+
   // Queries for Investors
   const allPitchesQuery = useMemoFirebase(() => {
     if (!user || (!isInvestor && !isAdmin)) return null;
@@ -83,6 +93,7 @@ export default function DashboardPage() {
   const { data: startupPitches, isLoading: loadingStartupPitches } = useCollection(startupPitchesQuery);
   const { data: startupInterests, isLoading: loadingStartupInterests } = useCollection(startupInterestsQuery);
   const { data: startupContactRequests, isLoading: loadingStartupContactRequests } = useCollection(startupContactRequestsQuery);
+  const { data: investorsForMatching } = useCollection(investorsForMatchingQuery);
   const { data: allPitches, isLoading: loadingAllPitches } = useCollection(allPitchesQuery);
   const { data: investorInterests, isLoading: loadingInvestorInterests } = useCollection(investorInterestsQuery);
   const { data: investorFavorites, isLoading: loadingInvestorFavorites } = useCollection(investorFavoritesQuery);
@@ -90,7 +101,7 @@ export default function DashboardPage() {
 
   const pendingRequestsCount = startupContactRequests?.filter(r => r.status === 'pending').length || 0;
 
-  // Recommendation logic for Investors
+  // Recommendation logic for Investors (matching pitches)
   const recommendedPitches = useMemo(() => {
     if (!isInvestor || !allPitches || !profile?.investmentInterest) return [];
     
@@ -115,6 +126,30 @@ export default function DashboardPage() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
   }, [isInvestor, allPitches, profile]);
+
+  // Recommendation logic for Startups (matching investors)
+  const recommendedInvestors = useMemo(() => {
+    if (!isStartup || !investorsForMatching || !startupPitches || startupPitches.length === 0) return [];
+    
+    const startupIndustries = Array.from(new Set(startupPitches.map(p => (p.industry || '').toLowerCase()))).filter(Boolean);
+    
+    return investorsForMatching
+      .map(investor => {
+        let score = 0;
+        const interests = (investor.investmentInterest || '').toLowerCase().split(',').map(i => i.trim()).filter(Boolean);
+        
+        startupIndustries.forEach(industry => {
+          if (interests.some(interest => interest.includes(industry) || industry.includes(interest))) {
+            score += 10;
+          }
+        });
+        
+        return { ...investor, score };
+      })
+      .filter(i => i.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+  }, [isStartup, investorsForMatching, startupPitches]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -247,6 +282,55 @@ export default function DashboardPage() {
                           <p className="text-lg font-black text-accent">${pitch.fundingNeeded?.toLocaleString()}</p>
                         </div>
                         <ArrowRight className="w-5 h-5 text-accent opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Recommended Section for Startups (Matching Investors) */}
+        {isStartup && recommendedInvestors.length > 0 && (
+          <section className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight">Recommended Investors</h2>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recommendedInvestors.map((investor) => (
+                <Link key={investor.id} href={`/profile/${investor.id}`}>
+                  <Card className="group border-2 border-primary/10 hover:border-primary bg-primary/5 hover:bg-primary/[0.08] transition-all h-full shadow-sm">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <Badge className="bg-primary text-white border-none px-3 py-1 font-bold text-[10px] uppercase">Strategic Partner</Badge>
+                        <div className="text-[10px] font-black text-primary bg-white border border-primary/20 px-2 py-0.5 rounded-full uppercase tracking-tighter">Perfect Match</div>
+                      </div>
+                      <CardTitle className="text-xl font-bold line-clamp-1 group-hover:text-primary transition-colors">
+                        {investor.name || 'Private Investor'}
+                      </CardTitle>
+                      <CardDescription className="text-xs uppercase font-bold tracking-widest text-muted-foreground">
+                        {investor.company || 'Investment Group'}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pb-4">
+                      <div className="space-y-4">
+                        <div className="flex flex-wrap gap-1.5">
+                          {investor.investmentInterest?.split(',').slice(0, 3).map((interest: string, idx: number) => (
+                            <Badge key={idx} variant="outline" className="text-[9px] bg-white border-primary/20">
+                              {interest.trim()}
+                            </Badge>
+                          ))}
+                        </div>
+                        <div className="flex justify-between items-center pt-2">
+                           <span className="text-[10px] text-muted-foreground italic flex items-center gap-1">
+                             <Building2 className="w-3 h-3" /> Targeted Sector Match
+                           </span>
+                           <ArrowRight className="w-5 h-5 text-primary opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
