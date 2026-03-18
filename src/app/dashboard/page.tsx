@@ -9,7 +9,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search } from 'lucide-react';
+import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -54,16 +54,24 @@ export default function DashboardPage() {
     );
   }, [db, user, isInvestor]);
 
+  const investorFavoritesQuery = useMemoFirebase(() => {
+    if (!user || !isInvestor) return null;
+    return query(
+      collection(db, 'favorites'),
+      where('investorId', '==', user.uid)
+    );
+  }, [db, user, isInvestor]);
+
   const { data: startupPitches, isLoading: loadingStartupPitches } = useCollection(startupPitchesQuery);
   const { data: startupInterests, isLoading: loadingStartupInterests } = useCollection(startupInterestsQuery);
   const { data: allPitches, isLoading: loadingAllPitches } = useCollection(allPitchesQuery);
   const { data: investorInterests, isLoading: loadingInvestorInterests } = useCollection(investorInterestsQuery);
+  const { data: investorFavorites, isLoading: loadingInvestorFavorites } = useCollection(investorFavoritesQuery);
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
     } else if (!authLoading && user && !profile) {
-      // If user is authenticated but no Firestore doc exists, send to onboarding
       router.push('/onboarding');
     }
   }, [user, profile, authLoading, router]);
@@ -126,10 +134,10 @@ export default function DashboardPage() {
           <Card className="border-none shadow-sm bg-accent/5">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center text-white">
-                {isStartup ? <Users className="w-6 h-6" /> : <Star className="w-6 h-6" />}
+                {isStartup ? <Users className="w-6 h-6" /> : <Heart className="w-6 h-6" />}
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Total Leads' : 'My Watchlist'}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Total Leads' : 'Connections'}</p>
                 <p className="text-2xl font-bold">{isStartup ? (startupInterests?.length || 0) : (investorInterests?.length || 0)}</p>
               </div>
             </CardContent>
@@ -137,12 +145,12 @@ export default function DashboardPage() {
           <Card className="border-none shadow-sm bg-emerald-50">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
-                <DollarSign className="w-6 h-6" />
+                {isStartup ? <DollarSign className="w-6 h-6" /> : <Bookmark className="w-6 h-6" />}
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Funding Goal' : 'Avg. Ticket'}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Funding Goal' : 'Saved Pitches'}</p>
                 <p className="text-2xl font-bold">
-                  ${isStartup ? (profile.fundingNeeded || '0') : '1.2M'}
+                  {isStartup ? `$${profile.fundingNeeded || '0'}` : (investorFavorites?.length || 0)}
                 </p>
               </div>
             </CardContent>
@@ -186,6 +194,14 @@ export default function DashboardPage() {
                 </>
               )}
             </TabsTrigger>
+            {!isStartup && (
+              <TabsTrigger value="favorites" className="px-6 py-2 gap-2">
+                <Bookmark className="w-4 h-4" /> Saved Pitches
+                <Badge variant="secondary" className="ml-2 bg-emerald-100 text-emerald-600 border-none">
+                  {investorFavorites?.length || 0}
+                </Badge>
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="primary">
@@ -362,6 +378,52 @@ export default function DashboardPage() {
                        </Link>
                     </div>
                   )
+                )}
+             </div>
+          </TabsContent>
+
+          {/* New Favorites Tab for Investors */}
+          <TabsContent value="favorites">
+             <div className="grid gap-6">
+                {loadingInvestorFavorites ? (
+                  <div className="flex justify-center p-12"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>
+                ) : (investorFavorites && investorFavorites.length > 0) ? (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {investorFavorites.map((fav) => (
+                      <Card key={fav.id} className="border-none shadow-sm bg-white group hover:shadow-md transition-all">
+                        <CardHeader>
+                          <div className="flex justify-between items-start mb-2">
+                            <Badge className="bg-amber-50 text-amber-600 border-none px-3">
+                              {fav.industry}
+                            </Badge>
+                            <Bookmark className="w-4 h-4 text-amber-500 fill-amber-500" />
+                          </div>
+                          <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">
+                            {fav.startupName}
+                          </CardTitle>
+                          <CardDescription className="text-xs">
+                            Saved on {fav.timestamp?.toDate ? fav.timestamp.toDate().toLocaleDateString() : 'recently'}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardFooter className="pt-0">
+                          <Link href="/pitches" className="w-full">
+                            <Button variant="ghost" className="w-full text-xs justify-between group-hover:bg-primary/5">
+                              View in Marketplace <ArrowRight className="w-3 h-3" />
+                            </Button>
+                          </Link>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
+                     <Bookmark className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
+                     <h3 className="font-bold">No saved pitches</h3>
+                     <p className="text-sm text-muted-foreground">Found an interesting startup? Save it to review later.</p>
+                     <Link href="/pitches">
+                       <Button variant="link" className="mt-2 text-primary">Explore Pitches</Button>
+                     </Link>
+                  </div>
                 )}
              </div>
           </TabsContent>

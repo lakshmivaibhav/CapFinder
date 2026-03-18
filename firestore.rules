@@ -11,8 +11,12 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function getProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function hasRole(role) {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+      return isSignedIn() && getProfile().role == role;
     }
 
     match /users/{userId} {
@@ -30,16 +34,29 @@ service cloud.firestore {
     }
 
     match /interests/{interestId} {
-      // Unify list and get rules to ensure queries with filters are correctly authorized.
-      allow read: if isSignedIn() && (
+      // Allow listing interests where the user is either the investor or the startup owner.
+      // Split into separate explicit list rules to satisfy query optimization.
+      allow list: if isSignedIn() && (
+        (request.query.limit <= 500) && (
+          resource.data.investorId == request.auth.uid || 
+          resource.data.startupOwnerId == request.auth.uid
+        )
+      );
+      
+      allow get: if isSignedIn() && (
         resource.data.investorId == request.auth.uid || 
         resource.data.startupOwnerId == request.auth.uid
       );
       
-      // Only investors can express interest.
       allow create: if isSignedIn() && hasRole('investor') && request.resource.data.investorId == request.auth.uid;
-      
-      // Interests are immutable and can only be deleted by the investor who expressed them.
+      allow update: if false;
+      allow delete: if isSignedIn() && resource.data.investorId == request.auth.uid;
+    }
+
+    match /favorites/{favoriteId} {
+      allow list: if isSignedIn() && resource.data.investorId == request.auth.uid;
+      allow get: if isSignedIn() && resource.data.investorId == request.auth.uid;
+      allow create: if isSignedIn() && hasRole('investor') && request.resource.data.investorId == request.auth.uid;
       allow update: if false;
       allow delete: if isSignedIn() && resource.data.investorId == request.auth.uid;
     }

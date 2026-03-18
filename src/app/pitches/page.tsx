@@ -1,14 +1,15 @@
+
 "use client";
 
 import { useState } from 'react';
-import { collection, query, serverTimestamp, where } from 'firebase/firestore';
+import { collection, query, serverTimestamp, where, doc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, TrendingUp, Mail, Globe, Sparkles, CheckCircle2, FilterX, Landmark } from 'lucide-react';
+import { Loader2, Search, TrendingUp, Mail, Globe, Sparkles, CheckCircle2, FilterX, Landmark, Bookmark, BookmarkCheck } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,18 +35,22 @@ export default function PitchesFeedPage() {
   }, [db, user, profile]);
   const { data: userInterestsData } = useCollection(interestsQuery);
 
+  // Fetch favorites for current investor
+  const favoritesQuery = useMemoFirebase(() => {
+    if (!user || profile?.role !== 'investor') return null;
+    return query(collection(db, 'favorites'), where('investorId', '==', user.uid));
+  }, [db, user, profile]);
+  const { data: userFavoritesData } = useCollection(favoritesQuery);
+
   const userInterests = userInterestsData?.map(i => i.pitchId) || [];
+  const userFavorites = userFavoritesData || [];
+  const favoritePitchIds = userFavorites.map(f => f.pitchId);
 
   const industries = Array.from(new Set(pitches?.map(p => p.industry) || [])).filter(Boolean);
 
   const filteredPitches = pitches?.filter(p => {
-    // 1. Partial Search by Startup Name
     const matchesSearch = (p.startupName?.toLowerCase() || "").includes(search.toLowerCase());
-    
-    // 2. Industry Filter
     const matchesIndustry = industryFilter === 'all' || p.industry === industryFilter;
-    
-    // 3. Funding Range Filter
     const fundingVal = parseFloat(p.fundingNeeded?.toString().replace(/,/g, '') || "0");
     const matchesFunding = fundingFilter === 'all' || (() => {
       if (fundingFilter === '0-100k') return fundingVal <= 100000;
@@ -76,6 +81,32 @@ export default function PitchesFeedPage() {
       title: "Interest Registered",
       description: `The founders of ${pitch.startupName} have been notified.`,
     });
+  };
+
+  const handleToggleFavorite = async (pitch: any) => {
+    if (!user || profile?.role !== 'investor') return;
+
+    const existingFavorite = userFavorites.find(f => f.pitchId === pitch.id);
+
+    if (existingFavorite) {
+      deleteDocumentNonBlocking(doc(db, 'favorites', existingFavorite.id));
+      toast({
+        title: "Removed from favorites",
+        description: `${pitch.startupName} has been removed from your saved pitches.`,
+      });
+    } else {
+      addDocumentNonBlocking(collection(db, 'favorites'), {
+        pitchId: pitch.id,
+        investorId: user.uid,
+        startupName: pitch.startupName,
+        industry: pitch.industry,
+        timestamp: serverTimestamp(),
+      });
+      toast({
+        title: "Saved to favorites",
+        description: `${pitch.startupName} is now in your saved list.`,
+      });
+    }
   };
 
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
@@ -161,12 +192,22 @@ export default function PitchesFeedPage() {
         ) : filteredPitches.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPitches.map((pitch) => (
-              <Card key={pitch.id} className="flex flex-col group hover:shadow-xl transition-all border-none shadow-sm overflow-hidden rounded-2xl bg-white">
+              <Card key={pitch.id} className="flex flex-col group hover:shadow-xl transition-all border-none shadow-sm overflow-hidden rounded-2xl bg-white relative">
                 <CardHeader className="space-y-4">
                   <div className="flex justify-between items-start">
                     <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-3 py-1">
                       {pitch.industry}
                     </Badge>
+                    {profile?.role === 'investor' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className={`h-8 w-8 rounded-full ${favoritePitchIds.includes(pitch.id) ? 'text-accent' : 'text-muted-foreground hover:text-accent'}`}
+                        onClick={() => handleToggleFavorite(pitch)}
+                      >
+                        {favoritePitchIds.includes(pitch.id) ? <BookmarkCheck className="w-5 h-5 fill-current" /> : <Bookmark className="w-5 h-5" />}
+                      </Button>
+                    )}
                   </div>
                   <CardTitle className="text-2xl font-bold group-hover:text-primary transition-colors">{pitch.startupName}</CardTitle>
                 </CardHeader>

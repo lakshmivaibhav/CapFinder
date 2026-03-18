@@ -148,6 +148,44 @@
         "startupOwnerId",
         "timestamp"
       ]
+    },
+    "Favorite": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Favorite",
+      "type": "object",
+      "description": "Represents a startup pitch saved by an investor for later review.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Favorite entity."
+        },
+        "investorId": {
+          "type": "string",
+          "description": "The UID of the investor who saved the pitch."
+        },
+        "pitchId": {
+          "type": "string",
+          "description": "The ID of the pitch that was saved."
+        },
+        "startupName": {
+          "type": "string",
+          "description": "Denormalized name of the startup for display."
+        },
+        "industry": {
+          "type": "string",
+          "description": "Denormalized industry for display."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the pitch was favorited."
+        }
+      },
+      "required": [
+        "investorId",
+        "pitchId",
+        "timestamp"
+      ]
     }
   },
   "auth": {
@@ -186,6 +224,16 @@
             "$ref": "#/backend/entities/Interest"
           },
           "description": "Tracks investor interest in specific pitches."
+        }
+      },
+      {
+        "path": "/favorites/{favoriteId}",
+        "definition": {
+          "entityName": "Favorite",
+          "schema": {
+            "$ref": "#/backend/entities/Favorite"
+          },
+          "description": "Stores pitches saved/favorited by investors."
         }
       }
     ]
