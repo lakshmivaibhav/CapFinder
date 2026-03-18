@@ -1,9 +1,10 @@
+
 "use client";
 
-import { useState, useEffect } from 'react';
-import { collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { useState } from 'react';
+import { collection, query, serverTimestamp, where } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -13,81 +14,56 @@ import { Navbar } from '@/components/navbar';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { addDocumentNonBlocking } from '@/firebase';
 
 export default function PitchesFeedPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
   
-  const [pitches, setPitches] = useState<any[]>([]);
-  const [userInterests, setUserInterests] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [industryFilter, setIndustryFilter] = useState('all');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user || !profile || !profile.role) return;
-      
-      setLoading(true);
-      try {
-        const q = query(collection(db, 'pitches'));
-        const querySnapshot = await getDocs(q);
-        const fetchedPitches = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setPitches(fetchedPitches);
+  // Fetch all pitches
+  const pitchesQuery = useMemoFirebase(() => query(collection(db, 'pitches')), [db]);
+  const { data: pitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
 
-        // Explicitly guard interest fetch with role check and proper filter to satisfy security rules
-        if (profile.role === 'investor') {
-          const interestQuery = query(collection(db, 'interests'), where('investorId', '==', user.uid));
-          const interestSnap = await getDocs(interestQuery);
-          setUserInterests(interestSnap.docs.map(doc => doc.data().pitchId));
-        }
-      } catch (error) {
-        // Errors are handled by the global error listener
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Fetch interests for current investor to prevent double-interest
+  const interestsQuery = useMemoFirebase(() => {
+    if (!user || profile?.role !== 'investor') return null;
+    return query(collection(db, 'interests'), where('investorId', '==', user.uid));
+  }, [db, user, profile]);
+  const { data: userInterestsData } = useCollection(interestsQuery);
 
-    if (!authLoading && user && profile?.role) {
-      fetchData();
-    }
-  }, [db, user, profile, authLoading]);
+  const userInterests = userInterestsData?.map(i => i.pitchId) || [];
 
-  const industries = Array.from(new Set(pitches.map(p => p.industry))).filter(Boolean);
+  const industries = Array.from(new Set(pitches?.map(p => p.industry) || [])).filter(Boolean);
 
-  const filteredPitches = pitches.filter(p => {
+  const filteredPitches = pitches?.filter(p => {
     const matchesSearch = (p.startupName?.toLowerCase() || "").includes(search.toLowerCase()) || 
                           (p.industry?.toLowerCase() || "").includes(search.toLowerCase()) ||
                           (p.description?.toLowerCase() || "").includes(search.toLowerCase());
     const matchesIndustry = industryFilter === 'all' || p.industry === industryFilter;
     return matchesSearch && matchesIndustry;
-  });
+  }) || [];
 
   const handleShowInterest = async (pitch: any) => {
-    if (!user || !profile || profile.role !== 'investor') return;
+    if (!user || profile?.role !== 'investor') return;
     if (userInterests.includes(pitch.id)) return;
 
-    try {
-      addDocumentNonBlocking(collection(db, 'interests'), {
-        pitchId: pitch.id,
-        investorId: user.uid,
-        investorEmail: user.email,
-        startupOwnerId: pitch.ownerId,
-        startupName: pitch.startupName,
-        contactEmail: pitch.contactEmail,
-        timestamp: serverTimestamp(),
-      });
-      
-      setUserInterests([...userInterests, pitch.id]);
-      toast({
-        title: "Interest Sent!",
-        description: `You've expressed interest in ${pitch.startupName}.`,
-      });
-    } catch (error: any) {
-      // Handled by global emitter
-    }
+    addDocumentNonBlocking(collection(db, 'interests'), {
+      pitchId: pitch.id,
+      investorId: user.uid,
+      investorEmail: user.email,
+      startupOwnerId: pitch.ownerId,
+      startupName: pitch.startupName,
+      industry: pitch.industry,
+      timestamp: serverTimestamp(),
+    });
+    
+    toast({
+      title: "Interest Registered",
+      description: `The founders of ${pitch.startupName} have been notified.`,
+    });
   };
 
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
@@ -100,7 +76,9 @@ export default function PitchesFeedPage() {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-bold tracking-tight">Marketplace</h1>
-            <p className="text-muted-foreground text-lg">Browse {pitches.length} investment opportunities.</p>
+            <p className="text-muted-foreground text-lg">
+              Explore {pitches?.length || 0} active investment opportunities.
+            </p>
           </div>
           <div className="flex flex-wrap gap-3 w-full md:w-auto">
             <div className="relative flex-1 min-w-[240px]">
@@ -126,7 +104,7 @@ export default function PitchesFeedPage() {
           </div>
         </div>
 
-        {loading ? (
+        {loadingPitches ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map(i => <div key={i} className="h-64 w-full bg-muted animate-pulse rounded-2xl" />)}
           </div>

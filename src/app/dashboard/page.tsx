@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -5,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, limit } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Briefcase, Users, DollarSign, Mail, Heart } from 'lucide-react';
+import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Briefcase, Users, DollarSign, Mail, Heart, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 
@@ -17,28 +18,22 @@ export default function DashboardPage() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Memoized Queries with explicit role guards and direct UID matching to satisfy security rules
+  // Fetch pitches created by the startup or a sample for investors
   const pitchesQuery = useMemoFirebase(() => {
-    if (!user || !profile || !profile.role) return null;
+    if (!user || !profile?.role) return null;
     if (profile.role === 'startup') {
-      // Direct ownerId filter satisfies security rules
       return query(collection(db, 'pitches'), where('ownerId', '==', user.uid));
     }
-    // General read for investors is allowed
-    return query(collection(db, 'pitches'), limit(10));
+    return query(collection(db, 'pitches'), limit(5));
   }, [db, user, profile]);
 
+  // Fetch relevant interests based on user role
   const interestsQuery = useMemoFirebase(() => {
-    if (!user || !profile || !profile.role) return null;
-    
-    // Split queries by role to match the specific 'list' rules in firestore.rules
+    if (!user || !profile?.role) return null;
     if (profile.role === 'startup') {
       return query(collection(db, 'interests'), where('startupOwnerId', '==', user.uid));
     }
-    if (profile.role === 'investor') {
-      return query(collection(db, 'interests'), where('investorId', '==', user.uid));
-    }
-    return null;
+    return query(collection(db, 'interests'), where('investorId', '==', user.uid));
   }, [db, user, profile]);
 
   const { data: pitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
@@ -52,9 +47,6 @@ export default function DashboardPage() {
 
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
   if (!user) return null;
-
-  const activePitchesCount = pitches?.length || 0;
-  const connectionsCount = interests?.length || 0;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -74,8 +66,8 @@ export default function DashboardPage() {
                 </Button>
               </Link>
             )}
-            <Link href="/profile">
-              <Button variant="outline" className="h-11 px-6">Edit Profile</Button>
+            <Link href="/pitches">
+              <Button variant="outline" className="h-11 px-6">Explore Marketplace</Button>
             </Link>
           </div>
         </div>
@@ -98,8 +90,10 @@ export default function DashboardPage() {
                 <Megaphone className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Active Pitches</p>
-                <p className="text-xl font-bold">{activePitchesCount}</p>
+                <p className="text-sm text-muted-foreground">
+                  {profile?.role === 'startup' ? 'My Pitches' : 'Opportunities'}
+                </p>
+                <p className="text-xl font-bold">{pitches?.length || 0}</p>
               </div>
             </CardContent>
           </Card>
@@ -109,8 +103,8 @@ export default function DashboardPage() {
                 <Users className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Interests</p>
-                <p className="text-xl font-bold">{connectionsCount}</p>
+                <p className="text-sm text-muted-foreground">Connections</p>
+                <p className="text-xl font-bold">{interests?.length || 0}</p>
               </div>
             </CardContent>
           </Card>
@@ -120,7 +114,7 @@ export default function DashboardPage() {
                 <DollarSign className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Target Capital</p>
+                <p className="text-sm text-muted-foreground">Funding Needs</p>
                 <p className="text-xl font-bold">${profile?.fundingNeeded || '0'}</p>
               </div>
             </CardContent>
@@ -131,10 +125,10 @@ export default function DashboardPage() {
           <div className="lg:col-span-2 space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold">
-                {profile?.role === 'startup' ? "My Active Pitches" : "Latest Opportunities"}
+                {profile?.role === 'startup' ? "My Active Pitches" : "Featured Market"}
               </h2>
               <Link href="/pitches" className="text-sm text-primary font-medium hover:underline flex items-center gap-1">
-                View marketplace <ArrowRight className="w-4 h-4" />
+                View all <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
 
@@ -179,28 +173,24 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20 bg-white rounded-2xl border border-dashed flex flex-col items-center">
-                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-                  <Megaphone className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium">No pitches yet</h3>
-                <p className="text-muted-foreground max-w-xs mx-auto mb-6">
-                  {profile?.role === 'startup' 
-                    ? "Start by creating your first pitch to attract investors." 
-                    : "Wait for startups to post their innovative ideas."}
+              <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
+                <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium">No activity here yet</h3>
+                <p className="text-muted-foreground mb-6">
+                  {profile?.role === 'startup' ? 'Post your first pitch to attract investors.' : 'Check the marketplace for new opportunities.'}
                 </p>
-                {profile?.role === 'startup' && (
-                  <Link href="/pitches/new">
-                    <Button variant="outline">Create a Pitch</Button>
-                  </Link>
-                )}
+                <Button asChild variant="outline">
+                   <Link href={profile?.role === 'startup' ? "/pitches/new" : "/pitches"}>
+                      {profile?.role === 'startup' ? 'Create Pitch' : 'Browse Marketplace'}
+                   </Link>
+                </Button>
               </div>
             )}
           </div>
 
           <div className="space-y-6">
             <h2 className="text-xl font-bold">
-              {profile?.role === 'startup' ? "Interested Investors" : "My Expressions of Interest"}
+              {profile?.role === 'startup' ? "Recent Inbound" : "My Interests"}
             </h2>
             <Card className="border-none shadow-sm">
               <CardContent className="p-0">
@@ -209,46 +199,54 @@ export default function DashboardPage() {
                 ) : (interests && interests.length > 0) ? (
                   <div className="divide-y">
                     {interests.map((interest) => (
-                      <div key={interest.id} className="p-4 hover:bg-muted/30 transition-colors">
-                        <div className="flex justify-between items-start mb-1">
-                          <p className="font-bold text-sm">
-                            {profile?.role === 'startup' ? interest.investorEmail : interest.startupName}
-                          </p>
+                      <div key={interest.id} className="p-5 hover:bg-muted/30 transition-colors">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <p className="font-bold text-sm">
+                              {profile?.role === 'startup' ? interest.investorEmail : interest.startupName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {profile?.role === 'startup' ? 'Requested details' : `Target: ${interest.industry}`}
+                            </p>
+                          </div>
                           <Badge variant="outline" className="text-[10px] h-4">
-                            {interest.timestamp?.toDate ? interest.timestamp.toDate().toLocaleDateString() : 'New'}
+                            {interest.timestamp?.toDate ? interest.timestamp.toDate().toLocaleDateString() : 'Just now'}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground mb-3">
-                          {profile?.role === 'startup' ? 'Expressed interest in your pitch' : 'You expressed interest'}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" className="h-8 text-xs flex-1" asChild>
-                            <Link href={`mailto:${profile?.role === 'startup' ? interest.investorEmail : interest.contactEmail}`}>
-                              <Mail className="w-3 h-3 mr-2" /> Message
+                        <div className="flex gap-2 mt-4">
+                          <Button variant="outline" size="sm" className="h-8 text-[10px] flex-1" asChild>
+                            <Link href={profile?.role === 'startup' ? `mailto:${interest.investorEmail}` : `/pitches`}>
+                              <Mail className="w-3 h-3 mr-2" /> 
+                              {profile?.role === 'startup' ? 'Reply' : 'View Pitch'}
                             </Link>
                           </Button>
+                          {profile?.role === 'investor' && (
+                             <Button variant="ghost" size="sm" className="h-8 text-[10px] px-2">
+                                <ExternalLink className="w-3 h-3" />
+                             </Button>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="p-12 text-center">
-                    <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">No interest activity yet.</p>
+                    <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+                    <p className="text-sm text-muted-foreground">No connections found.</p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-sm bg-primary text-white">
-              <CardHeader>
-                <CardTitle className="text-lg">Network Insight</CardTitle>
+            <Card className="border-none shadow-sm bg-accent/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Quick Pro Tip</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-primary-foreground/90 leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   {profile?.role === 'startup' 
-                    ? "Startups that respond to interested investors within 24 hours are 3x more likely to secure a follow-up meeting."
-                    : "Following up with founders after expressing interest helps clarify goals and accelerates the due diligence process."}
+                    ? "Adding keywords like 'SaaS' or 'Web3' to your pitch description helps investors find you faster in their filtered search."
+                    : "Use the marketplace filters to find startups in specific industries that match your current portfolio strategy."}
                 </p>
               </CardContent>
             </Card>

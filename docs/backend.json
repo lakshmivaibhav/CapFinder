@@ -127,6 +127,14 @@
           "type": "string",
           "description": "The UID of the startup owner who posted the pitch."
         },
+        "startupName": {
+          "type": "string",
+          "description": "The name of the startup (denormalized for UI)."
+        },
+        "industry": {
+          "type": "string",
+          "description": "The industry of the startup (denormalized for UI)."
+        },
         "timestamp": {
           "type": "string",
           "format": "date-time",
