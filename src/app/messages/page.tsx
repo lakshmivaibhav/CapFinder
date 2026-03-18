@@ -2,16 +2,15 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { collection, query, where, orderBy, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, doc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { Navbar } from '@/components/navbar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Send, MessageSquare, User, Clock } from 'lucide-react';
+import { Loader2, Send, MessageSquare, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -22,32 +21,43 @@ export default function MessagesPage() {
   const [messageText, setMessageText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 1. Fetch all accepted contact requests where user is sender or receiver
+  // 1. Fetch all connection requests for the user (regardless of status, filtered in UI)
   const connectionsQuery = useMemoFirebase(() => {
     if (!user || !profile) return null;
     return query(
       collection(db, 'contactRequests'),
-      where('status', '==', 'accepted'),
-      // Ensure query filters by current user to satisfy standard security rule proving
       where(profile.role === 'investor' ? 'senderId' : 'receiverId', '==', user.uid)
     );
   }, [db, user, profile]);
 
-  const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
+  const { data: allConnections, isLoading: loadingConnections } = useCollection(connectionsQuery);
+  
+  // Filter for accepted connections in the UI logic
+  const connections = allConnections?.filter(c => c.status === 'accepted') || [];
 
-  // 2. Fetch messages for the selected connection
+  // 2. Fetch messages for the selected connection's pitch
+  // We use a simplified query to ensure permission checks pass, then filter participants in memory
   const messagesQuery = useMemoFirebase(() => {
     if (!selectedConnection) return null;
     return query(
       collection(db, 'messages'),
-      where('pitchId', '==', selectedConnection.pitchId),
-      // Use specific participant IDs to get the correct thread
-      where('senderId', 'in', [selectedConnection.senderId, selectedConnection.receiverId]),
-      orderBy('timestamp', 'asc')
+      where('pitchId', '==', selectedConnection.pitchId)
     );
   }, [db, selectedConnection]);
 
-  const { data: messages } = useCollection(messagesQuery);
+  const { data: rawMessages } = useCollection(messagesQuery);
+
+  // Filter messages for the specific conversation thread and sort chronologically in memory
+  const messages = (rawMessages || [])
+    .filter(msg => 
+      (msg.senderId === selectedConnection.senderId && msg.receiverId === selectedConnection.receiverId) ||
+      (msg.senderId === selectedConnection.receiverId && msg.receiverId === selectedConnection.senderId)
+    )
+    .sort((a, b) => {
+      const timeA = a.timestamp?.toMillis?.() || 0;
+      const timeB = b.timestamp?.toMillis?.() || 0;
+      return timeA - timeB;
+    });
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -93,7 +103,7 @@ export default function MessagesPage() {
           <ScrollArea className="flex-1">
             {loadingConnections ? (
               <div className="p-10 text-center"><Loader2 className="animate-spin mx-auto w-6 h-6 text-muted-foreground" /></div>
-            ) : connections && connections.length > 0 ? (
+            ) : connections.length > 0 ? (
               <div className="divide-y">
                 {connections.map((conn) => (
                   <div
@@ -147,7 +157,7 @@ export default function MessagesPage() {
 
               <ScrollArea className="flex-1 p-6">
                 <div className="space-y-4">
-                  {messages?.map((msg) => (
+                  {messages.map((msg) => (
                     <div
                       key={msg.id}
                       className={cn(
