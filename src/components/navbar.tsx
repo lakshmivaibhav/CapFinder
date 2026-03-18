@@ -1,21 +1,20 @@
-
 "use client";
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { auth as firebaseAuth } from '@/lib/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useAuth as useFirebaseAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { collection, query, where } from 'firebase/firestore';
-import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, MessageSquare, Inbox, ShieldAlert, Bell } from 'lucide-react';
+import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, MessageSquare, Inbox, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { NotificationCenter } from '@/components/notification-center';
 
 export function Navbar() {
   const { user, profile, loading } = useAuth();
+  const firebaseAuth = useFirebaseAuth();
   const pathname = usePathname();
   const router = useRouter();
   const db = useFirestore();
@@ -26,8 +25,6 @@ export function Navbar() {
   };
 
   const unreadMessagesQuery = useMemoFirebase(() => {
-    // CRITICAL: Guard with profile to satisfy security rules (isAuthorized)
-    // Security rules require isAuthorized() for 'messages' read operations.
     if (!user || !profile || !profile.role || profile.disabled === true) return null;
     return query(
       collection(db, 'messages'),
@@ -40,8 +37,6 @@ export function Navbar() {
   const unreadCount = unreadMessages?.length || 0;
 
   const pendingRequestsQuery = useMemoFirebase(() => {
-    // CRITICAL: Guard with profile to satisfy security rules (isAuthorized)
-    // Security rules require isAuthorized() for 'contactRequests' read operations.
     if (!user || !profile || !profile.role || profile.disabled === true) return null;
     return query(
       collection(db, 'contactRequests'),
@@ -122,7 +117,6 @@ export function Navbar() {
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
         ) : (
           <>
-            {/* Only render NotificationCenter if the profile is ready and authorized */}
             {profile && profile.role && profile.disabled === false && <NotificationCenter />}
             <div className="h-8 w-[1px] bg-border mx-1 hidden sm:block" />
             {profile?.role === 'startup' && (

@@ -88,13 +88,11 @@ function AdminDashboardContent() {
   // Queries optimized with filters to satisfy security rules and performance requirements
   const usersQuery = useMemoFirebase(() => {
     if (!profile || profile.role !== 'admin' || profile.disabled === true) return null;
-    // Filter by disabled status to provide a constrained query
     return query(collection(db, 'users'), where('disabled', 'in', [true, false]), limit(500));
   }, [db, profile]);
 
   const pitchesQuery = useMemoFirebase(() => {
     if (!profile || profile.role !== 'admin' || profile.disabled === true) return null;
-    // Filter by funding needed to provide a constrained query
     return query(collection(db, 'pitches'), where('fundingNeeded', '>=', 0), limit(500));
   }, [db, profile]);
 
