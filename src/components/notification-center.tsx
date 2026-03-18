@@ -19,12 +19,11 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
 
   const notificationsQuery = useMemoFirebase(() => {
-    // CRITICAL: Ensure profile is non-null and fully initialized with a role 
-    // to satisfy security rules (isAuthorized) before initiating the query.
-    // This prevents PERMISSION_DENIED errors during initial login/onboarding.
-    if (!user || !profile || !profile.role) return null;
+    // CRITICAL: Strictly guard the query to ensure the user is fully authorized.
+    // The 'notifications' security rules require isAuthorized() (profile document exists and disabled == false).
+    // Also, we MUST filter by userId to satisfy the identity-based read rule for list operations.
+    if (!user || !profile || !profile.role || profile.disabled === true) return null;
     
-    // Explicitly filter by userId as required by security rules for list operations
     return query(
       collection(db, 'notifications'),
       where('userId', '==', user.uid),

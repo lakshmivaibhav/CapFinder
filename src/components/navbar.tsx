@@ -27,7 +27,8 @@ export function Navbar() {
 
   const unreadMessagesQuery = useMemoFirebase(() => {
     // CRITICAL: Guard with profile to satisfy security rules (isAuthorized)
-    if (!user || !profile) return null;
+    // Security rules require isAuthorized() for 'messages' read operations.
+    if (!user || !profile || !profile.role || profile.disabled === true) return null;
     return query(
       collection(db, 'messages'),
       where('receiverId', '==', user.uid),
@@ -40,7 +41,8 @@ export function Navbar() {
 
   const pendingRequestsQuery = useMemoFirebase(() => {
     // CRITICAL: Guard with profile to satisfy security rules (isAuthorized)
-    if (!user || !profile) return null;
+    // Security rules require isAuthorized() for 'contactRequests' read operations.
+    if (!user || !profile || !profile.role || profile.disabled === true) return null;
     return query(
       collection(db, 'contactRequests'),
       where('receiverId', '==', user.uid),
@@ -120,7 +122,8 @@ export function Navbar() {
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
         ) : (
           <>
-            <NotificationCenter />
+            {/* Only render NotificationCenter if the profile is ready and authorized */}
+            {profile && profile.role && profile.disabled === false && <NotificationCenter />}
             <div className="h-8 w-[1px] bg-border mx-1 hidden sm:block" />
             {profile?.role === 'startup' && (
               <Link href="/pitches/new" className="hidden sm:block">
