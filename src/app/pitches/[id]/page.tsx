@@ -2,7 +2,7 @@
 "use client";
 
 import { use, useState } from 'react';
-import { doc, collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { doc, collection, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Navbar } from '@/components/navbar';
@@ -18,6 +18,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const { user, profile, loading: authLoading } = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
+  const [deleting, setDeleting] = useState(false);
 
   const pitchRef = useMemoFirebase(() => doc(db, 'pitches', id), [db, id]);
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
@@ -110,27 +111,75 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
     toast({ title: "Contact Request Sent", description: "The startup will review your request shortly." });
   };
 
-  const handleRequestDeletion = () => {
+  const handleRequestDeletion = async () => {
     if (!user || !pitch || pitch.ownerId !== user.uid) return;
-    if (confirm("Are you sure you want to request deletion of this pitch? An administrator will review your request.")) {
-      addDocumentNonBlocking(collection(db, 'deleteRequests'), {
-        userId: user.uid,
-        targetType: 'pitch',
-        targetId: pitch.id,
-        status: 'pending',
-        timestamp: serverTimestamp(),
-        details: `Startup owner requested deletion of pitch: ${pitch.startupName}`
-      });
-      
-      addDocumentNonBlocking(collection(db, 'logs'), {
-        userId: user.uid,
-        action: 'delete_request_created',
-        targetId: pitch.id,
-        timestamp: serverTimestamp(),
-        details: `Deletion request submitted for pitch ${pitch.startupName}`
-      });
+    
+    setDeleting(true);
+    try {
+      // Check for active interests
+      const interestsSnap = await getDocs(query(collection(db, 'interests'), where('pitchId', '==', pitch.id)));
+      if (!interestsSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Cannot Delete Pitch",
+          description: "There are investors currently interested in this pitch. Please resolve these leads first."
+        });
+        setDeleting(false);
+        return;
+      }
 
-      toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });
+      // Check for active contact requests
+      const requestsSnap = await getDocs(query(collection(db, 'contactRequests'), where('pitchId', '==', pitch.id)));
+      if (!requestsSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Cannot Delete Pitch",
+          description: "There are active introduction requests for this pitch."
+        });
+        setDeleting(false);
+        return;
+      }
+
+      // Check for active messages
+      const messagesSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
+      if (!messagesSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Cannot Delete Pitch",
+          description: "There are active message threads linked to this pitch."
+        });
+        setDeleting(false);
+        return;
+      }
+
+      if (confirm("Are you sure you want to request deletion of this pitch? An administrator will review your request.")) {
+        addDocumentNonBlocking(collection(db, 'deleteRequests'), {
+          userId: user.uid,
+          targetType: 'pitch',
+          targetId: pitch.id,
+          status: 'pending',
+          timestamp: serverTimestamp(),
+          details: `Startup owner requested deletion of pitch: ${pitch.startupName}`
+        });
+        
+        addDocumentNonBlocking(collection(db, 'logs'), {
+          userId: user.uid,
+          action: 'delete_request_created',
+          targetId: pitch.id,
+          timestamp: serverTimestamp(),
+          details: `Deletion request submitted for pitch ${pitch.startupName}`
+        });
+
+        toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Check Failed",
+        description: "Could not verify pitch status. Please try again."
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -165,8 +214,10 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                         size="sm" 
                         className="text-destructive hover:bg-destructive/10"
                         onClick={handleRequestDeletion}
+                        disabled={deleting}
                       >
-                        <Trash2 className="w-4 h-4 mr-2" /> Request Deletion
+                        {deleting ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                        Request Deletion
                       </Button>
                     )}
                     {isInvestor && (

@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, collection, serverTimestamp, getDocs, query, where, or } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const db = useFirestore();
   const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -78,27 +79,87 @@ export default function ProfilePage() {
     }
   };
 
-  const handleRequestAccountDeletion = () => {
+  const handleRequestAccountDeletion = async () => {
     if (!user) return;
-    if (confirm("Are you sure you want to request account deletion? An administrator will review your request and contact you. This action cannot be undone.")) {
-      addDocumentNonBlocking(collection(db, 'deleteRequests'), {
-        userId: user.uid,
-        targetType: 'account',
-        targetId: user.uid,
-        status: 'pending',
-        timestamp: serverTimestamp(),
-        details: `User requested account deletion: ${user.email}`
-      });
+    
+    setChecking(true);
+    try {
+      // Check for active messages
+      const messagesSnap = await getDocs(query(
+        collection(db, 'messages'),
+        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid))
+      ));
+      
+      if (!messagesSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Cannot Request Deletion",
+          description: "You have active message threads. Please resolve them first."
+        });
+        setChecking(false);
+        return;
+      }
 
-      addDocumentNonBlocking(collection(db, 'logs'), {
-        userId: user.uid,
-        action: 'delete_request_created',
-        targetId: user.uid,
-        timestamp: serverTimestamp(),
-        details: `Account deletion request submitted for ${user.email}`
-      });
+      // Check for pending/accepted contact requests
+      const requestsSnap = await getDocs(query(
+        collection(db, 'contactRequests'),
+        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid))
+      ));
 
-      toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });
+      if (!requestsSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Cannot Request Deletion",
+          description: "You have active contact requests or introductions in progress."
+        });
+        setChecking(false);
+        return;
+      }
+
+      // Check for interests
+      const interestsSnap = await getDocs(query(
+        collection(db, 'interests'),
+        or(where('investorId', '==', user.uid), where('startupOwnerId', '==', user.uid))
+      ));
+
+      if (!interestsSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Cannot Request Deletion",
+          description: "You have registered interests or leads linked to your account."
+        });
+        setChecking(false);
+        return;
+      }
+
+      if (confirm("Are you sure you want to request account deletion? An administrator will review your request. This action cannot be undone.")) {
+        addDocumentNonBlocking(collection(db, 'deleteRequests'), {
+          userId: user.uid,
+          targetType: 'account',
+          targetId: user.uid,
+          status: 'pending',
+          timestamp: serverTimestamp(),
+          details: `User requested account deletion: ${user.email}`
+        });
+
+        addDocumentNonBlocking(collection(db, 'logs'), {
+          userId: user.uid,
+          action: 'delete_request_created',
+          targetId: user.uid,
+          timestamp: serverTimestamp(),
+          details: `Account deletion request submitted for ${user.email}`
+        });
+
+        toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Check Failed",
+        description: "Could not verify account status. Please try again."
+      });
+    } finally {
+      setChecking(false);
     }
   };
 
@@ -153,8 +214,10 @@ export default function ProfilePage() {
                   size="sm" 
                   className="w-full text-destructive hover:bg-red-50 hover:text-red-700 font-medium"
                   onClick={handleRequestAccountDeletion}
+                  disabled={checking}
                 >
-                  <Trash2 className="w-4 h-4 mr-2" /> Request Account Deletion
+                  {checking ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                  Request Account Deletion
                 </Button>
               </div>
             </Card>
