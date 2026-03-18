@@ -9,15 +9,15 @@ import { Bell, Sparkles, Clock, Circle } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
 
 export function NotificationCenter() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
-  // Notifications system enabled with strict identity filtering to resolve permission errors
+  // Notifications system: strictly filtered by userId and only when open
   const notificationsQuery = useMemoFirebase(() => {
-    // Only query if the sheet is open AND we have a valid user identity
     if (!open || !user?.uid) return null;
     return query(
       collection(db, 'notifications'),
@@ -29,7 +29,6 @@ export function NotificationCenter() {
 
   const { data: notifications, isLoading } = useCollection(notificationsQuery);
   
-  // Count unread for the badge (requires a separate background count or just using the loaded list)
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
 
   if (!user) return null;
