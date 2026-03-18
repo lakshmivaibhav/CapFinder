@@ -215,9 +215,10 @@
         "receiverId": { "type": "string" },
         "pitchId": { "type": "string" },
         "text": { "type": "string" },
+        "read": { "type": "boolean", "description": "Whether the message has been read by the receiver." },
         "timestamp": { "type": "string", "format": "date-time" }
       },
-      "required": ["senderId", "receiverId", "pitchId", "text", "timestamp"]
+      "required": ["senderId", "receiverId", "pitchId", "text", "timestamp", "read"]
     }
   },
   "auth": {

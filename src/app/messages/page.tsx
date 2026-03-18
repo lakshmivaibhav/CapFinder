@@ -4,13 +4,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { collection, query, where, serverTimestamp, doc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Send, MessageSquare, Clock } from 'lucide-react';
+import { Loader2, Send, MessageSquare, Clock, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -21,7 +21,7 @@ export default function MessagesPage() {
   const [messageText, setMessageText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 1. Fetch all connection requests for the user (regardless of status, filtered in UI)
+  // 1. Fetch all connection requests for the user
   const connectionsQuery = useMemoFirebase(() => {
     if (!user || !profile) return null;
     return query(
@@ -32,11 +32,9 @@ export default function MessagesPage() {
 
   const { data: allConnections, isLoading: loadingConnections } = useCollection(connectionsQuery);
   
-  // Filter for accepted connections in the UI logic
   const connections = allConnections?.filter(c => c.status === 'accepted') || [];
 
   // 2. Fetch messages for the selected connection's pitch
-  // We use a simplified query to ensure permission checks pass, then filter participants in memory
   const messagesQuery = useMemoFirebase(() => {
     if (!selectedConnection) return null;
     return query(
@@ -47,7 +45,6 @@ export default function MessagesPage() {
 
   const { data: rawMessages } = useCollection(messagesQuery);
 
-  // Filter messages for the specific conversation thread and sort chronologically in memory
   const messages = (rawMessages || [])
     .filter(msg => 
       (msg.senderId === selectedConnection.senderId && msg.receiverId === selectedConnection.receiverId) ||
@@ -58,6 +55,18 @@ export default function MessagesPage() {
       const timeB = b.timestamp?.toMillis?.() || 0;
       return timeA - timeB;
     });
+
+  // Mark messages as read when viewed
+  useEffect(() => {
+    if (selectedConnection && user && messages.length > 0) {
+      const unreadMessages = messages.filter(
+        (m) => m.receiverId === user.uid && m.read === false
+      );
+      unreadMessages.forEach((m) => {
+        updateDocumentNonBlocking(doc(db, 'messages', m.id), { read: true });
+      });
+    }
+  }, [selectedConnection, messages, user, db]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -79,6 +88,7 @@ export default function MessagesPage() {
       pitchId: selectedConnection.pitchId,
       text: messageText,
       timestamp: serverTimestamp(),
+      read: false,
     });
 
     setMessageText('');
@@ -105,28 +115,38 @@ export default function MessagesPage() {
               <div className="p-10 text-center"><Loader2 className="animate-spin mx-auto w-6 h-6 text-muted-foreground" /></div>
             ) : connections.length > 0 ? (
               <div className="divide-y">
-                {connections.map((conn) => (
-                  <div
-                    key={conn.id}
-                    className={cn(
-                      "p-4 cursor-pointer hover:bg-muted/50 transition-colors flex items-center gap-3",
-                      selectedConnection?.id === conn.id && "bg-primary/5 border-l-4 border-primary"
-                    )}
-                    onClick={() => setSelectedConnection(conn)}
-                  >
-                    <Avatar className="h-10 w-10 border">
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        {conn.startupName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 overflow-hidden">
-                      <p className="font-semibold text-sm truncate">{conn.startupName}</p>
-                      <p className="text-[10px] text-muted-foreground truncate italic">
-                        {profile?.role === 'startup' ? conn.investorEmail : 'Founder'}
-                      </p>
+                {connections.map((conn) => {
+                  const hasUnread = rawMessages?.some(
+                    m => m.pitchId === conn.pitchId && m.receiverId === user.uid && m.read === false
+                  );
+                  return (
+                    <div
+                      key={conn.id}
+                      className={cn(
+                        "p-4 cursor-pointer hover:bg-muted/50 transition-colors flex items-center gap-3 relative",
+                        selectedConnection?.id === conn.id && "bg-primary/5 border-l-4 border-primary"
+                      )}
+                      onClick={() => setSelectedConnection(conn)}
+                    >
+                      <Avatar className="h-10 w-10 border">
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {conn.startupName[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 overflow-hidden">
+                        <div className="flex justify-between items-center">
+                          <p className={cn("text-sm truncate", hasUnread ? "font-bold text-foreground" : "font-semibold text-muted-foreground")}>
+                            {conn.startupName}
+                          </p>
+                          {hasUnread && <div className="w-2 h-2 bg-red-500 rounded-full" />}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground truncate italic">
+                          {profile?.role === 'startup' ? conn.investorEmail : 'Founder'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="p-10 text-center text-muted-foreground">
@@ -175,10 +195,15 @@ export default function MessagesPage() {
                       >
                         {msg.text}
                       </div>
-                      <span className="text-[9px] text-muted-foreground flex items-center gap-1">
-                        <Clock className="w-2.5 h-2.5" />
-                        {msg.timestamp?.toDate ? format(msg.timestamp.toDate(), 'HH:mm') : 'Just now'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] text-muted-foreground flex items-center gap-1">
+                          <Clock className="w-2.5 h-2.5" />
+                          {msg.timestamp?.toDate ? format(msg.timestamp.toDate(), 'HH:mm') : 'Just now'}
+                        </span>
+                        {msg.senderId === user.uid && (
+                          <CheckCheck className={cn("w-3 h-3", msg.read ? "text-blue-500" : "text-muted-foreground")} />
+                        )}
+                      </div>
                     </div>
                   ))}
                   <div ref={scrollRef} />
