@@ -3,13 +3,13 @@
 
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark, Inbox, CheckCircle2, XCircle, User, ShieldAlert, BarChart3 } from 'lucide-react';
+import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark, Inbox, CheckCircle2, XCircle, User, ShieldAlert, BarChart3, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -89,6 +89,32 @@ export default function DashboardPage() {
   const { data: allUsers, isLoading: loadingAllUsers } = useCollection(allUsersQuery);
 
   const pendingRequestsCount = startupContactRequests?.filter(r => r.status === 'pending').length || 0;
+
+  // Recommendation logic for Investors
+  const recommendedPitches = useMemo(() => {
+    if (!isInvestor || !allPitches || !profile?.investmentInterest) return [];
+    
+    const interests = profile.investmentInterest.toLowerCase().split(',').map(i => i.trim()).filter(Boolean);
+    
+    return allPitches
+      .map(pitch => {
+        let score = 0;
+        const industry = (pitch.industry || '').toLowerCase();
+        const description = (pitch.description || '').toLowerCase();
+        const startupName = (pitch.startupName || '').toLowerCase();
+        
+        interests.forEach(interest => {
+          if (industry.includes(interest)) score += 10;
+          if (description.includes(interest)) score += 2;
+          if (startupName.includes(interest)) score += 5;
+        });
+        
+        return { ...pitch, score };
+      })
+      .filter(p => p.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+  }, [isInvestor, allPitches, profile]);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -188,6 +214,47 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Recommended Section for Investors */}
+        {isInvestor && recommendedPitches.length > 0 && (
+          <section className="mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-8 h-8 bg-accent/10 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-accent" />
+              </div>
+              <h2 className="text-2xl font-bold tracking-tight">Recommended for You</h2>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recommendedPitches.map((pitch) => (
+                <Link key={pitch.id} href={`/pitches/${pitch.id}`}>
+                  <Card className="group border-2 border-accent/10 hover:border-accent bg-accent/5 hover:bg-accent/[0.08] transition-all h-full shadow-sm">
+                    <CardHeader className="pb-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <Badge className="bg-accent text-white border-none px-3 py-1 font-bold text-[10px] uppercase">{pitch.industry}</Badge>
+                        <div className="text-[10px] font-black text-accent bg-white border border-accent/20 px-2 py-0.5 rounded-full uppercase tracking-tighter">AI Match</div>
+                      </div>
+                      <CardTitle className="text-xl font-bold line-clamp-1 group-hover:text-accent transition-colors">
+                        {pitch.startupName}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pb-4">
+                      <p className="text-sm text-muted-foreground line-clamp-2 italic mb-6 leading-relaxed">
+                        &quot;{pitch.description}&quot;
+                      </p>
+                      <div className="flex justify-between items-end">
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Target Funding</p>
+                          <p className="text-lg font-black text-accent">${pitch.fundingNeeded?.toLocaleString()}</p>
+                        </div>
+                        <ArrowRight className="w-5 h-5 text-accent opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Branched Dashboard Content */}
         <Tabs defaultValue="primary" className="space-y-6">
