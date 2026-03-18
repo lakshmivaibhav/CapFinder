@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * CapFinder Security Rules
+     * 
+     * Core Philosophy:
+     * This ruleset enforces a strict identity-based access model with role-specific visibility. 
+     * It leverages Authorization Independence by nesting user data under their Auth UID and 
+     * denormalizing ownership IDs onto shared resources (Pitches).
+     *
+     * Data Structure:
+     * - /users/{userId}: Private user profiles containing identity and role (Investor vs Startup).
+     * - /pitches/{pitchId}: Shared investment pitches.
+     *
+     * Key Security Decisions:
+     * - Ownership: Users can only read/write their own profile documents.
+     * - Role-Based Access: Pitch visibility is restricted to users with the 'Investor' role or the owner.
+     * - Structural Segregation: User-specific data is kept separate from the public-facing pitch collection.
+     * - Relational Integrity: On creation, the rules enforce that the data's owner ID matches the authenticated user.
+     *
+     * Denormalization for Authorization:
+     * - The 'StartupPitch' document includes 'startupId' to allow the backend to verify ownership 
+     *   without performing a cross-collection lookup.
+     * - User roles are stored directly on the 'UserProfile' to facilitate role-based checks for pitch access.
+     */
+
+    // --- Global Helper Functions ---
+
+    /** @description Checks if the request is from a signed-in user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** @description Checks if the authenticated user's UID matches the provided userId. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** @description Checks if the user is the owner of an existing document. */
+    function isExistingOwner(ownerId) {
+      return isSignedIn() && resource != null && request.auth.uid == ownerId;
+    }
+
+    /** @description Fetches the authenticated user's role from their profile document. */
+    function hasRole(role) {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for user profile documents. Enforces owner-only access and UID consistency.
+     * @path /users/{userId}
+     * @allow (get) Signed-in user fetching their own profile.
+     * @deny (list) Anonymous users or users attempting to list all profiles.
+     * @principle Restricts access to a user's own data tree and validates path consistency.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isOwner(userId) && resource != null && request.resource.data.id == resource.data.id;
+      allow delete: if isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Rules for startup pitches. Owners can manage their pitches; Investors can view all.
+     * @path /pitches/{pitchId}
+     * @allow (list) Users with the 'Investor' role browsing pitches.
+     * @deny (update) Any user attempting to change the 'startupId' field on a pitch.
+     * @principle Enforces owner-only writes and role-based visibility for shared resources.
+     */
+    match /pitches/{pitchId} {
+      // Readers can be the owner or any verified Investor.
+      // Note: resource.data is used for 'get'. For 'list', we rely on the Investor role check.
+      allow get: if isOwner(resource.data.startupId) || hasRole('Investor');
+      allow list: if isSignedIn() && hasRole('Investor');
+      
+      // Only users with 'Startup' role can create pitches, and they must own the pitch they create.
+      allow create: if isSignedIn() && hasRole('Startup') && request.resource.data.startupId == request.auth.uid;
+      
+      // Only the owning startup can update or delete their pitch.
+      // Relational integrity: The startupId must remain immutable.
+      allow update: if isExistingOwner(resource.data.startupId) && request.resource.data.startupId == resource.data.startupId;
+      allow delete: if isExistingOwner(resource.data.startupId);
+    }
+  }
+}

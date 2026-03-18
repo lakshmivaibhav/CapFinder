@@ -1,0 +1,146 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile within the CapFinder application, distinguishing between investors and startups.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the user or a representative of the company."
+        },
+        "email": {
+          "type": "string",
+          "description": "The primary contact email for the user. Used for communication.",
+          "format": "email"
+        },
+        "bio": {
+          "type": "string",
+          "description": "A short biography or a brief description of the user's company or background."
+        },
+        "company": {
+          "type": "string",
+          "description": "The name of the company the user is associated with (e.g., startup name, investment firm name)."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user, indicating whether they are an 'Investor' or a 'Startup'."
+        },
+        "investmentInterest": {
+          "type": "string",
+          "description": "A description of the industries, stages, or types of startups an investor is interested in. (Relevant for 'Investor' role)."
+        },
+        "fundingNeeded": {
+          "type": "number",
+          "description": "The total amount of funding the startup is currently seeking, in a numerical format. (Relevant for 'Startup' role)."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "role"
+      ]
+    },
+    "StartupPitch": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StartupPitch",
+      "type": "object",
+      "description": "Represents an investment pitch posted by a startup, visible to investors.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StartupPitch entity."
+        },
+        "startupId": {
+          "type": "string",
+          "description": "Reference to the UserProfile entity of the startup that posted this pitch. (Relationship: UserProfile 1:N StartupPitch)"
+        },
+        "startupName": {
+          "type": "string",
+          "description": "The official name of the startup presenting this pitch."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the startup, its product/service, market, and business model."
+        },
+        "fundingNeeded": {
+          "type": "number",
+          "description": "The specific amount of funding requested for this particular pitch."
+        },
+        "industry": {
+          "type": "string",
+          "description": "The industry or sector in which the startup primarily operates."
+        },
+        "contactEmail": {
+          "type": "string",
+          "description": "An email address for potential investors to contact the startup directly regarding this pitch.",
+          "format": "email"
+        },
+        "postedDate": {
+          "type": "string",
+          "description": "The date and time when the pitch was posted.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "startupId",
+        "startupName",
+        "description",
+        "fundingNeeded",
+        "industry",
+        "contactEmail",
+        "postedDate"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores individual user profiles, accessible only by the user themselves. The 'id' field within the document must match the '{userId}' path parameter. Includes the user's 'role' ('Investor' or 'Startup') for role-based authorization checks. This structure ensures Authorization Independence for user data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique Firebase Authentication UID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/pitches/{pitchId}",
+        "definition": {
+          "entityName": "StartupPitch",
+          "schema": {
+            "$ref": "#/backend/entities/StartupPitch"
+          },
+          "description": "Contains all investment pitches posted by startups. These documents are publicly readable by authenticated 'Investor' users. The 'startupId' field is denormalized within each document, referencing the owner's UserProfile, thereby enabling Authorization Independence for write operations (only the owning startup can modify).",
+          "params": [
+            {
+              "name": "pitchId",
+              "description": "The unique identifier for a specific startup pitch."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The CapFinder Firestore structure is designed to adhere strictly to the core principles of authorization independence, structural segregation, and predictable access modeling, ensuring a secure, scalable, and debuggable system. \n\n**Authorization Independence (CRITICAL) & Denormalization:**\n\n1.  **User Profiles (`/users/{userId}`):** User profiles are stored directly under their Firebase Authentication UID. This inherently provides authorization independence as access to a user's profile (read/write) can be directly granted based on `request.auth.uid == userId`. There are no parent documents whose attributes need to be fetched via `get()` calls to determine authorization for a user's own profile. The user's role (`Investor` or `Startup`) is stored within their `UserProfile` document, allowing for straightforward role-based checks without external lookups for the authenticated user.\n2.  **Startup Pitches (`/pitches/{pitchId}`):** Each `StartupPitch` document includes a `startupId` field. This `startupId` is a direct reference to the Firebase UID of the startup that posted the pitch. This denormalization means that when a startup wants to create, update, or delete its own pitch, the security rules can directly compare `request.auth.uid` with `resource.data.startupId` (for new documents) or `resource.data.startupId` (for existing documents) without needing to perform a `get()` call on the parent user document. This enables atomic operations and simplifies rules significantly.\n\n**QAPs (Rules are not Filters):**\n\n1.  **User Profiles:** The `/users/{userId}` structure supports QAPs by ensuring that `list` operations on `/users` are not needed for general access. Users typically interact with their *own* profile (`/users/{request.auth.uid}`), which is an exact lookup, not a filtered list. If a 'list all startups' feature were needed, a separate, perhaps denormalized, collection or indexed query on `/users` specifically filtered for `role == 'Startup'` would be employed, ensuring rules don't attempt to filter arbitrary lists.\n2.  **Startup Pitches:** The `/pitches` collection is designed for investors to \"see all pitches\". This is a prime example of supporting QAPs. All pitches are placed in a single top-level collection, allowing a simple `list` query from the client (`db.collection('pitches')`). The security rules for this collection will enforce that only authenticated users with the 'Investor' role can read these documents. This role check involves a `get()` on the *requesting user's own profile* (`get(/databases/$(database)/documents/users/$(request.auth.uid))`), which is permissible as it checks the actor's properties and does not violate authorization independence concerning the `pitch` documents themselves.\n\n**Structural Segregation:**\n\n*   The `/users` collection is segregated for private user data, ensuring that each document has the same security posture (owner-only access). \n*   The `/pitches` collection is segregated for publicly viewable (by investors) startup pitches, maintaining a consistent security posture across all documents in that collection. This avoids mixing sensitive user data with public pitch data in the same collection, simplifying rule logic and improving maintainability."
+  }
+}
