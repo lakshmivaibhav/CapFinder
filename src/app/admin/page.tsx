@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, User, Megaphone, Inbox, MessageSquare, ShieldAlert, AlertTriangle, UserX, UserCheck, ShieldCheck } from 'lucide-react';
+import { Loader2, Trash2, User, Megaphone, Inbox, MessageSquare, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -38,7 +38,6 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        // Fetch fresh document from Firestore to verify role
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = userDoc.data();
         
@@ -62,7 +61,6 @@ export default function AdminDashboardPage() {
     verifyAdminStatus();
   }, [user, authLoading, db, router, toast]);
 
-  // Queries only activate if verification passes
   const usersQuery = useMemoFirebase(() => 
     isVerifiedAdmin ? query(collection(db, 'users'), limit(100)) : null, 
     [db, isVerifiedAdmin]
@@ -93,9 +91,9 @@ export default function AdminDashboardPage() {
   };
 
   const handleDeleteUser = (userId: string, email: string) => {
-    if (confirm(`Are you sure you want to delete the profile for "${email}"? This will not delete their Auth account.`)) {
+    if (confirm(`Are you sure you want to delete the profile for "${email}"?`)) {
       deleteDocumentNonBlocking(doc(db, 'users', userId));
-      toast({ title: "User Profile Deleted", description: `The Firestore profile for ${email} has been removed.` });
+      toast({ title: "User Profile Deleted", description: `The profile for ${email} has been removed.` });
     }
   };
 
@@ -119,7 +117,7 @@ export default function AdminDashboardPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background space-y-4">
         <Loader2 className="animate-spin w-12 h-12 text-primary" />
-        <p className="text-sm font-medium text-muted-foreground animate-pulse">Verifying Security Credentials...</p>
+        <p className="text-sm font-medium text-muted-foreground animate-pulse">Verifying Admin Access...</p>
       </div>
     );
   }
@@ -135,89 +133,89 @@ export default function AdminDashboardPage() {
           <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
               <ShieldAlert className="w-8 h-8 text-destructive" />
-              System Administration
+              Platform Administration
             </h1>
-            <p className="text-muted-foreground">Global oversight and platform management.</p>
+            <p className="text-muted-foreground">Manage user roles, system data, and platform security.</p>
           </div>
           <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border border-emerald-200 font-bold text-xs">
-            <ShieldCheck className="w-4 h-4" /> Security Verified Session
+            <ShieldCheck className="w-4 h-4" /> Secure Admin Session
           </div>
         </div>
 
         <Tabs defaultValue="users" className="space-y-6">
           <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full md:w-auto h-auto p-1 bg-muted/50">
             <TabsTrigger value="users" className="gap-2 py-2">
-              <User className="w-4 h-4" /> Users
+              <UserCog className="w-4 h-4" /> Role Management
             </TabsTrigger>
             <TabsTrigger value="pitches" className="gap-2 py-2">
-              <Megaphone className="w-4 h-4" /> Pitches
+              <Megaphone className="w-4 h-4" /> Startup Pitches
             </TabsTrigger>
             <TabsTrigger value="requests" className="gap-2 py-2">
-              <Inbox className="w-4 h-4" /> Requests
+              <Inbox className="w-4 h-4" /> Connections
             </TabsTrigger>
             <TabsTrigger value="messages" className="gap-2 py-2">
-              <MessageSquare className="w-4 h-4" /> Messages
+              <MessageSquare className="w-4 h-4" /> Audit Logs
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users">
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>Global User Directory</CardTitle>
-                <CardDescription>View and manage all registered accounts.</CardDescription>
+                <CardTitle>User Directory & Role Control</CardTitle>
+                <CardDescription>Assign roles and manage account status for all platform members.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead>User / Organization</TableHead>
-                      <TableHead>Role</TableHead>
+                      <TableHead>User Identity</TableHead>
+                      <TableHead>Current Role</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Last Active</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Last Activity</TableHead>
+                      <TableHead className="text-right">Management</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingUsers ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
                     ) : allUsers?.map((u) => (
-                      <TableRow key={u.id}>
+                      <TableRow key={u.id} className="hover:bg-muted/5 transition-colors">
                         <TableCell>
                           <div className="flex flex-col">
-                            <Link href={`/profile/${u.id}`} className="font-bold hover:underline">{u.name || 'Anonymous'}</Link>
+                            <Link href={`/profile/${u.id}`} className="font-bold hover:underline text-primary">{u.name || 'Anonymous'}</Link>
                             <span className="text-xs text-muted-foreground">{u.email}</span>
                           </div>
                         </TableCell>
                         <TableCell>
                           <Select 
-                            defaultValue={u.role} 
+                            defaultValue={u.role || 'startup'} 
                             onValueChange={(val) => handleChangeRole(u.id, val)}
                           >
-                            <SelectTrigger className="h-8 w-32 border-none bg-muted/50 text-xs">
+                            <SelectTrigger className="h-9 w-32 bg-white border-primary/20 text-xs font-semibold focus:ring-primary">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="startup">Startup</SelectItem>
                               <SelectItem value="investor">Investor</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="admin">Administrator</SelectItem>
                             </SelectContent>
                           </Select>
                         </TableCell>
                         <TableCell>
                           {u.disabled ? (
-                            <Badge variant="destructive">Disabled</Badge>
+                            <Badge variant="destructive" className="uppercase text-[9px]">Disabled</Badge>
                           ) : (
-                            <Badge variant="secondary" className="bg-green-50 text-green-700">Active</Badge>
+                            <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 uppercase text-[9px]">Active</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
-                          {u.lastActive?.toDate ? format(u.lastActive.toDate(), 'MMM d, p') : 'Never'}
+                          {u.lastActive?.toDate ? format(u.lastActive.toDate(), 'MMM d, HH:mm') : 'Never'}
                         </TableCell>
                         <TableCell className="text-right flex items-center justify-end gap-1">
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className={u.disabled ? "text-green-600 hover:bg-green-100" : "text-amber-600 hover:bg-amber-100"}
+                            className={u.disabled ? "text-green-600 hover:bg-green-50" : "text-amber-600 hover:bg-amber-50"}
                             onClick={() => toggleUserStatus(u.id, !!u.disabled)}
                             title={u.disabled ? "Enable User" : "Disable User"}
                           >
@@ -226,7 +224,7 @@ export default function AdminDashboardPage() {
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="text-destructive hover:bg-destructive/10"
+                            className="text-destructive hover:bg-red-50"
                             onClick={() => handleDeleteUser(u.id, u.email)}
                             title="Delete Profile"
                           >
@@ -244,17 +242,17 @@ export default function AdminDashboardPage() {
           <TabsContent value="pitches">
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>Investment Marketplace Pitches</CardTitle>
-                <CardDescription>Monitor all active startup proposals.</CardDescription>
+                <CardTitle>Marketplace Content Moderation</CardTitle>
+                <CardDescription>Review and manage all active investment proposals.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead>Startup Name</TableHead>
+                      <TableHead>Startup</TableHead>
                       <TableHead>Industry</TableHead>
-                      <TableHead>Goal</TableHead>
-                      <TableHead>Posted By</TableHead>
+                      <TableHead>Funding Goal</TableHead>
+                      <TableHead>Owner ID</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -264,16 +262,16 @@ export default function AdminDashboardPage() {
                     ) : allPitches?.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell>
-                          <Link href={`/pitches/${p.id}`} className="font-bold hover:underline">{p.startupName}</Link>
+                          <Link href={`/pitches/${p.id}`} className="font-bold hover:underline text-primary">{p.startupName}</Link>
                         </TableCell>
-                        <TableCell><Badge variant="secondary">{p.industry}</Badge></TableCell>
-                        <TableCell className="font-mono text-primary font-bold">${p.fundingNeeded?.toLocaleString()}</TableCell>
-                        <TableCell className="text-xs italic">UID: {p.ownerId?.substring(0, 8)}...</TableCell>
+                        <TableCell><Badge variant="outline" className="text-[10px]">{p.industry}</Badge></TableCell>
+                        <TableCell className="font-mono text-emerald-600 font-bold">${p.fundingNeeded?.toLocaleString()}</TableCell>
+                        <TableCell className="text-[10px] font-mono text-muted-foreground">{p.ownerId?.substring(0, 8)}...</TableCell>
                         <TableCell className="text-right">
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="text-destructive hover:bg-destructive/10"
+                            className="text-destructive hover:bg-red-50"
                             onClick={() => handleDeletePitch(p.id, p.startupName)}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -290,17 +288,17 @@ export default function AdminDashboardPage() {
           <TabsContent value="requests">
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>Contact Requests Log</CardTitle>
-                <CardDescription>Oversight of platform connections and networking activity.</CardDescription>
+                <CardTitle>Platform Connection Logs</CardTitle>
+                <CardDescription>Oversight of networking and introduction activity.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead>Entities</TableHead>
+                      <TableHead>Parties</TableHead>
                       <TableHead>Target Startup</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Timestamp</TableHead>
+                      <TableHead>Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -309,14 +307,14 @@ export default function AdminDashboardPage() {
                     ) : allRequests?.map((r) => (
                       <TableRow key={r.id}>
                         <TableCell className="text-xs">
-                          <div className="flex flex-col">
-                            <span>From: {r.investorEmail}</span>
-                            <span className="text-muted-foreground">To: {r.receiverId?.substring(0, 8)}...</span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-semibold">Inv: {r.investorEmail}</span>
+                            <span className="text-muted-foreground text-[10px]">Founder UID: {r.receiverId?.substring(0, 8)}...</span>
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium">{r.startupName}</TableCell>
+                        <TableCell className="font-medium text-sm">{r.startupName}</TableCell>
                         <TableCell>
-                          <Badge variant={r.status === 'accepted' ? 'default' : r.status === 'pending' ? 'secondary' : 'destructive'} className="capitalize">
+                          <Badge variant={r.status === 'accepted' ? 'default' : r.status === 'pending' ? 'secondary' : 'destructive'} className="capitalize text-[10px]">
                             {r.status}
                           </Badge>
                         </TableCell>
@@ -334,16 +332,16 @@ export default function AdminDashboardPage() {
           <TabsContent value="messages">
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>System Messages Log</CardTitle>
-                <CardDescription>Compliance oversight of private platform communications.</CardDescription>
+                <CardTitle>System Message Logs</CardTitle>
+                <CardDescription>Audit trails for private platform communications.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead>Communication</TableHead>
-                      <TableHead>Message Preview</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead>Session</TableHead>
+                      <TableHead>Content Preview</TableHead>
+                      <TableHead>Read</TableHead>
                       <TableHead>Timestamp</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -352,15 +350,17 @@ export default function AdminDashboardPage() {
                       <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
                     ) : allMessages?.map((m) => (
                       <TableRow key={m.id}>
-                        <TableCell className="text-[10px] leading-tight">
+                        <TableCell className="text-[10px] font-mono leading-tight">
                           <div className="flex flex-col">
-                            <span>S: {m.senderId?.substring(0, 8)}...</span>
-                            <span>R: {m.receiverId?.substring(0, 8)}...</span>
+                            <span>S: {m.senderId?.substring(0, 6)}...</span>
+                            <span>R: {m.receiverId?.substring(0, 6)}...</span>
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-xs truncate text-sm italic">"{m.text}"</TableCell>
+                        <TableCell className="max-w-xs truncate text-sm italic text-muted-foreground">
+                          "{m.text}"
+                        </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-[10px] uppercase">{m.read ? 'Read' : 'Unread'}</Badge>
+                          <Badge variant="outline" className="text-[9px] uppercase">{m.read ? 'Yes' : 'No'}</Badge>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {m.timestamp?.toDate ? format(m.timestamp.toDate(), 'HH:mm:ss') : 'N/A'}

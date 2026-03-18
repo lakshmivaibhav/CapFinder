@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Save, User, ArrowLeft, Camera, Briefcase, Mail, Shield } from 'lucide-react';
+import { Loader2, Save, User, ArrowLeft, Camera, Briefcase, Mail, Shield, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
@@ -55,7 +55,7 @@ export default function ProfilePage() {
       const numericFunding = formData.fundingNeeded ? parseFloat(formData.fundingNeeded) : 0;
       
       // SECURITY: Explicitly exclude 'role' from the update payload
-      // Roles can only be changed by an Administrator.
+      // Roles can only be changed by an Administrator through the Admin Dashboard.
       const updateData = {
         name: formData.name,
         company: formData.company,
@@ -93,9 +93,12 @@ export default function ProfilePage() {
           <Link href="/dashboard" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors font-medium">
             <ArrowLeft className="w-4 h-4" /> Back to Dashboard
           </Link>
-          <Badge variant="outline" className="px-3 py-1 capitalize border-primary/20 text-primary font-bold bg-primary/5">
-            {formData.role} Account
-          </Badge>
+          <div className="flex items-center gap-2">
+            {profile?.role === 'admin' && <Badge className="bg-destructive text-white border-none px-3 py-1 uppercase text-[10px]">Admin Access</Badge>}
+            <Badge variant="outline" className="px-3 py-1 capitalize border-primary/20 text-primary font-bold bg-primary/5">
+              {formData.role} Account
+            </Badge>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
@@ -118,10 +121,19 @@ export default function ProfilePage() {
                   <span className="truncate">{formData.company || 'No Company Set'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium">
-                  <Shield className="w-3.5 h-3.5 text-primary/60" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                   <span>Verified Identity</span>
                 </div>
               </div>
+            </Card>
+
+            <Card className="border-none shadow-sm bg-primary/5 p-6 border-l-4 border-l-primary">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
+                <Shield className="w-4 h-4" /> Role Security
+              </h4>
+              <p className="text-[10px] text-muted-foreground leading-relaxed italic">
+                Professional roles are established during registration and are locked to preserve ecosystem trust. Contact support for role reassignment.
+              </p>
             </Card>
           </div>
 
@@ -129,13 +141,13 @@ export default function ProfilePage() {
             <Card className="border-none shadow-sm bg-white overflow-hidden">
               <div className="bg-primary/5 border-b p-8">
                 <CardTitle className="text-2xl font-bold">Profile Settings</CardTitle>
-                <CardDescription>Manage your professional identity and role on the platform.</CardDescription>
+                <CardDescription>Update your public identity and professional credentials.</CardDescription>
               </div>
               <CardContent className="p-8">
                 <form onSubmit={handleSave} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="name" className="text-sm font-semibold">Display Name</Label>
+                      <Label htmlFor="name" className="text-sm font-semibold">Legal Name / Representative</Label>
                       <Input 
                         id="name" 
                         value={formData.name}
@@ -145,7 +157,7 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="company" className="text-sm font-semibold">Organization Name</Label>
+                      <Label htmlFor="company" className="text-sm font-semibold">Official Organization</Label>
                       <Input 
                         id="company" 
                         value={formData.company}
@@ -157,27 +169,27 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Your Account Role</Label>
-                    <div className="h-11 flex items-center px-4 border rounded-md bg-muted/30 text-muted-foreground capitalize font-medium text-sm">
+                    <Label className="text-sm font-semibold">Professional Role</Label>
+                    <div className="h-11 flex items-center px-4 border rounded-md bg-muted/30 text-muted-foreground capitalize font-bold text-xs tracking-wide">
                       {formData.role}
                     </div>
-                    <p className="text-[10px] text-muted-foreground italic px-1">Role is locked for security. Contact an administrator to request a role change.</p>
+                    <p className="text-[10px] text-muted-foreground italic px-1">Role management is handled by system administrators.</p>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="bio" className="text-sm font-semibold">Professional Bio</Label>
                     <Textarea 
                       id="bio" 
-                      className="min-h-[140px] resize-none focus-visible:ring-primary"
+                      className="min-h-[140px] resize-none focus-visible:ring-primary leading-relaxed"
                       value={formData.bio}
                       onChange={(e) => setFormData({...formData, bio: e.target.value})}
-                      placeholder="Briefly describe your background, expertise, or startup vision..."
+                      placeholder="Share your expertise, startup vision, or investment philosophy..."
                     />
                   </div>
 
                   {formData.role === 'startup' && (
                     <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                      <Label htmlFor="fundingNeeded" className="text-sm font-semibold">Current Funding Goal ($)</Label>
+                      <Label htmlFor="fundingNeeded" className="text-sm font-semibold">Current Round Goal ($)</Label>
                       <Input 
                         id="fundingNeeded" 
                         type="number"
@@ -191,12 +203,12 @@ export default function ProfilePage() {
 
                   {formData.role === 'investor' && (
                     <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                      <Label htmlFor="investmentInterest" className="text-sm font-semibold">Investment Interests (Keywords)</Label>
+                      <Label htmlFor="investmentInterest" className="text-sm font-semibold">Target Industries (Keywords)</Label>
                       <Input 
                         id="investmentInterest" 
                         value={formData.investmentInterest}
                         onChange={(e) => setFormData({...formData, investmentInterest: e.target.value})}
-                        placeholder="e.g. SaaS, Fintech, AI, Web3"
+                        placeholder="e.g. SaaS, Fintech, Healthcare"
                         className="h-11 focus-visible:ring-primary"
                       />
                     </div>
@@ -205,7 +217,7 @@ export default function ProfilePage() {
                   <div className="pt-4">
                     <Button type="submit" className="w-full h-12 shadow-md bg-primary hover:bg-primary/90 font-bold gap-2" disabled={saving}>
                       {saving ? <Loader2 className="animate-spin" /> : <Save className="w-5 h-5" />}
-                      Save All Changes
+                      Sync Profile Changes
                     </Button>
                   </div>
                 </form>
