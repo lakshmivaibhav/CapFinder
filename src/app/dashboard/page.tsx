@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -78,12 +79,15 @@ export default function DashboardPage() {
 
     setResolving(pitchId);
     try {
+      // 1. Delete Interest
       const intSnap = await getDocs(query(collection(db, 'interests'), where('investorId', '==', user.uid), where('pitchId', '==', pitchId)));
       intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
 
+      // 2. Delete Contact Request
       const reqSnap = await getDocs(query(collection(db, 'contactRequests'), where('senderId', '==', user.uid), where('pitchId', '==', pitchId)));
       reqSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id)));
 
+      // 3. Delete Messages
       const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitchId)));
       msgsSnap.docs.forEach(d => {
         const m = d.data();

@@ -101,12 +101,15 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
 
     setResolving(true);
     try {
+      // 1. Delete Interests
       if (interests) {
         interests.forEach(i => deleteDocumentNonBlocking(doc(db, 'interests', i.id)));
       }
+      // 2. Delete Contact Requests
       if (contactRequests) {
         contactRequests.forEach(r => deleteDocumentNonBlocking(doc(db, 'contactRequests', r.id)));
       }
+      // 3. Delete Messages
       const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
       msgsSnap.docs.forEach(d => {
         const m = d.data();
