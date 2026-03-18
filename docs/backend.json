@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -57,9 +58,9 @@
           "type": "string",
           "description": "Unique identifier for the StartupPitch entity."
         },
-        "startupId": {
+        "ownerId": {
           "type": "string",
-          "description": "Reference to the UserProfile entity of the startup that posted this pitch. (Relationship: UserProfile 1:N StartupPitch)"
+          "description": "Reference to the UserProfile entity of the startup that posted this pitch."
         },
         "startupName": {
           "type": "string",
@@ -90,13 +91,54 @@
       },
       "required": [
         "id",
-        "startupId",
+        "ownerId",
         "startupName",
         "description",
         "fundingNeeded",
         "industry",
         "contactEmail",
         "postedDate"
+      ]
+    },
+    "Interest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Interest",
+      "type": "object",
+      "description": "Represents an investor expressing interest in a startup's pitch.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Interest entity."
+        },
+        "pitchId": {
+          "type": "string",
+          "description": "The ID of the pitch the investor is interested in."
+        },
+        "investorId": {
+          "type": "string",
+          "description": "The UID of the investor."
+        },
+        "investorEmail": {
+          "type": "string",
+          "description": "The email of the investor expressing interest.",
+          "format": "email"
+        },
+        "startupOwnerId": {
+          "type": "string",
+          "description": "The UID of the startup owner who posted the pitch."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the interest was recorded."
+        }
+      },
+      "required": [
+        "pitchId",
+        "investorId",
+        "investorEmail",
+        "startupOwnerId",
+        "timestamp"
       ]
     }
   },
@@ -115,13 +157,7 @@
           "schema": {
             "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores individual user profiles, accessible only by the user themselves. The 'id' field within the document must match the '{userId}' path parameter. Includes the user's 'role' ('Investor' or 'Startup') for role-based authorization checks. This structure ensures Authorization Independence for user data.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique Firebase Authentication UID of the user."
-            }
-          ]
+          "description": "Stores individual user profiles."
         }
       },
       {
@@ -131,16 +167,19 @@
           "schema": {
             "$ref": "#/backend/entities/StartupPitch"
           },
-          "description": "Contains all investment pitches posted by startups. These documents are publicly readable by authenticated 'Investor' users. The 'startupId' field is denormalized within each document, referencing the owner's UserProfile, thereby enabling Authorization Independence for write operations (only the owning startup can modify).",
-          "params": [
-            {
-              "name": "pitchId",
-              "description": "The unique identifier for a specific startup pitch."
-            }
-          ]
+          "description": "Contains all investment pitches posted by startups."
+        }
+      },
+      {
+        "path": "/interests/{interestId}",
+        "definition": {
+          "entityName": "Interest",
+          "schema": {
+            "$ref": "#/backend/entities/Interest"
+          },
+          "description": "Tracks investor interest in specific pitches."
         }
       }
-    ],
-    "reasoning": "The CapFinder Firestore structure is designed to adhere strictly to the core principles of authorization independence, structural segregation, and predictable access modeling, ensuring a secure, scalable, and debuggable system. \n\n**Authorization Independence (CRITICAL) & Denormalization:**\n\n1.  **User Profiles (`/users/{userId}`):** User profiles are stored directly under their Firebase Authentication UID. This inherently provides authorization independence as access to a user's profile (read/write) can be directly granted based on `request.auth.uid == userId`. There are no parent documents whose attributes need to be fetched via `get()` calls to determine authorization for a user's own profile. The user's role (`Investor` or `Startup`) is stored within their `UserProfile` document, allowing for straightforward role-based checks without external lookups for the authenticated user.\n2.  **Startup Pitches (`/pitches/{pitchId}`):** Each `StartupPitch` document includes a `startupId` field. This `startupId` is a direct reference to the Firebase UID of the startup that posted the pitch. This denormalization means that when a startup wants to create, update, or delete its own pitch, the security rules can directly compare `request.auth.uid` with `resource.data.startupId` (for new documents) or `resource.data.startupId` (for existing documents) without needing to perform a `get()` call on the parent user document. This enables atomic operations and simplifies rules significantly.\n\n**QAPs (Rules are not Filters):**\n\n1.  **User Profiles:** The `/users/{userId}` structure supports QAPs by ensuring that `list` operations on `/users` are not needed for general access. Users typically interact with their *own* profile (`/users/{request.auth.uid}`), which is an exact lookup, not a filtered list. If a 'list all startups' feature were needed, a separate, perhaps denormalized, collection or indexed query on `/users` specifically filtered for `role == 'Startup'` would be employed, ensuring rules don't attempt to filter arbitrary lists.\n2.  **Startup Pitches:** The `/pitches` collection is designed for investors to \"see all pitches\". This is a prime example of supporting QAPs. All pitches are placed in a single top-level collection, allowing a simple `list` query from the client (`db.collection('pitches')`). The security rules for this collection will enforce that only authenticated users with the 'Investor' role can read these documents. This role check involves a `get()` on the *requesting user's own profile* (`get(/databases/$(database)/documents/users/$(request.auth.uid))`), which is permissible as it checks the actor's properties and does not violate authorization independence concerning the `pitch` documents themselves.\n\n**Structural Segregation:**\n\n*   The `/users` collection is segregated for private user data, ensuring that each document has the same security posture (owner-only access). \n*   The `/pitches` collection is segregated for publicly viewable (by investors) startup pitches, maintaining a consistent security posture across all documents in that collection. This avoids mixing sensitive user data with public pitch data in the same collection, simplifying rule logic and improving maintainability."
+    ]
   }
 }

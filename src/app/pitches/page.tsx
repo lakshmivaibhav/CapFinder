@@ -1,21 +1,28 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, getDocs, query, orderBy, where, serverTimestamp, addDoc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
+import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, Filter, TrendingUp, Mail, ExternalLink, Briefcase, Globe } from 'lucide-react';
+import { Loader2, Search, TrendingUp, Mail, ExternalLink, Globe, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
+import { addDocumentNonBlocking } from '@/firebase';
 
 export default function PitchesFeedPage() {
   const { user, profile, loading: authLoading } = useAuth();
+  const db = useFirestore();
+  const { toast } = useToast();
+  
   const [pitches, setPitches] = useState<any[]>([]);
+  const [userInterests, setUserInterests] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [industryFilter, setIndustryFilter] = useState('all');
@@ -28,25 +35,59 @@ export default function PitchesFeedPage() {
         const querySnapshot = await getDocs(q);
         const fetchedPitches = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setPitches(fetchedPitches);
+
+        if (user && profile?.role === 'investor') {
+          const interestQuery = query(collection(db, 'interests'), where('investorId', '==', user.uid));
+          const interestSnap = await getDocs(interestQuery);
+          setUserInterests(interestSnap.docs.map(doc => doc.data().pitchId));
+        }
       } catch (error) {
-        console.error("Error fetching pitches:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchPitches();
-  }, []);
+  }, [db, user, profile]);
 
   const industries = Array.from(new Set(pitches.map(p => p.industry))).filter(Boolean);
 
   const filteredPitches = pitches.filter(p => {
-    const matchesSearch = p.startupName.toLowerCase().includes(search.toLowerCase()) || 
-                          p.industry.toLowerCase().includes(search.toLowerCase()) ||
-                          p.description.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = (p.startupName?.toLowerCase() || "").includes(search.toLowerCase()) || 
+                          (p.industry?.toLowerCase() || "").includes(search.toLowerCase()) ||
+                          (p.description?.toLowerCase() || "").includes(search.toLowerCase());
     const matchesIndustry = industryFilter === 'all' || p.industry === industryFilter;
     return matchesSearch && matchesIndustry;
   });
+
+  const handleShowInterest = async (pitch: any) => {
+    if (!user || !profile) return;
+    if (userInterests.includes(pitch.id)) return;
+
+    try {
+      addDocumentNonBlocking(collection(db, 'interests'), {
+        pitchId: pitch.id,
+        investorId: user.uid,
+        investorEmail: user.email,
+        startupOwnerId: pitch.ownerId,
+        startupName: pitch.startupName, // Denormalized for dashboard convenience
+        timestamp: serverTimestamp(),
+      });
+      
+      setUserInterests([...userInterests, pitch.id]);
+      toast({
+        title: "Interest Sent!",
+        description: `You've expressed interest in ${pitch.startupName}.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Action failed",
+        description: "Could not express interest at this time."
+      });
+    }
+  };
 
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
 
@@ -77,7 +118,7 @@ export default function PitchesFeedPage() {
               <SelectContent>
                 <SelectItem value="all">All Industries</SelectItem>
                 {industries.map(ind => (
-                  <SelectItem key={ind} value={ind}>{ind}</SelectItem>
+                  <SelectItem key={ind as string} value={ind as string}>{ind as string}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -126,9 +167,19 @@ export default function PitchesFeedPage() {
                       <Mail className="mr-2 w-4 h-4" /> Contact
                     </Button>
                   </Link>
-                  <Button className="flex-1 h-10 shadow-sm">
-                    Invest Now <ExternalLink className="ml-2 w-4 h-4" />
-                  </Button>
+                  {profile?.role === 'investor' && (
+                    <Button 
+                      className={`flex-1 h-10 shadow-sm ${userInterests.includes(pitch.id) ? 'bg-green-600 hover:bg-green-600' : 'bg-primary'}`}
+                      onClick={() => handleShowInterest(pitch)}
+                      disabled={userInterests.includes(pitch.id)}
+                    >
+                      {userInterests.includes(pitch.id) ? (
+                        <>Interested <CheckCircle2 className="ml-2 w-4 h-4" /></>
+                      ) : (
+                        <>Show Interest <Sparkles className="ml-2 w-4 h-4" /></>
+                      )}
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             ))}
