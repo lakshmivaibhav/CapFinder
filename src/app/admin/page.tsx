@@ -3,18 +3,18 @@
 
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, limit, doc, getDoc, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, query, limit, doc, getDoc, orderBy, serverTimestamp, where } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, ClipboardList, Clock, Users, MessageSquare, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, ClipboardList, Clock, Users, MessageSquare, AlertTriangle, CheckCircle2, XCircle, Sparkles, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, differenceInHours } from 'date-fns';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -26,6 +26,7 @@ export default function AdminDashboardPage() {
   
   const [verifying, setVerifying] = useState(true);
   const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
+  const [processingStale, setProcessingStale] = useState(false);
 
   useEffect(() => {
     async function verifyAdminStatus() {
@@ -92,8 +93,18 @@ export default function AdminDashboardPage() {
   const { data: allLogs, isLoading: loadingLogs } = useCollection(logsQuery);
   const { data: allDeleteRequests, isLoading: loadingDeleteRequests } = useCollection(deleteRequestsQuery);
 
-  const handleDeletePitch = (pitchId: string, name: string, requestId?: string) => {
-    if (confirm(`Are you sure you want to PERMANENTLY delete the pitch for "${name}"? This action cannot be undone.`)) {
+  const staleRequests = useMemo(() => {
+    if (!allDeleteRequests) return [];
+    const now = new Date();
+    return allDeleteRequests.filter(req => {
+      if (!req.timestamp?.toDate) return false;
+      return differenceInHours(now, req.timestamp.toDate()) >= 24;
+    });
+  }, [allDeleteRequests]);
+
+  const handleDeletePitch = (pitchId: string, name: string, requestId?: string, isAuto = false) => {
+    const confirmMessage = `Are you sure you want to PERMANENTLY delete the pitch for "${name}"? This action cannot be undone.`;
+    if (isAuto || confirm(confirmMessage)) {
       deleteDocumentNonBlocking(doc(db, 'pitches', pitchId));
       if (requestId) {
         updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status: 'resolved' });
@@ -101,18 +112,21 @@ export default function AdminDashboardPage() {
       
       addDocumentNonBlocking(collection(db, 'logs'), {
         userId: user?.uid,
-        action: 'pitch_deleted',
+        action: isAuto ? 'auto_pitch_deleted' : 'pitch_deleted',
         targetId: pitchId,
-        details: `Admin deleted pitch for ${name}`,
+        details: isAuto ? `System auto-deleted stale pitch request for ${name}` : `Admin approved deletion of pitch: ${name}`,
         timestamp: serverTimestamp()
       });
 
-      toast({ title: "Pitch Deleted", description: `The pitch for ${name} has been removed.` });
+      if (!isAuto) {
+        toast({ title: "Pitch Deleted", description: `The pitch for ${name} has been removed.` });
+      }
     }
   };
 
-  const handleDeleteUser = (userId: string, email: string, requestId?: string) => {
-    if (confirm(`Are you sure you want to PERMANENTLY delete the profile for "${email}"? This will remove all their access to the platform.`)) {
+  const handleDeleteUser = (userId: string, email: string, requestId?: string, isAuto = false) => {
+    const confirmMessage = `Are you sure you want to PERMANENTLY delete the profile for "${email}"? This will remove all their access to the platform.`;
+    if (isAuto || confirm(confirmMessage)) {
       deleteDocumentNonBlocking(doc(db, 'users', userId));
       if (requestId) {
         updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status: 'resolved' });
@@ -120,13 +134,34 @@ export default function AdminDashboardPage() {
 
       addDocumentNonBlocking(collection(db, 'logs'), {
         userId: user?.uid,
-        action: 'user_deleted',
+        action: isAuto ? 'auto_user_deleted' : 'user_deleted',
         targetId: userId,
-        details: `Admin deleted user ${email}`,
+        details: isAuto ? `System auto-deleted stale account request for ${email}` : `Admin approved deletion of user: ${email}`,
         timestamp: serverTimestamp()
       });
 
-      toast({ title: "User Profile Deleted", description: `The profile for ${email} has been removed.` });
+      if (!isAuto) {
+        toast({ title: "User Profile Deleted", description: `The profile for ${email} has been removed.` });
+      }
+    }
+  };
+
+  const handleProcessStaleRequests = async () => {
+    if (staleRequests.length === 0) return;
+    if (!confirm(`Are you sure you want to automatically process ${staleRequests.length} stale deletion requests?`)) return;
+
+    setProcessingStale(true);
+    try {
+      for (const req of staleRequests) {
+        if (req.targetType === 'account') {
+          handleDeleteUser(req.targetId, 'Stale Account Deletion', req.id, true);
+        } else {
+          handleDeletePitch(req.targetId, 'Stale Pitch Deletion', req.id, true);
+        }
+      }
+      toast({ title: "Batch Processing Complete", description: `${staleRequests.length} stale requests have been purged.` });
+    } finally {
+      setProcessingStale(false);
     }
   };
 
@@ -379,64 +414,100 @@ export default function AdminDashboardPage() {
           </TabsContent>
 
           <TabsContent value="delete-requests">
-            <Card className="border-none shadow-sm overflow-hidden bg-white">
-              <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>Data Removal Requests</CardTitle>
-                <CardDescription>Review and process user requests to delete their data.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Target ID / User</TableHead>
-                      <TableHead>Requested On</TableHead>
-                      <TableHead className="text-right">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loadingDeleteRequests ? (
-                      <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
-                    ) : allDeleteRequests?.length === 0 ? (
-                      <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground italic">No pending deletion requests.</TableCell></TableRow>
-                    ) : allDeleteRequests?.map((req) => (
-                      <TableRow key={req.id}>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">{req.targetType}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-mono text-[10px] text-muted-foreground">{req.targetId}</span>
-                            <span className="text-xs">User: {req.userId?.substring(0, 8)}...</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {req.timestamp?.toDate ? format(req.timestamp.toDate(), 'MMM d, HH:mm') : 'Recently'}
-                        </TableCell>
-                        <TableCell className="text-right flex items-center justify-end gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200"
-                            onClick={() => req.targetType === 'account' ? handleDeleteUser(req.targetId, 'Account deletion request', req.id) : handleDeletePitch(req.targetId, 'Pitch deletion request', req.id)}
-                          >
-                            <Trash2 className="w-4 h-4 mr-1" /> Approve & Delete
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-muted-foreground"
-                            onClick={() => handleResolveDeleteRequest(req.id, 'rejected')}
-                          >
-                            <XCircle className="w-4 h-4 mr-1" /> Dismiss
-                          </Button>
-                        </TableCell>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Pending Purge Queue</h3>
+                {staleRequests.length > 0 && (
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="gap-2" 
+                    onClick={handleProcessStaleRequests}
+                    disabled={processingStale}
+                  >
+                    {processingStale ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+                    Purge {staleRequests.length} Stale Requests (+24h)
+                  </Button>
+                )}
+              </div>
+              <Card className="border-none shadow-sm overflow-hidden bg-white">
+                <CardHeader className="bg-muted/10 border-b">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <CardTitle>Data Removal Requests</CardTitle>
+                      <CardDescription>Review and process user requests to delete their data.</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader className="bg-muted/30">
+                      <TableRow>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Target ID / User</TableHead>
+                        <TableHead>Requested On</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {loadingDeleteRequests ? (
+                        <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                      ) : allDeleteRequests?.length === 0 ? (
+                        <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">No pending deletion requests.</TableCell></TableRow>
+                      ) : allDeleteRequests?.map((req) => {
+                        const isStale = req.timestamp?.toDate && differenceInHours(new Date(), req.timestamp.toDate()) >= 24;
+                        return (
+                          <TableRow key={req.id} className={isStale ? "bg-red-50/30" : ""}>
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize">{req.targetType}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-mono text-[10px] text-muted-foreground">{req.targetId}</span>
+                                <span className="text-xs">User: {req.userId?.substring(0, 8)}...</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {req.timestamp?.toDate ? format(req.timestamp.toDate(), 'MMM d, HH:mm') : 'Recently'}
+                            </TableCell>
+                            <TableCell>
+                              {isStale ? (
+                                <Badge variant="destructive" className="animate-pulse flex items-center gap-1 w-fit">
+                                  <Clock className="w-3 h-3" /> Stale (24h+)
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="flex items-center gap-1 w-fit text-[10px]">
+                                  <Clock className="w-3 h-3" /> Pending
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right flex items-center justify-end gap-2">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200 h-8"
+                                onClick={() => req.targetType === 'account' ? handleDeleteUser(req.targetId, 'Approved Account Deletion', req.id) : handleDeletePitch(req.targetId, 'Approved Pitch Deletion', req.id)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-1" /> Approve & Delete
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-muted-foreground h-8"
+                                onClick={() => handleResolveDeleteRequest(req.id, 'rejected')}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" /> Dismiss
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="requests">
