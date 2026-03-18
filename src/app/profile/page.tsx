@@ -46,21 +46,23 @@ export default function ProfilePage() {
 
   // Fetch user's pitches for deletion management
   const myPitchesQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    // Wait for profile to satisfy isAuthorized() rule
+    if (!user || !profile) return null;
     return query(collection(db, 'pitches'), where('ownerId', '==', user.uid));
-  }, [db, user]);
+  }, [db, user, profile]);
   const { data: myPitches, isLoading: loadingPitches } = useCollection(myPitchesQuery);
 
   // Fetch user's personal logs for Activity History
   const myLogsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    // CRITICAL: Must wait for both user AND profile to satisfy security rules (isAuthorized)
+    if (!user || !profile) return null;
     return query(
       collection(db, 'logs'), 
       where('userId', '==', user.uid),
       orderBy('timestamp', 'desc'),
       limit(50)
     );
-  }, [db, user]);
+  }, [db, user, profile]);
   const { data: myLogs, isLoading: loadingLogs } = useCollection(myLogsQuery);
 
   useEffect(() => {
@@ -285,7 +287,6 @@ export default function ProfilePage() {
         </div>
 
         <div className="grid md:grid-cols-12 gap-8">
-          {/* Sidebar / Identity Card */}
           <div className="md:col-span-4 space-y-6">
             <Card className="border-none shadow-sm text-center p-6 bg-white overflow-hidden">
               <div className="relative inline-block mx-auto mb-4 mt-2">
