@@ -19,8 +19,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 /**
  * AdminDashboardPage - Phase 1: Verification
- * This component handles the initial security check. It does not call any hooks for sensitive
- * collections until it has definitively verified the user's role via a direct Firestore fetch.
  */
 export default function AdminDashboardPage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -41,11 +39,9 @@ export default function AdminDashboardPage() {
       }
 
       try {
-        // Authoritative role verification directly from the database
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = userDoc.data();
         
-        // Ensure exact string match for 'admin' and that profile is synchronized
         if (userDoc.exists() && userData?.role === 'admin' && !userData.disabled) {
           setIsVerifiedAdmin(true);
         } else {
@@ -78,13 +74,11 @@ export default function AdminDashboardPage() {
 
   if (!isVerifiedAdmin || !profile) return null;
 
-  // Render the content component which only now initializes sensitive collection hooks
   return <AdminDashboardContent />;
 }
 
 /**
  * AdminDashboardContent - Phase 2: Administrative Content
- * This component is only rendered after Phase 1 confirmation.
  */
 function AdminDashboardContent() {
   const { user, profile } = useAuth();
@@ -93,31 +87,31 @@ function AdminDashboardContent() {
   const [processingStale, setProcessingStale] = useState(false);
 
   // Queries are initialized here, ensuring they ONLY run after authoritative verification.
-  // All list queries are strictly guarded by profile existence to satisfy isAuthorized() rules.
   const usersQuery = useMemoFirebase(() => {
-    if (!profile) return null;
+    if (!profile || profile.disabled === true) return null;
     return query(collection(db, 'users'), limit(500));
   }, [db, profile]);
 
   const pitchesQuery = useMemoFirebase(() => {
-    if (!profile) return null;
+    if (!profile || profile.disabled === true) return null;
     return query(collection(db, 'pitches'), limit(500));
   }, [db, profile]);
 
   const requestsQuery = useMemoFirebase(() => {
-    if (!profile) return null;
+    if (!profile || profile.disabled === true) return null;
     return query(collection(db, 'contactRequests'), limit(500));
   }, [db, profile]);
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!profile) return null;
+    if (!profile || profile.disabled === true) return null;
     return query(collection(db, 'messages'), limit(500));
   }, [db, profile]);
   
   // SAFE LOG QUERY: Strictly includes userId filter to match identity-based security rules.
-  // This ensures that even admins use a constrained query pattern for "My Activity".
   const logsQuery = useMemoFirebase(() => {
-    if (!user || !profile) return null;
+    // Identity-based filtering is mandatory for non-administrative list operations
+    // on the logs collection according to firestore.rules.
+    if (!user || !profile || profile.disabled === true) return null;
     return query(
       collection(db, 'logs'), 
       where('userId', '==', user.uid),
@@ -127,7 +121,7 @@ function AdminDashboardContent() {
   }, [db, user, profile]);
   
   const deleteRequestsQuery = useMemoFirebase(() => {
-    if (!profile) return null;
+    if (!profile || profile.disabled === true) return null;
     return query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), limit(100));
   }, [db, profile]);
 
@@ -148,8 +142,7 @@ function AdminDashboardContent() {
   }, [allDeleteRequests]);
 
   const handleDeletePitch = (pitchId: string, name: string, requestId?: string, isAuto = false) => {
-    const confirmMessage = `Are you sure you want to PERMANENTLY delete the pitch for "${name}"? This action cannot be undone.`;
-    if (isAuto || confirm(confirmMessage)) {
+    if (isAuto || confirm(`Are you sure you want to PERMANENTLY delete the pitch for "${name}"?`)) {
       deleteDocumentNonBlocking(doc(db, 'pitches', pitchId));
       if (requestId) {
         updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status: 'resolved' });
@@ -163,15 +156,12 @@ function AdminDashboardContent() {
         timestamp: serverTimestamp()
       });
 
-      if (!isAuto) {
-        toast({ title: "Pitch Deleted", description: `The pitch for ${name} has been removed.` });
-      }
+      if (!isAuto) toast({ title: "Pitch Deleted" });
     }
   };
 
   const handleDeleteUser = (userId: string, email: string, requestId?: string, isAuto = false) => {
-    const confirmMessage = `Are you sure you want to PERMANENTLY delete the profile for "${email}"? This will remove all their access to the platform.`;
-    if (isAuto || confirm(confirmMessage)) {
+    if (isAuto || confirm(`Are you sure you want to PERMANENTLY delete the profile for "${email}"?`)) {
       deleteDocumentNonBlocking(doc(db, 'users', userId));
       if (requestId) {
         updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status: 'resolved' });
@@ -185,15 +175,13 @@ function AdminDashboardContent() {
         timestamp: serverTimestamp()
       });
 
-      if (!isAuto) {
-        toast({ title: "User Profile Deleted", description: `The profile for ${email} has been removed.` });
-      }
+      if (!isAuto) toast({ title: "User Profile Deleted" });
     }
   };
 
   const handleProcessStaleRequests = async () => {
     if (staleRequests.length === 0) return;
-    if (!confirm(`Are you sure you want to automatically process ${staleRequests.length} stale deletion requests?`)) return;
+    if (!confirm(`Process ${staleRequests.length} stale deletion requests?`)) return;
 
     setProcessingStale(true);
     try {
@@ -204,7 +192,7 @@ function AdminDashboardContent() {
           handleDeletePitch(req.targetId, 'Stale Pitch Deletion', req.id, true);
         }
       }
-      toast({ title: "Batch Processing Complete", description: `${staleRequests.length} stale requests have been purged.` });
+      toast({ title: "Batch Processing Complete" });
     } finally {
       setProcessingStale(false);
     }
@@ -223,19 +211,13 @@ function AdminDashboardContent() {
         timestamp: serverTimestamp()
       });
 
-      toast({ 
-        title: currentDisabledStatus ? "User Enabled" : "User Disabled", 
-        description: `The account for ${email} has been ${currentDisabledStatus ? 'reactivated' : 'suspended'}.` 
-      });
+      toast({ title: currentDisabledStatus ? "User Enabled" : "User Disabled" });
     }
   };
 
   const handleChangeRole = (userId: string, userEmail: string, currentRole: string, newRole: string) => {
     if (currentRole === newRole) return;
-
-    const confirmationMessage = `Are you sure you want to change the role for ${userEmail} from "${currentRole.toUpperCase()}" to "${newRole.toUpperCase()}"?`;
-
-    if (confirm(confirmationMessage)) {
+    if (confirm(`Change role for ${userEmail} to "${newRole.toUpperCase()}"?`)) {
       updateDocumentNonBlocking(doc(db, 'users', userId), { 
         role: newRole,
         updatedAt: new Date()
@@ -249,16 +231,8 @@ function AdminDashboardContent() {
         timestamp: serverTimestamp()
       });
       
-      toast({ 
-        title: "Role Updated Successfully", 
-        description: `${userEmail} is now a platform ${newRole}.` 
-      });
+      toast({ title: "Role Updated Successfully" });
     }
-  };
-
-  const handleResolveDeleteRequest = (requestId: string, status: 'resolved' | 'rejected') => {
-    updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status });
-    toast({ title: `Request ${status === 'resolved' ? 'Resolved' : 'Rejected'}` });
   };
 
   const stats = [
@@ -328,7 +302,6 @@ function AdminDashboardContent() {
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
                 <CardTitle>User Directory</CardTitle>
-                <CardDescription>Manage roles and account status.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -378,21 +351,11 @@ function AdminDashboardContent() {
                           {u.lastActive?.toDate ? format(u.lastActive.toDate(), 'MMM d, HH:mm') : 'Never'}
                         </TableCell>
                         <TableCell className="text-right flex items-center justify-end gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className={u.disabled ? "text-green-600 hover:bg-green-50" : "text-amber-600 hover:bg-amber-50"}
-                            onClick={() => toggleUserStatus(u.id, u.email, !!u.disabled)}
-                          >
-                            {u.disabled ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                          <Button variant="ghost" size="icon" onClick={() => toggleUserStatus(u.id, u.email, !!u.disabled)}>
+                            {u.disabled ? <UserCheck className="w-4 h-4 text-green-600" /> : <UserX className="w-4 h-4 text-amber-600" />}
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-destructive hover:bg-red-50"
-                            onClick={() => handleDeleteUser(u.id, u.email)}
-                          >
-                            <Trash2 className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(u.id, u.email)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -407,7 +370,6 @@ function AdminDashboardContent() {
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
                 <CardTitle>Content Moderation</CardTitle>
-                <CardDescription>Review all active investment proposals.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -430,13 +392,8 @@ function AdminDashboardContent() {
                         <TableCell><Badge variant="outline" className="text-[10px]">{p.industry}</Badge></TableCell>
                         <TableCell className="font-mono text-emerald-600 font-bold">${p.fundingNeeded?.toLocaleString()}</TableCell>
                         <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-destructive hover:bg-red-50"
-                            onClick={() => handleDeletePitch(p.id, p.startupName)}
-                          >
-                            <Trash2 className="w-4 h-4" />
+                          <Button variant="ghost" size="icon" onClick={() => handleDeletePitch(p.id, p.startupName)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -452,33 +409,18 @@ function AdminDashboardContent() {
               <div className="flex justify-between items-center">
                 <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Pending Purge Queue</h3>
                 {staleRequests.length > 0 && (
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
-                    className="gap-2" 
-                    onClick={handleProcessStaleRequests}
-                    disabled={processingStale}
-                  >
+                  <Button variant="destructive" size="sm" onClick={handleProcessStaleRequests} disabled={processingStale}>
                     {processingStale ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-                    Purge {staleRequests.length} Stale Requests (+24h)
+                    Purge Stale Requests (+24h)
                   </Button>
                 )}
               </div>
               <Card className="border-none shadow-sm overflow-hidden bg-white">
-                <CardHeader className="bg-muted/10 border-b">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <CardTitle>Data Removal Requests</CardTitle>
-                      <CardDescription>Review and process user requests to delete their data.</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
                 <CardContent className="p-0">
                   <Table>
                     <TableHeader className="bg-muted/30">
                       <TableRow>
                         <TableHead>Type</TableHead>
-                        <TableHead>Target ID / User</TableHead>
                         <TableHead>Requested On</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Action</TableHead>
@@ -486,57 +428,30 @@ function AdminDashboardContent() {
                     </TableHeader>
                     <TableBody>
                       {loadingDeleteRequests ? (
-                        <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                        <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
                       ) : allDeleteRequests?.length === 0 ? (
-                        <TableRow><TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">No pending deletion requests.</TableCell></TableRow>
-                      ) : allDeleteRequests?.map((req) => {
-                        const isStale = req.timestamp?.toDate && differenceInHours(new Date(), req.timestamp.toDate()) >= 24;
-                        return (
-                          <TableRow key={req.id} className={isStale ? "bg-red-50/30" : ""}>
-                            <TableCell>
-                              <Badge variant="outline" className="capitalize">{req.targetType}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="font-mono text-[10px] text-muted-foreground">{req.targetId}</span>
-                                <span className="text-xs">User: {req.userId?.substring(0, 8)}...</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
-                              {req.timestamp?.toDate ? format(req.timestamp.toDate(), 'MMM d, HH:mm') : 'Recently'}
-                            </TableCell>
-                            <TableCell>
-                              {isStale ? (
-                                <Badge variant="destructive" className="animate-pulse flex items-center gap-1 w-fit">
-                                  <Clock className="w-3 h-3" /> Stale (24h+)
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="flex items-center gap-1 w-fit text-[10px]">
-                                  <Clock className="w-3 h-3" /> Pending
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right flex items-center justify-end gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="bg-red-50 text-red-600 hover:bg-red-100 border-red-200 h-8"
-                                onClick={() => req.targetType === 'account' ? handleDeleteUser(req.targetId, 'Approved Account Deletion', req.id) : handleDeletePitch(req.targetId, 'Approved Pitch Deletion', req.id)}
-                              >
-                                <Trash2 className="w-4 h-4 mr-1" /> Approve & Delete
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-muted-foreground h-8"
-                                onClick={() => handleResolveDeleteRequest(req.id, 'rejected')}
-                              >
-                                <XCircle className="w-4 h-4 mr-1" /> Dismiss
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                        <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground italic">No pending requests.</TableCell></TableRow>
+                      ) : allDeleteRequests?.map((req) => (
+                        <TableRow key={req.id}>
+                          <TableCell><Badge variant="outline" className="capitalize">{req.targetType}</Badge></TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {req.timestamp?.toDate ? format(req.timestamp.toDate(), 'MMM d, HH:mm') : 'Recently'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-[10px]">Pending</Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="bg-red-50 text-red-600 hover:bg-red-100 h-8"
+                              onClick={() => req.targetType === 'account' ? handleDeleteUser(req.targetId, 'Account Deletion', req.id) : handleDeletePitch(req.targetId, 'Pitch Deletion', req.id)}
+                            >
+                              Approve
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -544,55 +459,10 @@ function AdminDashboardContent() {
             </div>
           </TabsContent>
 
-          <TabsContent value="requests">
-            <Card className="border-none shadow-sm overflow-hidden bg-white">
-              <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>Platform Connections</CardTitle>
-                <CardDescription>Oversight of networking activity.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow>
-                      <TableHead>Parties</TableHead>
-                      <TableHead>Target Startup</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {loadingRequests ? (
-                      <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
-                    ) : allRequests?.map((r) => (
-                      <TableRow key={r.id}>
-                        <TableCell className="text-xs">
-                          <div className="flex flex-col gap-0.5">
-                            <span className="font-semibold">Inv: {r.investorEmail}</span>
-                            <span className="text-muted-foreground text-[10px]">Founder UID: {r.receiverId?.substring(0, 8)}...</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium text-sm">{r.startupName}</TableCell>
-                        <TableCell>
-                          <Badge variant={r.status === 'accepted' ? 'default' : r.status === 'pending' ? 'secondary' : 'destructive'} className="capitalize text-[10px]">
-                            {r.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {r.timestamp?.toDate ? format(r.timestamp.toDate(), 'MMM d, HH:mm') : 'N/A'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="logs">
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
                 <CardTitle>My Administrative Activity</CardTitle>
-                <CardDescription>Review your personal system interactions and security actions.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -607,17 +477,14 @@ function AdminDashboardContent() {
                     {loadingLogs ? (
                       <TableRow><TableCell colSpan={3} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
                     ) : allLogs?.length === 0 ? (
-                      <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground italic">No recent activity logs found.</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground italic">No recent logs.</TableCell></TableRow>
                     ) : allLogs?.map((log) => (
-                      <TableRow key={log.id} className="hover:bg-muted/5 transition-colors">
+                      <TableRow key={log.id}>
                         <TableCell className="text-xs whitespace-nowrap font-mono text-muted-foreground">
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="w-3 h-3" />
-                            {log.timestamp?.toDate ? format(log.timestamp.toDate(), 'MMM d, HH:mm:ss') : 'Just now'}
-                          </div>
+                          {log.timestamp?.toDate ? format(log.timestamp.toDate(), 'MMM d, HH:mm') : 'Just now'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-[10px] uppercase font-bold bg-primary/5 text-primary border-primary/10">
+                          <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary">
                             {log.action}
                           </Badge>
                         </TableCell>
