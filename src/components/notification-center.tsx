@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, orderBy, limit, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,9 +19,12 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
 
   const notificationsQuery = useMemoFirebase(() => {
-    // CRITICAL: Ensure profile is non-null to avoid permission errors on initial login
-    if (!user || !profile || !profile.uid) return null;
+    // CRITICAL: Ensure profile is non-null and fully initialized with a role 
+    // to satisfy security rules (isAuthorized) before initiating the query.
+    // This prevents PERMISSION_DENIED errors during initial login/onboarding.
+    if (!user || !profile || !profile.role) return null;
     
+    // Explicitly filter by userId as required by security rules for list operations
     return query(
       collection(db, 'notifications'),
       where('userId', '==', user.uid),
