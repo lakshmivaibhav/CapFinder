@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -157,7 +158,7 @@ export default function ProfilePage() {
                     <Label htmlFor="role" className="text-sm font-semibold">Your Role</Label>
                     <Select 
                       value={formData.role} 
-                      onValueChange={(val) => setFormData({...formData, role: val as 'investor' | 'startup'})}
+                      onValueChange={(val) => setFormData({...formData, role: val})}
                     >
                       <SelectTrigger className="h-11 focus-visible:ring-primary">
                         <SelectValue placeholder="Select your role" />
@@ -165,6 +166,7 @@ export default function ProfilePage() {
                       <SelectContent>
                         <SelectItem value="startup">Startup Founder</SelectItem>
                         <SelectItem value="investor">Strategic Investor</SelectItem>
+                        <SelectItem value="admin">System Administrator</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

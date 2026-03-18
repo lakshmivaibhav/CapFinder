@@ -5,7 +5,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user's profile within the CapFinder application, distinguishing between investors and startups.",
+      "description": "Represents a user's profile within the CapFinder application, distinguishing between investors, startups, and admins.",
       "properties": {
         "id": {
           "type": "string",
@@ -30,7 +30,7 @@
         },
         "role": {
           "type": "string",
-          "description": "The role of the user, indicating whether they are an 'Investor' or a 'Startup'."
+          "description": "The role of the user, indicating whether they are an 'Investor', 'Startup', or 'Admin'."
         },
         "investmentInterest": {
           "type": "string",
