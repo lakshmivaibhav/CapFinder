@@ -4,15 +4,15 @@
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, limit, doc, getDoc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, limit, doc, getDoc, orderBy, serverTimestamp } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, User, Megaphone, Inbox, MessageSquare, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog } from 'lucide-react';
+import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, ClipboardList, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -27,7 +27,6 @@ export default function AdminDashboardPage() {
   const [verifying, setVerifying] = useState(true);
   const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
 
-  // Mandatory Firestore role check on every page load
   useEffect(() => {
     async function verifyAdminStatus() {
       if (authLoading) return;
@@ -73,19 +72,28 @@ export default function AdminDashboardPage() {
     isVerifiedAdmin ? query(collection(db, 'contactRequests'), limit(100)) : null, 
     [db, isVerifiedAdmin]
   );
-  const messagesQuery = useMemoFirebase(() => 
-    isVerifiedAdmin ? query(collection(db, 'messages'), limit(100)) : null, 
+  const logsQuery = useMemoFirebase(() => 
+    isVerifiedAdmin ? query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(100)) : null, 
     [db, isVerifiedAdmin]
   );
 
   const { data: allUsers, isLoading: loadingUsers } = useCollection(usersQuery);
   const { data: allPitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
   const { data: allRequests, isLoading: loadingRequests } = useCollection(requestsQuery);
-  const { data: allMessages, isLoading: loadingMessages } = useCollection(messagesQuery);
+  const { data: allLogs, isLoading: loadingLogs } = useCollection(logsQuery);
 
   const handleDeletePitch = (pitchId: string, name: string) => {
     if (confirm(`Are you sure you want to delete the pitch for "${name}"?`)) {
       deleteDocumentNonBlocking(doc(db, 'pitches', pitchId));
+      
+      addDocumentNonBlocking(collection(db, 'logs'), {
+        userId: user?.uid,
+        action: 'pitch_deleted',
+        targetId: pitchId,
+        details: `Admin deleted pitch for ${name}`,
+        timestamp: serverTimestamp()
+      });
+
       toast({ title: "Pitch Deleted", description: `The pitch for ${name} has been removed.` });
     }
   };
@@ -93,12 +101,30 @@ export default function AdminDashboardPage() {
   const handleDeleteUser = (userId: string, email: string) => {
     if (confirm(`Are you sure you want to delete the profile for "${email}"?`)) {
       deleteDocumentNonBlocking(doc(db, 'users', userId));
+
+      addDocumentNonBlocking(collection(db, 'logs'), {
+        userId: user?.uid,
+        action: 'user_deleted',
+        targetId: userId,
+        details: `Admin deleted user ${email}`,
+        timestamp: serverTimestamp()
+      });
+
       toast({ title: "User Profile Deleted", description: `The profile for ${email} has been removed.` });
     }
   };
 
   const toggleUserStatus = (userId: string, currentStatus: boolean) => {
     updateDocumentNonBlocking(doc(db, 'users', userId), { disabled: !currentStatus });
+    
+    addDocumentNonBlocking(collection(db, 'logs'), {
+      userId: user?.uid,
+      action: 'user_status_toggled',
+      targetId: userId,
+      details: `Admin ${currentStatus ? 'enabled' : 'disabled'} user profile`,
+      timestamp: serverTimestamp()
+    });
+
     toast({ 
       title: currentStatus ? "User Enabled" : "User Disabled", 
       description: "The user account status has been updated." 
@@ -108,12 +134,20 @@ export default function AdminDashboardPage() {
   const handleChangeRole = (userId: string, userEmail: string, currentRole: string, newRole: string) => {
     if (currentRole === newRole) return;
 
-    const confirmationMessage = `SECURITY CONFIRMATION:\n\nAre you sure you want to change the role for ${userEmail} from "${currentRole.toUpperCase()}" to "${newRole.toUpperCase()}"?\n\nThis will immediately modify their platform permissions, access levels, and dashboard interface.`;
+    const confirmationMessage = `Are you sure you want to change the role for ${userEmail} from "${currentRole.toUpperCase()}" to "${newRole.toUpperCase()}"?`;
 
     if (confirm(confirmationMessage)) {
       updateDocumentNonBlocking(doc(db, 'users', userId), { 
         role: newRole,
         updatedAt: new Date()
+      });
+
+      addDocumentNonBlocking(collection(db, 'logs'), {
+        userId: user?.uid,
+        action: 'role_changed',
+        targetId: userId,
+        details: `Role changed from ${currentRole} to ${newRole} for ${userEmail}`,
+        timestamp: serverTimestamp()
       });
       
       toast({ 
@@ -155,24 +189,24 @@ export default function AdminDashboardPage() {
         <Tabs defaultValue="users" className="space-y-6">
           <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full md:w-auto h-auto p-1 bg-muted/50">
             <TabsTrigger value="users" className="gap-2 py-2">
-              <UserCog className="w-4 h-4" /> Role Management
+              <UserCog className="w-4 h-4" /> Users
             </TabsTrigger>
             <TabsTrigger value="pitches" className="gap-2 py-2">
-              <Megaphone className="w-4 h-4" /> Startup Pitches
+              <Megaphone className="w-4 h-4" /> Pitches
             </TabsTrigger>
             <TabsTrigger value="requests" className="gap-2 py-2">
               <Inbox className="w-4 h-4" /> Connections
             </TabsTrigger>
-            <TabsTrigger value="messages" className="gap-2 py-2">
-              <MessageSquare className="w-4 h-4" /> Audit Logs
+            <TabsTrigger value="logs" className="gap-2 py-2">
+              <ClipboardList className="w-4 h-4" /> Audit Logs
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="users">
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>User Directory & Role Control</CardTitle>
-                <CardDescription>Assign roles and manage account status for all platform members. All role changes require manual confirmation.</CardDescription>
+                <CardTitle>User Directory</CardTitle>
+                <CardDescription>Manage roles and account status.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -189,7 +223,7 @@ export default function AdminDashboardPage() {
                     {loadingUsers ? (
                       <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
                     ) : allUsers?.map((u) => (
-                      <TableRow key={u.id} className="hover:bg-muted/5 transition-colors">
+                      <TableRow key={u.id}>
                         <TableCell>
                           <div className="flex flex-col">
                             <Link href={`/profile/${u.id}`} className="font-bold hover:underline text-primary">{u.name || 'Anonymous'}</Link>
@@ -201,13 +235,13 @@ export default function AdminDashboardPage() {
                             value={u.role || 'startup'} 
                             onValueChange={(val) => handleChangeRole(u.id, u.email, u.role || 'startup', val)}
                           >
-                            <SelectTrigger className="h-9 w-32 bg-white border-primary/20 text-xs font-semibold focus:ring-primary">
+                            <SelectTrigger className="h-9 w-32 bg-white text-xs font-semibold">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="startup">Startup</SelectItem>
                               <SelectItem value="investor">Investor</SelectItem>
-                              <SelectItem value="admin">Administrator</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -227,7 +261,6 @@ export default function AdminDashboardPage() {
                             size="icon" 
                             className={u.disabled ? "text-green-600 hover:bg-green-50" : "text-amber-600 hover:bg-amber-50"}
                             onClick={() => toggleUserStatus(u.id, !!u.disabled)}
-                            title={u.disabled ? "Enable User" : "Disable User"}
                           >
                             {u.disabled ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
                           </Button>
@@ -236,7 +269,6 @@ export default function AdminDashboardPage() {
                             size="icon" 
                             className="text-destructive hover:bg-red-50"
                             onClick={() => handleDeleteUser(u.id, u.email)}
-                            title="Delete Profile"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -252,8 +284,8 @@ export default function AdminDashboardPage() {
           <TabsContent value="pitches">
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>Marketplace Content Moderation</CardTitle>
-                <CardDescription>Review and manage all active investment proposals.</CardDescription>
+                <CardTitle>Content Moderation</CardTitle>
+                <CardDescription>Review all active investment proposals.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -262,13 +294,12 @@ export default function AdminDashboardPage() {
                       <TableHead>Startup</TableHead>
                       <TableHead>Industry</TableHead>
                       <TableHead>Funding Goal</TableHead>
-                      <TableHead>Owner ID</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingPitches ? (
-                      <TableRow><TableCell colSpan={5} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
                     ) : allPitches?.map((p) => (
                       <TableRow key={p.id}>
                         <TableCell>
@@ -276,7 +307,6 @@ export default function AdminDashboardPage() {
                         </TableCell>
                         <TableCell><Badge variant="outline" className="text-[10px]">{p.industry}</Badge></TableCell>
                         <TableCell className="font-mono text-emerald-600 font-bold">${p.fundingNeeded?.toLocaleString()}</TableCell>
-                        <TableCell className="text-[10px] font-mono text-muted-foreground">{p.ownerId?.substring(0, 8)}...</TableCell>
                         <TableCell className="text-right">
                           <Button 
                             variant="ghost" 
@@ -298,8 +328,8 @@ export default function AdminDashboardPage() {
           <TabsContent value="requests">
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>Platform Connection Logs</CardTitle>
-                <CardDescription>Oversight of networking and introduction activity.</CardDescription>
+                <CardTitle>Platform Connections</CardTitle>
+                <CardDescription>Oversight of networking activity.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
@@ -339,41 +369,43 @@ export default function AdminDashboardPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="messages">
+          <TabsContent value="logs">
             <Card className="border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="bg-muted/10 border-b">
-                <CardTitle>System Message Logs</CardTitle>
-                <CardDescription>Audit trails for private platform communications.</CardDescription>
+                <CardTitle>System Audit Logs</CardTitle>
+                <CardDescription>Track all major platform activities and security events.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead>Session</TableHead>
-                      <TableHead>Content Preview</TableHead>
-                      <TableHead>Read</TableHead>
                       <TableHead>Timestamp</TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead>Action</TableHead>
+                      <TableHead>Details</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {loadingMessages ? (
+                    {loadingLogs ? (
                       <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
-                    ) : allMessages?.map((m) => (
-                      <TableRow key={m.id}>
-                        <TableCell className="text-[10px] font-mono leading-tight">
-                          <div className="flex flex-col">
-                            <span>S: {m.senderId?.substring(0, 6)}...</span>
-                            <span>R: {m.receiverId?.substring(0, 6)}...</span>
+                    ) : allLogs?.map((log) => (
+                      <TableRow key={log.id} className="hover:bg-muted/5 transition-colors">
+                        <TableCell className="text-xs whitespace-nowrap font-mono text-muted-foreground">
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-3 h-3" />
+                            {log.timestamp?.toDate ? format(log.timestamp.toDate(), 'MMM d, HH:mm:ss') : 'Just now'}
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-xs truncate text-sm italic text-muted-foreground">
-                          "{m.text}"
+                        <TableCell className="text-xs font-medium">
+                          {log.userId?.substring(0, 8)}...
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-[9px] uppercase">{m.read ? 'Yes' : 'No'}</Badge>
+                          <Badge variant="outline" className="text-[10px] uppercase font-bold bg-primary/5 text-primary border-primary/10">
+                            {log.action}
+                          </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {m.timestamp?.toDate ? format(m.timestamp.toDate(), 'HH:mm:ss') : 'N/A'}
+                        <TableCell className="text-sm text-muted-foreground max-w-md truncate">
+                          {log.details}
                         </TableCell>
                       </TableRow>
                     ))}

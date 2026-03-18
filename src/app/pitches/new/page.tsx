@@ -3,9 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 
 export default function NewPitchPage() {
   const { user, profile, loading: authLoading } = useAuth();
+  const db = useFirestore();
   const [loading, setLoading] = useState(false);
   const [refining, setRefining] = useState(false);
   const [aiResult, setAiResult] = useState<{ refinedPitchDescription: string, suggestions: string[] } | null>(null);
@@ -35,9 +36,8 @@ export default function NewPitchPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Role Guard: Only startups can access this page
   useEffect(() => {
-    if (!authLoading && user && profile && profile.role !== 'startup') {
+    if (!authLoading && user && profile && profile.role !== 'startup' && profile.role !== 'admin') {
       toast({ 
         variant: "destructive", 
         title: "Access Denied", 
@@ -78,14 +78,24 @@ export default function NewPitchPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || profile?.role !== 'startup') return;
+    if (!user || (profile?.role !== 'startup' && profile?.role !== 'admin')) return;
     setLoading(true);
+    
     try {
-      await addDoc(collection(db, 'pitches'), {
+      const pitchRef = await addDocumentNonBlocking(collection(db, 'pitches'), {
         ...formData,
         ownerId: user.uid,
         createdAt: serverTimestamp(),
       });
+
+      addDocumentNonBlocking(collection(db, 'logs'), {
+        userId: user.uid,
+        action: 'pitch_created',
+        targetId: pitchRef?.id || 'unknown',
+        timestamp: serverTimestamp(),
+        details: `New pitch created for ${formData.startupName}`
+      });
+
       toast({ title: "Pitch posted!", description: "Investors can now view your proposal in the marketplace." });
       router.push('/dashboard');
     } catch (error: any) {
@@ -103,7 +113,7 @@ export default function NewPitchPage() {
     );
   }
 
-  if (!user || profile?.role !== 'startup') {
+  if (!user || (profile?.role !== 'startup' && profile?.role !== 'admin')) {
     return (
       <div className="p-20 text-center space-y-4">
         <ShieldAlert className="w-16 h-16 text-destructive mx-auto" />
@@ -209,7 +219,6 @@ export default function NewPitchPage() {
         </CardContent>
       </Card>
 
-      {/* AI Refinement Modal */}
       <Dialog open={showAiModal} onOpenChange={setShowAiModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>

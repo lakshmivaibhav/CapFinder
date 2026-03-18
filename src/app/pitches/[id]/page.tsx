@@ -19,15 +19,12 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const db = useFirestore();
   const { toast } = useToast();
 
-  // 1. Fetch Pitch Data
   const pitchRef = useMemoFirebase(() => doc(db, 'pitches', id), [db, id]);
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
 
-  // 2. Fetch Owner Profile Data (Wait for pitch to load)
   const ownerRef = useMemoFirebase(() => pitch ? doc(db, 'users', pitch.ownerId) : null, [db, pitch]);
   const { data: ownerProfile, isLoading: loadingOwner } = useDoc(ownerRef);
 
-  // 3. Subscription logic for investor interactions
   const interestsQuery = useMemoFirebase(() => {
     if (!user || profile?.role !== 'investor') return null;
     return query(collection(db, 'interests'), where('investorId', '==', user.uid), where('pitchId', '==', id));
@@ -49,7 +46,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const { data: contactRequests } = useCollection(contactRequestsQuery);
   const contactRequest = contactRequests?.[0];
 
-  // Actions
   const handleShowInterest = () => {
     if (!user || !pitch || isInterested) return;
     addDocumentNonBlocking(collection(db, 'interests'), {
@@ -61,6 +57,15 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       industry: pitch.industry,
       timestamp: serverTimestamp(),
     });
+
+    addDocumentNonBlocking(collection(db, 'logs'), {
+      userId: user.uid,
+      action: 'interest_registered',
+      targetId: pitch.id,
+      timestamp: serverTimestamp(),
+      details: `Investor registered interest in ${pitch.startupName}`
+    });
+
     toast({ title: "Interest Registered", description: `The founders of ${pitch.startupName} have been notified.` });
   };
 
@@ -93,6 +98,15 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       status: 'pending',
       timestamp: serverTimestamp(),
     }, { merge: true });
+
+    addDocumentNonBlocking(collection(db, 'logs'), {
+      userId: user.uid,
+      action: 'contact_request_sent',
+      targetId: pitch.id,
+      timestamp: serverTimestamp(),
+      details: `Contact request sent to founder of ${pitch.startupName}`
+    });
+
     toast({ title: "Contact Request Sent", description: "The startup will review your request shortly." });
   };
 
@@ -110,7 +124,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
         </Link>
 
         <div className="grid lg:grid-cols-12 gap-8 items-start">
-          {/* Main Content */}
           <div className="lg:col-span-8 space-y-6">
             <Card className="border-none shadow-md overflow-hidden bg-white rounded-2xl">
               <CardHeader className="p-8 pb-4 space-y-6">
@@ -118,9 +131,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="secondary" className="bg-primary/10 text-primary border-none px-4 py-1.5 text-xs font-bold uppercase tracking-wider">
                       {pitch.industry}
-                    </Badge>
-                    <Badge variant="outline" className="border-emerald-200 text-emerald-600 bg-emerald-50 px-4 py-1.5 text-xs font-bold uppercase tracking-wider">
-                      Active Round
                     </Badge>
                   </div>
                   {isInvestor && (
@@ -145,49 +155,31 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                   </CardTitle>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground font-semibold uppercase tracking-widest">
                     <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-primary" /> Posted {pitch.createdAt?.toDate ? pitch.createdAt.toDate().toLocaleDateString() : 'Recently'}</span>
-                    <span className="flex items-center gap-1.5"><Globe className="w-4 h-4 text-primary" /> International Market</span>
                   </div>
                 </div>
               </CardHeader>
 
               <CardContent className="p-8 pt-4 space-y-10">
-                <div className="relative">
-                  <div className="absolute -left-4 top-0 bottom-0 w-1.5 bg-primary rounded-full opacity-20" />
-                  <p className="text-xl md:text-2xl leading-relaxed text-foreground/80 font-medium italic">
-                    &quot;{pitch.description}&quot;
-                  </p>
-                </div>
+                <p className="text-xl md:text-2xl leading-relaxed text-foreground/80 font-medium italic">
+                  &quot;{pitch.description}&quot;
+                </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="p-6 bg-primary/5 rounded-2xl space-y-2 border border-primary/10 flex flex-col items-center text-center">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center mb-2">
-                      <DollarSign className="w-5 h-5 text-primary" />
-                    </div>
+                    <DollarSign className="w-5 h-5 text-primary" />
                     <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-extrabold">Target Funding</p>
-                    <p className="text-2xl font-black text-primary">
-                      ${typeof pitch.fundingNeeded === 'number' ? pitch.fundingNeeded.toLocaleString() : pitch.fundingNeeded}
-                    </p>
+                    <p className="text-2xl font-black text-primary">${pitch.fundingNeeded?.toLocaleString()}</p>
                   </div>
                   <div className="p-6 bg-accent/5 rounded-2xl space-y-2 border border-accent/10 flex flex-col items-center text-center">
-                    <div className="w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center mb-2">
-                      <Building2 className="w-5 h-5 text-accent" />
-                    </div>
+                    <Building2 className="w-5 h-5 text-accent" />
                     <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-extrabold">Industry</p>
                     <p className="text-2xl font-black text-accent">{pitch.industry}</p>
-                  </div>
-                  <div className="p-6 bg-orange-50 rounded-2xl space-y-2 border border-orange-100 flex flex-col items-center text-center">
-                    <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center mb-2">
-                      <TrendingUp className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-extrabold">Traction</p>
-                    <p className="text-2xl font-black text-orange-700">Early MVP</p>
                   </div>
                 </div>
               </CardContent>
 
               {isInvestor && (
                 <CardFooter className="p-8 border-t bg-muted/5 flex flex-col sm:flex-row gap-4">
-                   {/* Contact Button Logic */}
                    <div className="flex-1 flex flex-col gap-2">
                      {!contactRequest ? (
                        <Button className="w-full h-14 text-lg font-bold shadow-lg bg-primary hover:bg-primary/90" onClick={handleRequestContact}>
@@ -234,7 +226,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
             </Card>
           </div>
 
-          {/* Sidebar Info */}
           <div className="lg:col-span-4 space-y-6">
             <Card className="border-none shadow-md bg-white overflow-hidden rounded-2xl">
               <CardHeader className="bg-primary/5 border-b py-5 px-6">
@@ -258,42 +249,17 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                         <p className="text-[10px] font-black text-primary uppercase tracking-widest">{ownerProfile.company || 'Venture Lead'}</p>
                       </div>
                     </div>
-                    
-                    <div className="text-sm text-muted-foreground leading-relaxed italic bg-muted/30 p-5 rounded-2xl border-l-2 border-primary/20">
-                      &quot;{ownerProfile.bio || "Building the next generation of industry-defining solutions."}&quot;
-                    </div>
-
                     <div className="pt-4 space-y-4">
                        <Link href={`/profile/${pitch.ownerId}`} className="w-full block">
                          <Button variant="outline" className="w-full gap-2 text-xs font-black uppercase tracking-widest border-primary/20 hover:bg-primary/5">
                            View Professional Profile <ExternalLink className="w-3 h-3" />
                          </Button>
                        </Link>
-                       <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 w-full px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-emerald-100">
-                         <ShieldCheck className="w-4 h-4" /> Identity Verified by CapFinder
-                       </div>
                     </div>
                   </>
                 ) : (
-                  <div className="text-center py-6">
-                    <User className="w-10 h-10 text-muted-foreground mx-auto opacity-20 mb-2" />
-                    <p className="text-sm text-muted-foreground italic">Profile details are private.</p>
-                  </div>
+                  <div className="text-center py-6 text-sm text-muted-foreground italic">Profile details are private.</div>
                 )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-md bg-emerald-600 text-white overflow-hidden rounded-2xl">
-              <CardContent className="p-8 space-y-4">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-2">
-                  <ShieldCheck className="w-7 h-7" />
-                </div>
-                <h4 className="font-black text-xl leading-tight">Investor Protection</h4>
-                <p className="text-xs opacity-90 leading-relaxed font-medium">
-                  We verify all parties to ensure a safe ecosystem. Always conduct independent due diligence before committing capital.
-                </p>
-                <div className="h-0.5 w-full bg-white/20 rounded-full" />
-                <p className="text-[10px] font-black uppercase tracking-tighter opacity-80">Strategic Partnership Program</p>
               </CardContent>
             </Card>
           </div>
