@@ -229,21 +229,6 @@
       },
       "required": ["senderId", "receiverId", "pitchId", "text", "timestamp", "read"]
     },
-    "Log": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Log",
-      "type": "object",
-      "description": "System audit log for tracking user and administrative actions.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string", "description": "The UID of the user performing the action." },
-        "action": { "type": "string", "description": "The type of action performed (e.g., login, pitch_created)." },
-        "targetId": { "type": "string", "description": "The ID of the affected entity (e.g., pitchId, targetUserId)." },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "details": { "type": "string", "description": "Additional context or description of the action." }
-      },
-      "required": ["userId", "action", "timestamp"]
-    },
     "DeleteRequest": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DeleteRequest",
@@ -327,16 +312,6 @@
             "$ref": "#/backend/entities/Message"
           },
           "description": "Stores private messages between partners."
-        }
-      },
-      {
-        "path": "/logs/{logId}",
-        "definition": {
-          "entityName": "Log",
-          "schema": {
-            "$ref": "#/backend/entities/Log"
-          },
-          "description": "System audit logs."
         }
       },
       {
