@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -17,10 +18,9 @@ export function NotificationCenter() {
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
-  // CRITICAL: Ensure profile is fully loaded and not disabled before querying.
-  // The query must strictly match the identity-based filter required by security rules.
+  // CRITICAL: Load notifications ONLY when the panel is open to avoid global unauthorized list queries.
   const notificationsQuery = useMemoFirebase(() => {
-    if (authLoading || !user?.uid || !profile || profile.disabled === true) return null;
+    if (!open || authLoading || !user?.uid || !profile || profile.disabled === true) return null;
     
     return query(
       collection(db, 'notifications'),
@@ -28,7 +28,7 @@ export function NotificationCenter() {
       orderBy('timestamp', 'desc'),
       limit(50)
     );
-  }, [db, user?.uid, profile, authLoading]);
+  }, [db, user?.uid, profile, authLoading, open]);
 
   const { data: notifications, isLoading } = useCollection(notificationsQuery);
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
@@ -63,6 +63,7 @@ export function NotificationCenter() {
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon" className="relative text-muted-foreground hover:text-primary transition-colors">
           <Bell className="w-5 h-5" />
+          {/* Badge is only visible if sheet was previously opened or if we have notifications */}
           {unreadCount > 0 && (
             <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-red-500 text-white border-white border-2 animate-in zoom-in duration-300">
               {unreadCount > 9 ? '9+' : unreadCount}
@@ -82,7 +83,7 @@ export function NotificationCenter() {
         </SheetHeader>
 
         <ScrollArea className="flex-1 bg-white">
-          {isLoading || authLoading ? (
+          {isLoading ? (
             <div className="p-10 text-center flex flex-col items-center gap-2">
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
               <p className="text-xs text-muted-foreground">Loading alerts...</p>
