@@ -98,28 +98,9 @@ export default function ProfilePage() {
       if (!interestsSnap.empty || !requestsSnap.empty) {
         toast({
           variant: "destructive",
-          title: "Deletion Blocked",
-          description: "You have active connections. We've notified your partners to resolve these first."
+          title: "Resolve connection before delete",
+          description: "Active connections exist. Partners must resolve their interests before you can delete your account."
         });
-
-        const snaps = [...interestsSnap.docs, ...requestsSnap.docs];
-        snaps.forEach(d => {
-          const data = d.data();
-          const targetId = isInvestor 
-            ? (data.startupOwnerId || data.receiverId)
-            : (data.investorId || data.senderId);
-          
-          if (targetId) {
-            addDocumentNonBlocking(collection(db, 'notifications'), {
-              userId: targetId,
-              type: 'system',
-              text: `A partner you are connected with (${user.email}) has requested account deletion. Please resolve your active connections.`,
-              read: false,
-              timestamp: serverTimestamp(),
-            });
-          }
-        });
-
         setChecking(false);
         return;
       }

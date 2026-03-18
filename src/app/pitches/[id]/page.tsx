@@ -1,14 +1,14 @@
 "use client";
 
-import { use, useState, useEffect, useMemo } from 'react';
-import { doc, collection, query, where, serverTimestamp, getDocs, getDoc } from 'firebase/firestore';
+import { use, useState, useMemo } from 'react';
+import { doc, collection, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ExternalLink, DollarSign, Building2, Trash2, Zap } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -20,7 +20,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const [checking, setChecking] = useState(false);
   const [resolving, setResolving] = useState(false);
 
-  // Directly load the pitch by ID
   const pitchRef = useMemoFirebase(() => doc(db, 'pitches', id), [db, id]);
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
 
@@ -59,15 +58,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       industry: pitch.industry,
       timestamp: serverTimestamp(),
     });
-
-    addDocumentNonBlocking(collection(db, 'notifications'), {
-      userId: pitch.ownerId,
-      type: 'interest',
-      text: `An investor is interested in your pitch: ${pitch.startupName}`,
-      read: false,
-      timestamp: serverTimestamp(),
-    });
-
     toast({ title: "Interest Registered", description: `The founders of ${pitch.startupName} have been notified.` });
   };
 
@@ -101,15 +91,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       status: 'pending',
       timestamp: serverTimestamp(),
     }, { merge: true });
-
-    addDocumentNonBlocking(collection(db, 'notifications'), {
-      userId: pitch.ownerId,
-      type: 'contact_request',
-      text: `New contact request for ${pitch.startupName} from ${user.email}`,
-      read: false,
-      timestamp: serverTimestamp(),
-    });
-
     toast({ title: "Contact Request Sent", description: "The startup will review your request shortly." });
   };
 
@@ -119,17 +100,12 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
 
     setResolving(true);
     try {
-      // 1. Remove Interest
       if (interests) {
         interests.forEach(i => deleteDocumentNonBlocking(doc(db, 'interests', i.id)));
       }
-      
-      // 2. Remove Contact Requests
       if (contactRequests) {
         contactRequests.forEach(r => deleteDocumentNonBlocking(doc(db, 'contactRequests', r.id)));
       }
-
-      // 3. Remove associated messages
       const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
       msgsSnap.docs.forEach(d => {
         const m = d.data();
@@ -137,16 +113,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
           deleteDocumentNonBlocking(doc(db, 'messages', d.id));
         }
       });
-
-      addDocumentNonBlocking(collection(db, 'notifications'), {
-        userId: pitch.ownerId,
-        type: 'system',
-        text: `An investor has resolved their connection to "${pitch.startupName}".`,
-        read: false,
-        timestamp: serverTimestamp(),
-      });
-
-      toast({ title: "Connection Resolved", description: "All interest and communication records have been cleared." });
+      toast({ title: "Connection Resolved", description: "All records for this pitch have been cleared." });
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "Could not fully resolve connection." });
     } finally {
@@ -161,26 +128,13 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
     try {
       const interestsSnap = await getDocs(query(collection(db, 'interests'), where('pitchId', '==', pitch.id)));
       const requestsSnap = await getDocs(query(collection(db, 'contactRequests'), where('pitchId', '==', pitch.id)));
-      const messagesSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
 
-      if (!interestsSnap.empty || !requestsSnap.empty || !messagesSnap.empty) {
+      if (!interestsSnap.empty || !requestsSnap.empty) {
         toast({
           variant: "destructive",
-          title: "Deletion Blocked",
-          description: "This pitch has active connections. We've notified connected investors to resolve their interests first."
+          title: "Resolve connection before delete",
+          description: "Active connections exist. Investors must resolve their interest before you can delete this pitch."
         });
-
-        interestsSnap.docs.forEach(d => {
-          const interestData = d.data();
-          addDocumentNonBlocking(collection(db, 'notifications'), {
-            userId: interestData.investorId,
-            type: 'system',
-            text: `The startup owner of "${pitch.startupName}" wishes to delete this pitch. Please resolve your interest/connection.`,
-            read: false,
-            timestamp: serverTimestamp(),
-          });
-        });
-        
         setChecking(false);
         return;
       }
@@ -194,7 +148,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
           timestamp: serverTimestamp(),
           details: `Startup owner requested deletion of pitch: ${pitch.startupName}`
         });
-
         toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });
       }
     } catch (error) {

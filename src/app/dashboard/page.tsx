@@ -8,12 +8,11 @@ import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking
 import { collection, query, where, limit, doc, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark, Inbox, CheckCircle2, User, Sparkles, Coins, Zap } from 'lucide-react';
+import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export default function DashboardPage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -22,7 +21,6 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [resolving, setResolving] = useState<string | null>(null);
 
-  // Route protection
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
@@ -31,44 +29,23 @@ export default function DashboardPage() {
     }
   }, [user, profile, authLoading, router]);
 
-  // Unified guards for queries - strictly derived from Firestore profile
   const isStartup = profile?.role === 'startup';
   const isInvestor = profile?.role === 'investor';
   const isAdmin = profile?.role === 'admin';
 
-  // Queries optimized with mandatory identity-based filters
   const startupPitchesQuery = useMemoFirebase(() => {
     if (!user || !profile || !isStartup || profile.disabled === true) return null;
-    return query(
-      collection(db, 'pitches'), 
-      where('ownerId', '==', user.uid)
-    );
+    return query(collection(db, 'pitches'), where('ownerId', '==', user.uid));
   }, [db, user, profile, isStartup]);
 
   const startupInterestsQuery = useMemoFirebase(() => {
     if (!user || !profile || !isStartup || profile.disabled === true) return null;
-    return query(
-      collection(db, 'interests'), 
-      where('startupOwnerId', '==', user.uid)
-    );
+    return query(collection(db, 'interests'), where('startupOwnerId', '==', user.uid));
   }, [db, user, profile, isStartup]);
 
   const startupContactRequestsQuery = useMemoFirebase(() => {
     if (!user || !profile || !isStartup || profile.disabled === true) return null;
-    return query(
-      collection(db, 'contactRequests'),
-      where('receiverId', '==', user.uid)
-    );
-  }, [db, user, profile, isStartup]);
-
-  const investorsForMatchingQuery = useMemoFirebase(() => {
-    if (!user || !profile || !isStartup || profile.disabled === true) return null;
-    return query(
-      collection(db, 'users'),
-      where('role', '==', 'investor'),
-      where('disabled', '==', false),
-      limit(100)
-    );
+    return query(collection(db, 'contactRequests'), where('receiverId', '==', user.uid));
   }, [db, user, profile, isStartup]);
 
   const allPitchesQuery = useMemoFirebase(() => {
@@ -78,33 +55,20 @@ export default function DashboardPage() {
 
   const investorInterestsQuery = useMemoFirebase(() => {
     if (!user || !profile || !isInvestor || profile.disabled === true) return null;
-    return query(
-      collection(db, 'interests'), 
-      where('investorId', '==', user.uid)
-    );
+    return query(collection(db, 'interests'), where('investorId', '==', user.uid));
   }, [db, user, profile, isInvestor]);
 
   const investorFavoritesQuery = useMemoFirebase(() => {
     if (!user || !profile || !isInvestor || profile.disabled === true) return null;
-    return query(
-      collection(db, 'favorites'),
-      where('investorId', '==', user.uid)
-    );
+    return query(collection(db, 'favorites'), where('investorId', '==', user.uid));
   }, [db, user, profile, isInvestor]);
 
-  const allUsersQuery = useMemoFirebase(() => {
-    if (!user || !profile || !isAdmin || profile.disabled === true) return null;
-    return query(collection(db, 'users'), limit(50));
-  }, [db, user, profile, isAdmin]);
-
-  const { data: startupPitches, isLoading: loadingStartupPitches } = useCollection(startupPitchesQuery);
-  const { data: startupInterests, isLoading: loadingStartupInterests } = useCollection(startupInterestsQuery);
-  const { data: startupContactRequests, isLoading: loadingStartupContactRequests } = useCollection(startupContactRequestsQuery);
-  const { data: investorsForMatching } = useCollection(investorsForMatchingQuery);
-  const { data: allPitches, isLoading: loadingAllPitches } = useCollection(allPitchesQuery);
-  const { data: investorInterests, isLoading: loadingInvestorInterests } = useCollection(investorInterestsQuery);
-  const { data: investorFavorites, isLoading: loadingInvestorFavorites } = useCollection(investorFavoritesQuery);
-  const { data: allUsers, isLoading: loadingAllUsers } = useCollection(allUsersQuery);
+  const { data: startupPitches } = useCollection(startupPitchesQuery);
+  const { data: startupInterests } = useCollection(startupInterestsQuery);
+  const { data: startupContactRequests } = useCollection(startupContactRequestsQuery);
+  const { data: allPitches } = useCollection(allPitchesQuery);
+  const { data: investorInterests } = useCollection(investorInterestsQuery);
+  const { data: investorFavorites } = useCollection(investorFavoritesQuery);
 
   const pendingRequestsCount = startupContactRequests?.filter(r => r.status === 'pending').length || 0;
 
@@ -114,29 +78,18 @@ export default function DashboardPage() {
 
     setResolving(pitchId);
     try {
-      // Clear interest
       const intSnap = await getDocs(query(collection(db, 'interests'), where('investorId', '==', user.uid), where('pitchId', '==', pitchId)));
       intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
 
-      // Clear connection requests
       const reqSnap = await getDocs(query(collection(db, 'contactRequests'), where('senderId', '==', user.uid), where('pitchId', '==', pitchId)));
       reqSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id)));
 
-      // Clear messages
       const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitchId)));
       msgsSnap.docs.forEach(d => {
         const m = d.data();
         if ((m.senderId === user.uid && m.receiverId === startupOwnerId) || (m.senderId === startupOwnerId && m.receiverId === user.uid)) {
           deleteDocumentNonBlocking(doc(db, 'messages', d.id));
         }
-      });
-
-      addDocumentNonBlocking(collection(db, 'notifications'), {
-        userId: startupOwnerId,
-        type: 'system',
-        text: `Investor ${user.email} has resolved their connection to your pitch "${startupName}".`,
-        read: false,
-        timestamp: new Date(),
       });
 
       toast({ title: "Connection Resolved", description: "All records for this pitch have been cleared." });
@@ -165,30 +118,6 @@ export default function DashboardPage() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
   }, [isInvestor, allPitches, profile]);
-
-  const recommendedInvestors = useMemo(() => {
-    if (!isStartup || !investorsForMatching || !startupPitches || startupPitches.length === 0) return [];
-    const startupIndustries = Array.from(new Set(startupPitches.map(p => (p.industry || '').toLowerCase()))).filter(Boolean);
-    return investorsForMatching
-      .map(investor => {
-        let score = 0;
-        const interests = (investor.investmentInterest || '').toLowerCase().split(',').map(i => i.trim()).filter(Boolean);
-        startupIndustries.forEach(industry => {
-          if (interests.some(interest => interest.includes(industry) || industry.includes(interest))) {
-            score += 15;
-          }
-        });
-        return { ...investor, score };
-      })
-      .filter(i => i.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3);
-  }, [isStartup, investorsForMatching, startupPitches]);
-
-  const handleUpdateRequestStatus = (requestId: string, status: 'accepted' | 'rejected') => {
-    updateDocumentNonBlocking(doc(db, 'contactRequests', requestId), { status });
-    toast({ title: `Request ${status}` });
-  };
 
   if (authLoading || (user && !profile)) {
     return (

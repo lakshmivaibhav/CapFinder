@@ -1,13 +1,12 @@
-
 "use client";
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Inbox, CheckCircle2, XCircle, Mail, Clock, User, ExternalLink } from 'lucide-react';
@@ -21,7 +20,6 @@ export default function RequestsPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Route protection
   useEffect(() => {
     if (!authLoading) {
       if (!user) {
@@ -49,17 +47,6 @@ export default function RequestsPage() {
 
   const handleUpdateStatus = (req: any, status: 'accepted' | 'rejected') => {
     updateDocumentNonBlocking(doc(db, 'contactRequests', req.id), { status });
-    
-    if (status === 'accepted') {
-      addDocumentNonBlocking(collection(db, 'notifications'), {
-        userId: req.senderId,
-        type: 'contact_accepted',
-        text: `Your contact request for ${req.startupName} has been accepted!`,
-        read: false,
-        timestamp: serverTimestamp(),
-      });
-    }
-
     toast({
       title: `Request ${status}`,
       description: status === 'accepted' ? 'Investor can now see your contact details and message you.' : 'Introduction request declined.',

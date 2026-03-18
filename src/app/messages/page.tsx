@@ -22,7 +22,6 @@ export default function MessagesPage() {
   const [messageText, setMessageText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Route protection
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
@@ -83,14 +82,6 @@ export default function MessagesPage() {
       text: messageText,
       timestamp: serverTimestamp(),
       read: false,
-    });
-
-    addDocumentNonBlocking(collection(db, 'notifications'), {
-      userId: receiverId,
-      type: 'message',
-      text: `New message for ${selectedConnection.startupName} from ${user.email}`,
-      read: false,
-      timestamp: serverTimestamp(),
     });
 
     setMessageText('');
