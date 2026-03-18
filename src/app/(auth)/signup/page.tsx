@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { useAuth, useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,13 +28,13 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Initialize profile with lastActive
-      updateDocumentNonBlocking(doc(db, 'users', userCredential.user.uid), {
+      // Initialize profile with lastActive and createdAt (using set with merge for upsert safety)
+      setDocumentNonBlocking(doc(db, 'users', userCredential.user.uid), {
         id: userCredential.user.uid,
         email: userCredential.user.email,
         lastActive: serverTimestamp(),
         createdAt: serverTimestamp(),
-      });
+      }, { merge: true });
 
       toast({ title: "Account created!", description: "Welcome to CapFinder." });
       router.push('/onboarding');

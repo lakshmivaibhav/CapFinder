@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { useAuth, useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,10 +28,10 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      // Update lastActive status non-blocking
-      updateDocumentNonBlocking(doc(db, 'users', userCredential.user.uid), {
+      // Update lastActive status non-blocking (using set with merge for upsert safety)
+      setDocumentNonBlocking(doc(db, 'users', userCredential.user.uid), {
         lastActive: serverTimestamp()
-      });
+      }, { merge: true });
       
       toast({ title: "Welcome back!", description: "Redirecting to your dashboard..." });
       router.push('/dashboard');
