@@ -7,13 +7,13 @@ import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 
 interface Profile {
   uid: string;
-  role?: 'investor' | 'startup';
+  role?: 'investor' | 'startup' | 'admin';
   name?: string;
   email?: string;
   company?: string;
   bio?: string;
   investmentInterest?: string;
-  fundingNeeded?: string;
+  fundingNeeded?: number;
 }
 
 interface AuthContextType {
@@ -46,7 +46,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (docSnap.exists()) {
         setProfile({ uid, ...docSnap.data() } as Profile);
       } else {
-        // If document doesn't exist, we don't have a profile yet (e.g. during onboarding)
         setProfile(null);
       }
     } catch (error) {

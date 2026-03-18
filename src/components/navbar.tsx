@@ -8,7 +8,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { auth as firebaseAuth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
 import { collection, query, where } from 'firebase/firestore';
-import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, MessageSquare, Inbox } from 'lucide-react';
+import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, MessageSquare, Inbox, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -23,7 +23,6 @@ export function Navbar() {
     router.push('/');
   };
 
-  // Fetch unread messages count
   const unreadMessagesQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -36,7 +35,6 @@ export function Navbar() {
   const { data: unreadMessages } = useCollection(unreadMessagesQuery);
   const unreadCount = unreadMessages?.length || 0;
 
-  // Fetch pending requests count
   const pendingRequestsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -51,14 +49,15 @@ export function Navbar() {
 
   if (!user) return null;
 
+  const isAdmin = profile?.role === 'admin';
+
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { label: pathname === '/pitches' ? 'Marketplace' : 'Browse', href: '/pitches', icon: Search },
+    { label: 'Marketplace', href: '/pitches', icon: Search },
     { 
       label: 'Requests', 
       href: '/requests', 
       icon: Inbox, 
-      // Badge is removed when the requests page is opened
       badge: pathname === '/requests' ? 0 : requestCount, 
       show: profile?.role === 'startup' 
     },
@@ -66,8 +65,13 @@ export function Navbar() {
       label: 'Messages', 
       href: '/messages', 
       icon: MessageSquare, 
-      // Badge is removed when the messages page is opened
       badge: pathname === '/messages' ? 0 : unreadCount 
+    },
+    { 
+      label: 'Admin', 
+      href: '/admin', 
+      icon: ShieldAlert, 
+      show: isAdmin 
     },
     { label: 'Profile', href: '/profile', icon: User },
   ];
