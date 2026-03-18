@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -6,38 +5,45 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit } from 'firebase/firestore';
+import { collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Briefcase, Users, DollarSign, Mail, Heart, ExternalLink } from 'lucide-react';
+import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Briefcase, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function DashboardPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const db = useFirestore();
   const router = useRouter();
 
-  // Fetch pitches created by the startup or a sample for investors
-  const pitchesQuery = useMemoFirebase(() => {
-    if (!user || !profile?.role) return null;
-    if (profile.role === 'startup') {
-      return query(collection(db, 'pitches'), where('ownerId', '==', user.uid));
-    }
-    return query(collection(db, 'pitches'), limit(5));
+  // Queries for Startups
+  const startupPitchesQuery = useMemoFirebase(() => {
+    if (!user || profile?.role !== 'startup') return null;
+    return query(collection(db, 'pitches'), where('ownerId', '==', user.uid), orderBy('createdAt', 'desc'));
   }, [db, user, profile]);
 
-  // Fetch relevant interests based on user role
-  const interestsQuery = useMemoFirebase(() => {
-    if (!user || !profile?.role) return null;
-    if (profile.role === 'startup') {
-      return query(collection(db, 'interests'), where('startupOwnerId', '==', user.uid));
-    }
-    return query(collection(db, 'interests'), where('investorId', '==', user.uid));
+  const startupInterestsQuery = useMemoFirebase(() => {
+    if (!user || profile?.role !== 'startup') return null;
+    return query(collection(db, 'interests'), where('startupOwnerId', '==', user.uid), orderBy('timestamp', 'desc'));
   }, [db, user, profile]);
 
-  const { data: pitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
-  const { data: interests, isLoading: loadingInterests } = useCollection(interestsQuery);
+  // Queries for Investors
+  const allPitchesQuery = useMemoFirebase(() => {
+    if (!user || profile?.role !== 'investor') return null;
+    return query(collection(db, 'pitches'), limit(20));
+  }, [db, user, profile]);
+
+  const investorInterestsQuery = useMemoFirebase(() => {
+    if (!user || profile?.role !== 'investor') return null;
+    return query(collection(db, 'interests'), where('investorId', '==', user.uid), orderBy('timestamp', 'desc'));
+  }, [db, user, profile]);
+
+  const { data: startupPitches, isLoading: loadingStartupPitches } = useCollection(startupPitchesQuery);
+  const { data: startupInterests, isLoading: loadingStartupInterests } = useCollection(startupInterestsQuery);
+  const { data: allPitches, isLoading: loadingAllPitches } = useCollection(allPitchesQuery);
+  const { data: investorInterests, isLoading: loadingInvestorInterests } = useCollection(investorInterestsQuery);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -46,212 +52,294 @@ export default function DashboardPage() {
   }, [user, authLoading, router]);
 
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
-  if (!user) return null;
+  if (!user || !profile) return null;
+
+  const isStartup = profile.role === 'startup';
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
       <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full">
-        <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground">Welcome back, {profile?.name || user.email}</p>
+            <h1 className="text-3xl font-bold tracking-tight">Welcome, {profile.name || user.email}</h1>
+            <p className="text-muted-foreground">Here's what's happening with your {profile.role} account today.</p>
           </div>
           <div className="flex gap-3">
-            {profile?.role === 'startup' && (
+            {isStartup ? (
               <Link href="/pitches/new">
-                <Button className="h-11 px-6 shadow-md">
-                  <Plus className="mr-2 w-5 h-5" /> Create Pitch
+                <Button className="h-11 px-6 shadow-md gap-2">
+                  <Plus className="w-5 h-5" /> New Pitch
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/pitches">
+                <Button className="h-11 px-6 shadow-md gap-2">
+                  <Search className="w-5 h-5" /> Browse Marketplace
                 </Button>
               </Link>
             )}
-            <Link href="/pitches">
-              <Button variant="outline" className="h-11 px-6">Explore Marketplace</Button>
-            </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-          <Card className="border-none shadow-sm">
+        {/* Overview Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <Card className="border-none shadow-sm bg-primary/5">
             <CardContent className="p-6 flex items-center gap-4">
-              <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-                <Briefcase className="w-6 h-6" />
+              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white">
+                {isStartup ? <Megaphone className="w-6 h-6" /> : <LayoutGrid className="w-6 h-6" />}
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">My Role</p>
-                <p className="text-xl font-bold capitalize">{profile?.role || 'User'}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'My Pitches' : 'Market Opportunities'}</p>
+                <p className="text-2xl font-bold">{isStartup ? (startupPitches?.length || 0) : (allPitches?.length || 0)}</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-none shadow-sm">
+          <Card className="border-none shadow-sm bg-accent/5">
             <CardContent className="p-6 flex items-center gap-4">
-              <div className="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600">
-                <Megaphone className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  {profile?.role === 'startup' ? 'My Pitches' : 'Opportunities'}
-                </p>
-                <p className="text-xl font-bold">{pitches?.length || 0}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-none shadow-sm">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600">
+              <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center text-white">
                 <Users className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Connections</p>
-                <p className="text-xl font-bold">{interests?.length || 0}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Total Interests' : 'My Interactions'}</p>
+                <p className="text-2xl font-bold">{isStartup ? (startupInterests?.length || 0) : (investorInterests?.length || 0)}</p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-none shadow-sm">
+          <Card className="border-none shadow-sm bg-emerald-50">
             <CardContent className="p-6 flex items-center gap-4">
-              <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
+              <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
                 <DollarSign className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Funding Needs</p>
-                <p className="text-xl font-bold">${profile?.fundingNeeded || '0'}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Funding Goal' : 'Avg. Pitch Size'}</p>
+                <p className="text-2xl font-bold">${isStartup ? (profile.fundingNeeded || '0') : '1.2M'}</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">
-                {profile?.role === 'startup' ? "My Active Pitches" : "Featured Market"}
-              </h2>
-              <Link href="/pitches" className="text-sm text-primary font-medium hover:underline flex items-center gap-1">
-                View all <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
+        {/* Tabbed Content */}
+        <Tabs defaultValue="primary" className="space-y-6">
+          <TabsList className="bg-muted/50 p-1">
+            <TabsTrigger value="primary" className="px-6 py-2 gap-2">
+              {isStartup ? (
+                <>
+                  <Megaphone className="w-4 h-4" /> My Pitches
+                  <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary border-none">
+                    {startupPitches?.length || 0}
+                  </Badge>
+                </>
+              ) : (
+                <>
+                  <LayoutGrid className="w-4 h-4" /> All Pitches
+                  <Badge variant="secondary" className="ml-2 bg-primary/10 text-primary border-none">
+                    {allPitches?.length || 0}
+                  </Badge>
+                </>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="secondary" className="px-6 py-2 gap-2">
+              {isStartup ? (
+                <>
+                  <Users className="w-4 h-4" /> Interested Investors
+                  <Badge variant="secondary" className="ml-2 bg-accent/10 text-accent border-none">
+                    {startupInterests?.length || 0}
+                  </Badge>
+                </>
+              ) : (
+                <>
+                  <Star className="w-4 h-4" /> Interested Pitches
+                  <Badge variant="secondary" className="ml-2 bg-accent/10 text-accent border-none">
+                    {investorInterests?.length || 0}
+                  </Badge>
+                </>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-            {loadingPitches ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => <div key={i} className="h-32 w-full bg-muted animate-pulse rounded-xl" />)}
-              </div>
-            ) : (pitches && pitches.length > 0) ? (
-              <div className="space-y-4">
-                {pitches.map((pitch) => (
-                  <Card key={pitch.id} className="group hover:shadow-md transition-all overflow-hidden border-none shadow-sm">
-                    <CardHeader className="flex flex-row items-start justify-between pb-2">
-                      <div>
-                        <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">{pitch.startupName}</CardTitle>
-                        <CardDescription>{pitch.industry}</CardDescription>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <Badge variant="secondary" className="bg-primary/5 text-primary">
-                          ${pitch.fundingNeeded}
-                        </Badge>
-                        {profile?.role === 'startup' && (
-                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase">
-                            <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                            {interests?.filter(i => i.pitchId === pitch.id).length || 0} interested
+          <TabsContent value="primary">
+            {isStartup ? (
+              <div className="grid gap-6">
+                {(loadingStartupPitches) ? (
+                  <div className="flex justify-center p-12"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>
+                ) : (startupPitches && startupPitches.length > 0) ? (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {startupPitches.map((pitch) => (
+                      <Card key={pitch.id} className="group hover:shadow-lg transition-all border-none shadow-sm overflow-hidden bg-white">
+                        <CardHeader className="pb-3">
+                          <div className="flex justify-between items-start mb-2">
+                            <Badge variant="secondary" className="bg-primary/5 text-primary border-none">{pitch.industry}</Badge>
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase">
+                              <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                              {startupInterests?.filter(i => i.pitchId === pitch.id).length || 0} interests
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{pitch.description}</p>
-                    </CardContent>
-                    <CardFooter className="pt-0 flex justify-between items-center text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-3 h-3" />
-                        {pitch.createdAt?.toDate ? pitch.createdAt.toDate().toLocaleDateString() : 'Recent'}
-                      </div>
-                      <Link href={`/pitches`} className="text-primary font-semibold hover:underline">
-                        Details
-                      </Link>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-white rounded-2xl border border-dashed">
-                <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-medium">No activity here yet</h3>
-                <p className="text-muted-foreground mb-6">
-                  {profile?.role === 'startup' ? 'Post your first pitch to attract investors.' : 'Check the marketplace for new opportunities.'}
-                </p>
-                <Button asChild variant="outline">
-                   <Link href={profile?.role === 'startup' ? "/pitches/new" : "/pitches"}>
-                      {profile?.role === 'startup' ? 'Create Pitch' : 'Browse Marketplace'}
-                   </Link>
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold">
-              {profile?.role === 'startup' ? "Recent Inbound" : "My Interests"}
-            </h2>
-            <Card className="border-none shadow-sm">
-              <CardContent className="p-0">
-                {loadingInterests ? (
-                  <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto text-primary" /></div>
-                ) : (interests && interests.length > 0) ? (
-                  <div className="divide-y">
-                    {interests.map((interest) => (
-                      <div key={interest.id} className="p-5 hover:bg-muted/30 transition-colors">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <p className="font-bold text-sm">
-                              {profile?.role === 'startup' ? interest.investorEmail : interest.startupName}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {profile?.role === 'startup' ? 'Requested details' : `Target: ${interest.industry}`}
-                            </p>
+                          <CardTitle className="text-xl font-bold line-clamp-1 group-hover:text-primary transition-colors">
+                            {pitch.startupName}
+                          </CardTitle>
+                          <CardDescription className="line-clamp-2">
+                            {pitch.description}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="pb-4">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <DollarSign className="w-4 h-4" /> Goal
+                            </span>
+                            <span className="font-bold text-primary">${pitch.fundingNeeded}</span>
                           </div>
-                          <Badge variant="outline" className="text-[10px] h-4">
-                            {interest.timestamp?.toDate ? interest.timestamp.toDate().toLocaleDateString() : 'Just now'}
-                          </Badge>
-                        </div>
-                        <div className="flex gap-2 mt-4">
-                          <Button variant="outline" size="sm" className="h-8 text-[10px] flex-1" asChild>
-                            <Link href={profile?.role === 'startup' ? `mailto:${interest.investorEmail}` : `/pitches`}>
-                              <Mail className="w-3 h-3 mr-2" /> 
-                              {profile?.role === 'startup' ? 'Reply' : 'View Pitch'}
-                            </Link>
-                          </Button>
-                          {profile?.role === 'investor' && (
-                             <Button variant="ghost" size="sm" className="h-8 text-[10px] px-2">
-                                <ExternalLink className="w-3 h-3" />
-                             </Button>
-                          )}
-                        </div>
-                      </div>
+                        </CardContent>
+                        <CardFooter className="pt-4 border-t bg-muted/10 flex justify-between items-center">
+                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {pitch.createdAt?.toDate ? pitch.createdAt.toDate().toLocaleDateString() : 'Just now'}
+                          </div>
+                          <Link href="/pitches" className="text-primary text-sm font-bold hover:underline inline-flex items-center gap-1">
+                            Details <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </CardFooter>
+                      </Card>
                     ))}
                   </div>
                 ) : (
-                  <div className="p-12 text-center">
-                    <Users className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-50" />
-                    <p className="text-sm text-muted-foreground">No connections found.</p>
+                  <Card className="border-dashed border-2 py-16 text-center">
+                    <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-bold">No pitches yet</h3>
+                    <p className="text-muted-foreground mb-6">Start by creating your first startup pitch to attract investors.</p>
+                    <Link href="/pitches/new">
+                      <Button variant="outline">Create My First Pitch</Button>
+                    </Link>
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <div className="grid gap-6">
+                {loadingAllPitches ? (
+                  <div className="flex justify-center p-12"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>
+                ) : (allPitches && allPitches.length > 0) ? (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {allPitches.map((pitch) => (
+                      <Card key={pitch.id} className="group hover:shadow-lg transition-all border-none shadow-sm bg-white overflow-hidden">
+                        <CardHeader className="pb-3">
+                          <Badge variant="secondary" className="w-fit mb-2 bg-primary/5 text-primary border-none">{pitch.industry}</Badge>
+                          <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors">{pitch.startupName}</CardTitle>
+                          <CardDescription className="line-clamp-3 italic text-xs leading-relaxed">
+                            &quot;{pitch.description}&quot;
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="p-3 bg-muted/30 rounded-lg flex items-center justify-between">
+                            <span className="text-xs font-medium text-muted-foreground">Target Funding</span>
+                            <span className="text-sm font-bold text-primary">${pitch.fundingNeeded}</span>
+                          </div>
+                        </CardContent>
+                        <CardFooter className="pt-4 border-t bg-muted/10">
+                          <Link href="/pitches" className="w-full">
+                            <Button variant="ghost" className="w-full text-xs gap-2">
+                              Explore details <ArrowRight className="w-3 h-3" />
+                            </Button>
+                          </Link>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
+                    <Search className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No active pitches found in the marketplace.</p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            )}
+          </TabsContent>
 
-            <Card className="border-none shadow-sm bg-accent/5">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Quick Pro Tip</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {profile?.role === 'startup' 
-                    ? "Adding keywords like 'SaaS' or 'Web3' to your pitch description helps investors find you faster in their filtered search."
-                    : "Use the marketplace filters to find startups in specific industries that match your current portfolio strategy."}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+          <TabsContent value="secondary">
+             <div className="grid gap-6">
+                {isStartup ? (
+                  loadingStartupInterests ? (
+                    <div className="flex justify-center p-12"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>
+                  ) : (startupInterests && startupInterests.length > 0) ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {startupInterests.map((interest) => (
+                        <Card key={interest.id} className="border-none shadow-sm bg-white overflow-hidden">
+                          <CardHeader className="pb-2">
+                            <div className="flex justify-between items-center mb-1">
+                               <p className="text-[10px] font-bold text-accent uppercase tracking-wider">Investor Connection</p>
+                               <Badge variant="outline" className="text-[9px] h-4">
+                                  {interest.timestamp?.toDate ? interest.timestamp.toDate().toLocaleDateString() : 'Recent'}
+                               </Badge>
+                            </div>
+                            <CardTitle className="text-lg font-bold">{interest.investorEmail}</CardTitle>
+                            <CardDescription className="text-xs">
+                               Interested in: <span className="font-semibold text-foreground">{interest.startupName}</span>
+                            </CardDescription>
+                          </CardHeader>
+                          <CardFooter className="pt-4">
+                            <Button variant="outline" size="sm" className="w-full gap-2 border-accent/20 text-accent hover:bg-accent/5" asChild>
+                              <Link href={`mailto:${interest.investorEmail}`}>
+                                <Mail className="w-3 h-3" /> Contact Investor
+                              </Link>
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
+                       <Users className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
+                       <h3 className="font-bold">No interests yet</h3>
+                       <p className="text-sm text-muted-foreground">Your pitches haven't received any investor interest yet. Try refining your description!</p>
+                    </div>
+                  )
+                ) : (
+                  loadingInvestorInterests ? (
+                    <div className="flex justify-center p-12"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>
+                  ) : (investorInterests && investorInterests.length > 0) ? (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {investorInterests.map((interest) => (
+                        <Card key={interest.id} className="border-none shadow-sm bg-white group hover:shadow-md transition-all">
+                          <CardHeader>
+                            <div className="flex justify-between items-start mb-2">
+                              <Badge className="bg-emerald-50 text-emerald-600 border-none hover:bg-emerald-100 px-3">
+                                {interest.industry}
+                              </Badge>
+                              <div className="p-1.5 bg-emerald-50 rounded-full">
+                                <Star className="w-4 h-4 text-emerald-500 fill-emerald-500" />
+                              </div>
+                            </div>
+                            <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">
+                              {interest.startupName}
+                            </CardTitle>
+                            <CardDescription className="text-xs">
+                              You expressed interest on {interest.timestamp?.toDate ? interest.timestamp.toDate().toLocaleDateString() : 'recently'}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardFooter className="pt-0">
+                            <Link href="/pitches" className="w-full">
+                              <Button variant="ghost" className="w-full text-xs justify-between group-hover:bg-primary/5">
+                                View Pitch Details <ArrowRight className="w-3 h-3" />
+                              </Button>
+                            </Link>
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
+                       <Star className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
+                       <h3 className="font-bold">No marked interests</h3>
+                       <p className="text-sm text-muted-foreground">You haven't shown interest in any pitches yet. Start exploring the marketplace!</p>
+                       <Link href="/pitches">
+                         <Button variant="link" className="mt-2 text-primary">Browse Pitches</Button>
+                       </Link>
+                    </div>
+                  )
+                )}
+             </div>
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
