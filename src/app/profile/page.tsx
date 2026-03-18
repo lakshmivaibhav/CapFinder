@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc, collection, serverTimestamp, getDocs, query, where, or, limit, orderBy } from 'firebase/firestore';
+import { doc, updateDoc, collection, serverTimestamp, query, where, limit, orderBy } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Save, User, ArrowLeft, Camera, Briefcase, Mail, Shield, ShieldCheck, Trash2, Megaphone, AlertTriangle, History, Clock, Activity, FileText } from 'lucide-react';
+import { Loader2, Save, User, ArrowLeft, Trash2, History, Clock, Activity, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +26,6 @@ export default function ProfilePage() {
 
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [checkingPitch, setCheckingPitch] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -43,17 +42,9 @@ export default function ProfilePage() {
     }
   }, [user, authLoading, router]);
 
-  // Fetch user's pitches for deletion management
-  const myPitchesQuery = useMemoFirebase(() => {
-    if (!user || !profile || profile.disabled === true) return null;
-    return query(collection(db, 'pitches'), where('ownerId', '==', user.uid));
-  }, [db, user, profile]);
-  const { data: myPitches, isLoading: loadingPitches } = useCollection(myPitchesQuery);
-
   // SAFE LOG QUERY: Strictly wait for verified profile AND include userId filter.
+  // This ensures that the query matches the identity-based read rule for non-administrative list operations.
   const myLogsQuery = useMemoFirebase(() => {
-    // Identity-based filtering is mandatory for non-administrative list operations
-    // on the logs collection according to firestore.rules.
     if (!user || !profile || profile.disabled === true) return null;
     return query(
       collection(db, 'logs'), 
@@ -128,35 +119,6 @@ export default function ProfilePage() {
       }
     } finally {
       setChecking(false);
-    }
-  };
-
-  const handleRequestPitchDeletion = async (pitchId: string, pitchName: string) => {
-    if (!user) return;
-    setCheckingPitch(pitchId);
-    try {
-      if (confirm(`Request deletion of pitch "${pitchName}"?`)) {
-        addDocumentNonBlocking(collection(db, 'deleteRequests'), {
-          userId: user.uid,
-          targetType: 'pitch',
-          targetId: pitchId,
-          status: 'pending',
-          timestamp: serverTimestamp(),
-          details: `Startup owner requested deletion of pitch: ${pitchName}`
-        });
-        
-        addDocumentNonBlocking(collection(db, 'logs'), {
-          userId: user.uid,
-          action: 'delete_request_created',
-          targetId: pitchId,
-          timestamp: serverTimestamp(),
-          details: `Deletion request submitted for pitch ${pitchName}`
-        });
-
-        toast({ title: "Deletion Request Sent" });
-      }
-    } finally {
-      setCheckingPitch(null);
     }
   };
 

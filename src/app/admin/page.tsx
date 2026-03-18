@@ -108,10 +108,9 @@ function AdminDashboardContent() {
   }, [db, profile]);
   
   // SAFE LOG QUERY: Strictly includes userId filter to match identity-based security rules.
+  // This ensures that the query matches the allowed patterns in firestore.rules.
   const logsQuery = useMemoFirebase(() => {
-    // Identity-based filtering is mandatory for non-administrative list operations
-    // on the logs collection according to firestore.rules.
-    if (!user || !profile || profile.disabled === true) return null;
+    if (!user || !profile || profile.role !== 'admin' || profile.disabled === true) return null;
     return query(
       collection(db, 'logs'), 
       where('userId', '==', user.uid),
