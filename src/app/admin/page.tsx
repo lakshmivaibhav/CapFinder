@@ -18,6 +18,11 @@ import { format, differenceInHours } from 'date-fns';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+/**
+ * AdminDashboardPage - Phase 1: Verification
+ * This component handles the initial security check. It does not call any hooks for sensitive
+ * collections until it has definitively verified the user's role via a direct Firestore fetch.
+ */
 export default function AdminDashboardPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const db = useFirestore();
@@ -26,7 +31,6 @@ export default function AdminDashboardPage() {
   
   const [verifying, setVerifying] = useState(true);
   const [isVerifiedAdmin, setIsVerifiedAdmin] = useState(false);
-  const [processingStale, setProcessingStale] = useState(false);
 
   useEffect(() => {
     async function verifyAdminStatus() {
@@ -38,10 +42,10 @@ export default function AdminDashboardPage() {
       }
 
       try {
+        // Authoritative role verification directly from the database
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = userDoc.data();
         
-        // Strict role verification from Firestore on every mount
         if (userDoc.exists() && userData?.role === 'admin') {
           setIsVerifiedAdmin(true);
         } else {
@@ -62,31 +66,39 @@ export default function AdminDashboardPage() {
     verifyAdminStatus();
   }, [user, authLoading, db, router, toast]);
 
-  // Queries are strictly tied to isVerifiedAdmin state to prevent unauthorized rule evaluation
-  const usersQuery = useMemoFirebase(() => 
-    isVerifiedAdmin ? query(collection(db, 'users'), limit(500)) : null, 
-    [db, isVerifiedAdmin]
-  );
-  const pitchesQuery = useMemoFirebase(() => 
-    isVerifiedAdmin ? query(collection(db, 'pitches'), limit(500)) : null, 
-    [db, isVerifiedAdmin]
-  );
-  const requestsQuery = useMemoFirebase(() => 
-    isVerifiedAdmin ? query(collection(db, 'contactRequests'), limit(500)) : null, 
-    [db, isVerifiedAdmin]
-  );
-  const messagesQuery = useMemoFirebase(() => 
-    isVerifiedAdmin ? query(collection(db, 'messages'), limit(500)) : null, 
-    [db, isVerifiedAdmin]
-  );
-  const logsQuery = useMemoFirebase(() => 
-    isVerifiedAdmin ? query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(100)) : null, 
-    [db, isVerifiedAdmin]
-  );
-  const deleteRequestsQuery = useMemoFirebase(() => 
-    isVerifiedAdmin ? query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), orderBy('timestamp', 'desc')) : null, 
-    [db, isVerifiedAdmin]
-  );
+  if (authLoading || verifying) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background space-y-4">
+        <Loader2 className="animate-spin w-12 h-12 text-primary" />
+        <p className="text-sm font-medium text-muted-foreground animate-pulse">Verifying Admin Access...</p>
+      </div>
+    );
+  }
+
+  if (!isVerifiedAdmin) return null;
+
+  // Render the content component which only now initializes sensitive collection hooks
+  return <AdminDashboardContent />;
+}
+
+/**
+ * AdminDashboardContent - Phase 2: Administrative Content
+ * This component is only rendered after Phase 1 confirmation. All hooks for sensitive
+ * data (pitches, logs, deleteRequests, etc.) are safely initialized here.
+ */
+function AdminDashboardContent() {
+  const { user } = useAuth();
+  const db = useFirestore();
+  const { toast } = useToast();
+  const [processingStale, setProcessingStale] = useState(false);
+
+  // Queries are initialized here, ensuring they ONLY run after authoritative verification
+  const usersQuery = useMemoFirebase(() => query(collection(db, 'users'), limit(500)), [db]);
+  const pitchesQuery = useMemoFirebase(() => query(collection(db, 'pitches'), limit(500)), [db]);
+  const requestsQuery = useMemoFirebase(() => query(collection(db, 'contactRequests'), limit(500)), [db]);
+  const messagesQuery = useMemoFirebase(() => query(collection(db, 'messages'), limit(500)), [db]);
+  const logsQuery = useMemoFirebase(() => query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(100)), [db]);
+  const deleteRequestsQuery = useMemoFirebase(() => query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), orderBy('timestamp', 'desc')), [db]);
 
   const { data: allUsers, isLoading: loadingUsers } = useCollection(usersQuery);
   const { data: allPitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
@@ -217,17 +229,6 @@ export default function AdminDashboardPage() {
     updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status });
     toast({ title: `Request ${status === 'resolved' ? 'Resolved' : 'Rejected'}` });
   };
-
-  if (authLoading || verifying) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background space-y-4">
-        <Loader2 className="animate-spin w-12 h-12 text-primary" />
-        <p className="text-sm font-medium text-muted-foreground animate-pulse">Verifying Admin Access...</p>
-      </div>
-    );
-  }
-
-  if (!isVerifiedAdmin) return null;
 
   const stats = [
     { label: 'Total Users', value: allUsers?.length || 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
