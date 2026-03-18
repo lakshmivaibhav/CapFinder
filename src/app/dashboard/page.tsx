@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -18,27 +19,43 @@ export default function DashboardPage() {
   const db = useFirestore();
   const router = useRouter();
 
+  // Unified guards for queries to prevent permission errors
+  const isStartup = profile?.role === 'startup';
+  const isInvestor = profile?.role === 'investor';
+
   // Queries for Startups
   const startupPitchesQuery = useMemoFirebase(() => {
-    if (!user || profile?.role !== 'startup') return null;
-    return query(collection(db, 'pitches'), where('ownerId', '==', user.uid), orderBy('createdAt', 'desc'));
-  }, [db, user, profile]);
+    if (!user || !isStartup) return null;
+    return query(
+      collection(db, 'pitches'), 
+      where('ownerId', '==', user.uid), 
+      orderBy('createdAt', 'desc')
+    );
+  }, [db, user, isStartup]);
 
   const startupInterestsQuery = useMemoFirebase(() => {
-    if (!user || profile?.role !== 'startup') return null;
-    return query(collection(db, 'interests'), where('startupOwnerId', '==', user.uid), orderBy('timestamp', 'desc'));
-  }, [db, user, profile]);
+    if (!user || !isStartup) return null;
+    return query(
+      collection(db, 'interests'), 
+      where('startupOwnerId', '==', user.uid), 
+      orderBy('timestamp', 'desc')
+    );
+  }, [db, user, isStartup]);
 
   // Queries for Investors
   const allPitchesQuery = useMemoFirebase(() => {
-    if (!user || profile?.role !== 'investor') return null;
+    if (!user || !isInvestor) return null;
     return query(collection(db, 'pitches'), limit(20));
-  }, [db, user, profile]);
+  }, [db, user, isInvestor]);
 
   const investorInterestsQuery = useMemoFirebase(() => {
-    if (!user || profile?.role !== 'investor') return null;
-    return query(collection(db, 'interests'), where('investorId', '==', user.uid), orderBy('timestamp', 'desc'));
-  }, [db, user, profile]);
+    if (!user || !isInvestor) return null;
+    return query(
+      collection(db, 'interests'), 
+      where('investorId', '==', user.uid), 
+      orderBy('timestamp', 'desc')
+    );
+  }, [db, user, isInvestor]);
 
   const { data: startupPitches, isLoading: loadingStartupPitches } = useCollection(startupPitchesQuery);
   const { data: startupInterests, isLoading: loadingStartupInterests } = useCollection(startupInterestsQuery);
@@ -53,8 +70,6 @@ export default function DashboardPage() {
 
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
   if (!user || !profile) return null;
-
-  const isStartup = profile.role === 'startup';
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

@@ -31,18 +31,22 @@ service cloud.firestore {
 
     match /interests/{interestId} {
       // Split 'list' permissions to ensure queries with specific filters are correctly authorized.
+      // This allows investors to list interests they created.
       allow list: if isSignedIn() && resource.data.investorId == request.auth.uid;
+      
+      // This allows startups to list interests created for their pitches.
       allow list: if isSignedIn() && resource.data.startupOwnerId == request.auth.uid;
       
+      // 'get' is permitted if the user is either the investor or the startup owner.
       allow get: if isSignedIn() && (
         resource.data.investorId == request.auth.uid || 
         resource.data.startupOwnerId == request.auth.uid
       );
       
-      // Only investors can express interest
+      // Only investors can express interest.
       allow create: if isSignedIn() && hasRole('investor') && request.resource.data.investorId == request.auth.uid;
       
-      // Interests are generally immutable once expressed
+      // Interests are immutable and can only be deleted by the investor who expressed them.
       allow update: if false;
       allow delete: if isSignedIn() && resource.data.investorId == request.auth.uid;
     }
