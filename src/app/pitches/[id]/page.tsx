@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useState, useEffect } from 'react';
@@ -20,18 +19,18 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const { toast } = useToast();
   const [checking, setChecking] = useState(false);
 
-  // Critical: Guard the pitch reference with both authentication and profile readiness
+  // Guard the pitch reference with basic authentication check to satisfy security rules
   const pitchRef = useMemoFirebase(() => {
-    if (!user || !profile || profile.disabled) return null;
+    if (!user) return null;
     return doc(db, 'pitches', id);
-  }, [db, id, user, profile]);
+  }, [db, id, user]);
 
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
 
   const ownerRef = useMemoFirebase(() => {
-    if (!pitch || !user || !profile) return null;
+    if (!pitch || !user) return null;
     return doc(db, 'users', pitch.ownerId);
-  }, [db, pitch, user, profile]);
+  }, [db, pitch, user]);
 
   const { data: ownerProfile, isLoading: loadingOwner } = useDoc(ownerRef);
 
@@ -39,23 +38,23 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const isOwner = user?.uid === pitch?.ownerId;
 
   const interestsQuery = useMemoFirebase(() => {
-    if (!user || !profile || !isInvestor || !pitch) return null;
+    if (!user || !isInvestor || !pitch) return null;
     return query(collection(db, 'interests'), where('investorId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, profile, isInvestor, id, pitch]);
+  }, [db, user, isInvestor, id, pitch]);
   const { data: interests } = useCollection(interestsQuery);
   const isInterested = interests && interests.length > 0;
 
   const favoritesQuery = useMemoFirebase(() => {
-    if (!user || !profile || !isInvestor || !pitch) return null;
+    if (!user || !isInvestor || !pitch) return null;
     return query(collection(db, 'favorites'), where('investorId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, profile, isInvestor, id, pitch]);
+  }, [db, user, isInvestor, id, pitch]);
   const { data: favorites } = useCollection(favoritesQuery);
   const isFavorited = favorites && favorites.length > 0;
 
   const contactRequestsQuery = useMemoFirebase(() => {
-    if (!user || !profile || !isInvestor || !pitch) return null;
+    if (!user || !isInvestor || !pitch) return null;
     return query(collection(db, 'contactRequests'), where('senderId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, profile, isInvestor, id, pitch]);
+  }, [db, user, isInvestor, id, pitch]);
   const { data: contactRequests } = useCollection(contactRequestsQuery);
   const contactRequest = contactRequests?.[0];
 
@@ -173,8 +172,8 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  if (loadingPitch || authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
-  if (!pitch) return <div className="p-20 text-center font-bold text-destructive">Pitch not found.</div>;
+  if (loadingPitch || authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin w-10 h-10 text-primary" /></div>;
+  if (!pitch) return <div className="min-h-screen flex flex-col items-center justify-center gap-4"><Badge variant="destructive">Error</Badge><h2 className="text-xl font-bold">Pitch not found</h2><Link href="/pitches"><Button variant="link">Return to Marketplace</Button></Link></div>;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -257,7 +256,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                          <Clock className="mr-2 w-5 h-5 animate-pulse" /> Pending Approval
                        </Button>
                      ) : contactRequest.status === 'accepted' ? (
-                       <div className="flex gap-2">
+                       <div className="flex gap-2 w-full">
                           <Button className="flex-1 h-14 text-lg font-bold bg-green-600 hover:bg-green-700" asChild>
                             <a href={`mailto:${pitch.contactEmail}`}>
                               <Mail className="mr-2 w-5 h-5" /> Email Founder
