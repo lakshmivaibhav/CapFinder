@@ -9,7 +9,7 @@ import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark, Inbox, CheckCircle2, XCircle, User, ShieldAlert, BarChart3, Sparkles, Building2 } from 'lucide-react';
+import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark, Inbox, CheckCircle2, XCircle, User, ShieldAlert, BarChart3, Sparkles, Building2, Coins } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -132,17 +132,31 @@ export default function DashboardPage() {
     if (!isStartup || !investorsForMatching || !startupPitches || startupPitches.length === 0) return [];
     
     const startupIndustries = Array.from(new Set(startupPitches.map(p => (p.industry || '').toLowerCase()))).filter(Boolean);
+    const totalFundingNeeded = startupPitches.reduce((acc, p) => acc + (Number(p.fundingNeeded) || 0), 0);
     
     return investorsForMatching
       .map(investor => {
         let score = 0;
         const interests = (investor.investmentInterest || '').toLowerCase().split(',').map(i => i.trim()).filter(Boolean);
         
+        // Match based on industry
         startupIndustries.forEach(industry => {
           if (interests.some(interest => interest.includes(industry) || industry.includes(interest))) {
-            score += 10;
+            score += 15;
           }
         });
+
+        // Heuristic: If funding needed is high, prefer investors who mention "Growth", "Series A", or "Scale"
+        if (totalFundingNeeded > 1000000) {
+          if (interests.some(i => i.includes('growth') || i.includes('series') || i.includes('scale'))) {
+            score += 10;
+          }
+        } else if (totalFundingNeeded > 0) {
+          // If funding is smaller, prefer those mentioning "Seed", "Angel", or "Early"
+          if (interests.some(i => i.includes('seed') || i.includes('angel') || i.includes('early'))) {
+            score += 5;
+          }
+        }
         
         return { ...investor, score };
       })
@@ -298,7 +312,7 @@ export default function DashboardPage() {
               <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-primary" />
               </div>
-              <h2 className="text-2xl font-bold tracking-tight">Recommended Investors</h2>
+              <h2 className="text-2xl font-bold tracking-tight">Top Recommended Investors</h2>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {recommendedInvestors.map((investor) => (
@@ -306,8 +320,8 @@ export default function DashboardPage() {
                   <Card className="group border-2 border-primary/10 hover:border-primary bg-primary/5 hover:bg-primary/[0.08] transition-all h-full shadow-sm">
                     <CardHeader className="pb-3">
                       <div className="flex justify-between items-start mb-2">
-                        <Badge className="bg-primary text-white border-none px-3 py-1 font-bold text-[10px] uppercase">Strategic Partner</Badge>
-                        <div className="text-[10px] font-black text-primary bg-white border border-primary/20 px-2 py-0.5 rounded-full uppercase tracking-tighter">Perfect Match</div>
+                        <Badge className="bg-primary text-white border-none px-3 py-1 font-bold text-[10px] uppercase">Strategic Fit</Badge>
+                        <div className="text-[10px] font-black text-primary bg-white border border-primary/20 px-2 py-0.5 rounded-full uppercase tracking-tighter">AI Curated</div>
                       </div>
                       <CardTitle className="text-xl font-bold line-clamp-1 group-hover:text-primary transition-colors">
                         {investor.name || 'Private Investor'}
@@ -327,7 +341,7 @@ export default function DashboardPage() {
                         </div>
                         <div className="flex justify-between items-center pt-2">
                            <span className="text-[10px] text-muted-foreground italic flex items-center gap-1">
-                             <Building2 className="w-3 h-3" /> Targeted Sector Match
+                             <Coins className="w-3 h-3" /> Industry & Range Match
                            </span>
                            <ArrowRight className="w-5 h-5 text-primary opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0" />
                         </div>
