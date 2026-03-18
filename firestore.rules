@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Helper to fetch profile with a single get() call for efficiency
+    // Helper to fetch profile safely
     function getProfile() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
@@ -65,7 +65,12 @@ service cloud.firestore {
     }
 
     match /contactRequests/{requestId} {
-      allow read: if isAuthorized() && (
+      allow list: if isAuthorized() && (
+        request.query.filters.senderId == request.auth.uid || 
+        request.query.filters.receiverId == request.auth.uid ||
+        isAdmin()
+      );
+      allow get: if isAuthorized() && (
         resource.data.senderId == request.auth.uid || 
         resource.data.receiverId == request.auth.uid ||
         isAdmin()
@@ -83,7 +88,17 @@ service cloud.firestore {
         request.resource.data.senderId == request.auth.uid &&
         isContactAccepted(request.resource.data.senderId, request.resource.data.receiverId, request.resource.data.pitchId);
       
-      allow read: if isAuthorized();
+      allow list: if isAuthorized() && (
+        request.query.filters.senderId == request.auth.uid || 
+        request.query.filters.receiverId == request.auth.uid ||
+        isAdmin()
+      );
+      
+      allow get: if isAuthorized() && (
+        resource.data.senderId == request.auth.uid || 
+        resource.data.receiverId == request.auth.uid ||
+        isAdmin()
+      );
 
       allow update: if isAuthorized() && (
         (resource.data.receiverId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])) ||
@@ -94,20 +109,21 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
-      // Identity check first for efficient list evaluation
-      allow read: if isSignedIn() && resource.data.userId == request.auth.uid && isAuthorized();
+      allow list: if isAuthorized() && (request.query.filters.userId == request.auth.uid || isAdmin());
+      allow get: if isAuthorized() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isAuthorized();
       allow update: if isAuthorized() && resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if isAuthorized() && resource.data.userId == request.auth.uid;
     }
 
     match /logs/{logId} {
-      allow read: if isAdmin();
+      allow list: if isAuthorized() && (request.query.filters.userId == request.auth.uid || isAdmin());
+      allow get: if isAuthorized() && (resource.data.userId == request.auth.uid || isAdmin());
       allow create: if isAuthorized();
     }
 
     match /deleteRequests/{requestId} {
-      allow list: if isAdmin();
+      allow list: if isAdmin() || (isAuthorized() && request.query.filters.userId == request.auth.uid);
       allow get: if isAdmin() || (isAuthorized() && resource.data.userId == request.auth.uid);
       allow create: if isAuthorized() && request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin();
