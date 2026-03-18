@@ -2,14 +2,14 @@
 "use client";
 
 import { useState } from 'react';
-import { collection, query, serverTimestamp, where, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, serverTimestamp, where, doc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, TrendingUp, Mail, Globe, Sparkles, CheckCircle2, FilterX, Landmark, Bookmark, BookmarkCheck } from 'lucide-react';
+import { Loader2, Search, TrendingUp, Mail, Globe, Sparkles, CheckCircle2, FilterX, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, XCircle } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -42,9 +42,16 @@ export default function PitchesFeedPage() {
   }, [db, user, profile]);
   const { data: userFavoritesData } = useCollection(favoritesQuery);
 
+  // Fetch contact requests for current investor
+  const contactRequestsQuery = useMemoFirebase(() => {
+    if (!user || profile?.role !== 'investor') return null;
+    return query(collection(db, 'contactRequests'), where('senderId', '==', user.uid));
+  }, [db, user, profile]);
+  const { data: userContactRequestsData } = useCollection(contactRequestsQuery);
+
   const userInterests = userInterestsData?.map(i => i.pitchId) || [];
-  const userFavorites = userFavoritesData || [];
-  const favoritePitchIds = userFavorites.map(f => f.pitchId);
+  const favoritePitchIds = userFavoritesData?.map(f => f.pitchId) || [];
+  const contactRequests = userContactRequestsData || [];
 
   const industries = Array.from(new Set(pitches?.map(p => p.industry) || [])).filter(Boolean);
 
@@ -86,7 +93,7 @@ export default function PitchesFeedPage() {
   const handleToggleFavorite = async (pitch: any) => {
     if (!user || profile?.role !== 'investor') return;
 
-    const existingFavorite = userFavorites.find(f => f.pitchId === pitch.id);
+    const existingFavorite = userFavoritesData?.find(f => f.pitchId === pitch.id);
 
     if (existingFavorite) {
       deleteDocumentNonBlocking(doc(db, 'favorites', existingFavorite.id));
@@ -107,6 +114,82 @@ export default function PitchesFeedPage() {
         description: `${pitch.startupName} is now in your saved list.`,
       });
     }
+  };
+
+  const handleRequestContact = async (pitch: any) => {
+    if (!user || profile?.role !== 'investor') return;
+    
+    const existing = contactRequests.find(r => r.pitchId === pitch.id);
+    if (existing) return;
+
+    addDocumentNonBlocking(collection(db, 'contactRequests'), {
+      senderId: user.uid,
+      receiverId: pitch.ownerId,
+      pitchId: pitch.id,
+      startupName: pitch.startupName,
+      investorEmail: user.email,
+      status: 'pending',
+      timestamp: serverTimestamp(),
+    });
+
+    toast({
+      title: "Contact Request Sent",
+      description: `You've requested contact details from ${pitch.startupName}.`,
+    });
+  };
+
+  const getContactButton = (pitch: any) => {
+    if (profile?.role !== 'investor') {
+        return (
+            <Link href={`mailto:${pitch.contactEmail}`} className="flex-1">
+                <Button variant="outline" className="w-full h-10 border-primary/20 hover:bg-primary/5">
+                <Mail className="mr-2 w-4 h-4" /> Contact
+                </Button>
+            </Link>
+        );
+    }
+
+    const request = contactRequests.find(r => r.pitchId === pitch.id);
+
+    if (!request) {
+      return (
+        <Button 
+          variant="outline" 
+          className="flex-1 h-10 border-primary/20 hover:bg-primary/5"
+          onClick={() => handleRequestContact(pitch)}
+        >
+          <Mail className="mr-2 w-4 h-4" /> Request Contact
+        </Button>
+      );
+    }
+
+    if (request.status === 'pending') {
+      return (
+        <Button variant="secondary" className="flex-1 h-10 opacity-70 cursor-default" disabled>
+          <Clock className="mr-2 w-4 h-4" /> Pending Approval
+        </Button>
+      );
+    }
+
+    if (request.status === 'accepted') {
+      return (
+        <Link href={`mailto:${pitch.contactEmail}`} className="flex-1">
+          <Button variant="outline" className="w-full h-10 border-green-500/20 bg-green-50 text-green-700 hover:bg-green-100">
+            <ShieldCheck className="mr-2 w-4 h-4 text-green-600" /> Send Email
+          </Button>
+        </Link>
+      );
+    }
+
+    if (request.status === 'rejected') {
+      return (
+        <Button variant="outline" className="flex-1 h-10 border-red-200 text-red-400 opacity-60" disabled>
+          <XCircle className="mr-2 w-4 h-4" /> Request Declined
+        </Button>
+      );
+    }
+
+    return null;
   };
 
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
@@ -234,11 +317,7 @@ export default function PitchesFeedPage() {
                   </div>
                 </CardContent>
                 <CardFooter className="p-6 pt-0 flex gap-2">
-                  <Link href={`mailto:${pitch.contactEmail}`} className="flex-1">
-                    <Button variant="outline" className="w-full h-10 border-primary/20 hover:bg-primary/5">
-                      <Mail className="mr-2 w-4 h-4" /> Contact
-                    </Button>
-                  </Link>
+                  {getContactButton(pitch)}
                   {profile?.role === 'investor' && (
                     <Button 
                       className={`flex-1 h-10 shadow-sm ${userInterests.includes(pitch.id) ? 'bg-green-600 hover:bg-green-600' : 'bg-primary'}`}

@@ -186,6 +186,23 @@
         "pitchId",
         "timestamp"
       ]
+    },
+    "ContactRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ContactRequest",
+      "type": "object",
+      "description": "Represents a request for contact info/messaging between investor and startup.",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string", "description": "UID of the investor sending the request." },
+        "receiverId": { "type": "string", "description": "UID of the startup owner receiving the request." },
+        "pitchId": { "type": "string" },
+        "startupName": { "type": "string" },
+        "investorEmail": { "type": "string", "format": "email" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderId", "receiverId", "pitchId", "status", "timestamp"]
     }
   },
   "auth": {
@@ -234,6 +251,16 @@
             "$ref": "#/backend/entities/Favorite"
           },
           "description": "Stores pitches saved/favorited by investors."
+        }
+      },
+      {
+        "path": "/contactRequests/{requestId}",
+        "definition": {
+          "entityName": "ContactRequest",
+          "schema": {
+            "$ref": "#/backend/entities/ContactRequest"
+          },
+          "description": "Manages introduction requests between investors and startups."
         }
       }
     ]

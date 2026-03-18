@@ -5,19 +5,21 @@ import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark } from 'lucide-react';
+import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark, Inbox, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
   const { user, profile, loading: authLoading } = useAuth();
   const db = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
 
   // Unified guards for queries - strictly derived from Firestore profile
   const isStartup = profile?.role === 'startup';
@@ -37,6 +39,14 @@ export default function DashboardPage() {
     return query(
       collection(db, 'interests'), 
       where('startupOwnerId', '==', user.uid)
+    );
+  }, [db, user, isStartup]);
+
+  const startupContactRequestsQuery = useMemoFirebase(() => {
+    if (!user || !isStartup) return null;
+    return query(
+      collection(db, 'contactRequests'),
+      where('receiverId', '==', user.uid)
     );
   }, [db, user, isStartup]);
 
@@ -64,9 +74,12 @@ export default function DashboardPage() {
 
   const { data: startupPitches, isLoading: loadingStartupPitches } = useCollection(startupPitchesQuery);
   const { data: startupInterests, isLoading: loadingStartupInterests } = useCollection(startupInterestsQuery);
+  const { data: startupContactRequests, isLoading: loadingStartupContactRequests } = useCollection(startupContactRequestsQuery);
   const { data: allPitches, isLoading: loadingAllPitches } = useCollection(allPitchesQuery);
   const { data: investorInterests, isLoading: loadingInvestorInterests } = useCollection(investorInterestsQuery);
   const { data: investorFavorites, isLoading: loadingInvestorFavorites } = useCollection(investorFavoritesQuery);
+
+  const pendingRequestsCount = startupContactRequests?.filter(r => r.status === 'pending').length || 0;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -75,6 +88,14 @@ export default function DashboardPage() {
       router.push('/onboarding');
     }
   }, [user, profile, authLoading, router]);
+
+  const handleUpdateRequestStatus = (requestId: string, status: 'accepted' | 'rejected') => {
+    updateDocumentNonBlocking(doc(db, 'contactRequests', requestId), { status });
+    toast({
+      title: `Request ${status}`,
+      description: status === 'accepted' ? 'Investor can now see your contact details.' : 'Introduction request declined.',
+    });
+  };
 
   if (authLoading || (user && !profile)) {
     return (
@@ -145,12 +166,12 @@ export default function DashboardPage() {
           <Card className="border-none shadow-sm bg-emerald-50">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
-                {isStartup ? <DollarSign className="w-6 h-6" /> : <Bookmark className="w-6 h-6" />}
+                {isStartup ? <Inbox className="w-6 h-6" /> : <Bookmark className="w-6 h-6" />}
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Funding Goal' : 'Saved Pitches'}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Contact Requests' : 'Saved Pitches'}</p>
                 <p className="text-2xl font-bold">
-                  {isStartup ? `$${profile.fundingNeeded || '0'}` : (investorFavorites?.length || 0)}
+                  {isStartup ? pendingRequestsCount : (investorFavorites?.length || 0)}
                 </p>
               </div>
             </CardContent>
@@ -194,6 +215,16 @@ export default function DashboardPage() {
                 </>
               )}
             </TabsTrigger>
+            {isStartup && (
+              <TabsTrigger value="requests" className="px-6 py-2 gap-2">
+                <Inbox className="w-4 h-4" /> Contact Requests
+                {pendingRequestsCount > 0 && (
+                  <Badge variant="destructive" className="ml-2 border-none">
+                    {pendingRequestsCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
             {!isStartup && (
               <TabsTrigger value="favorites" className="px-6 py-2 gap-2">
                 <Bookmark className="w-4 h-4" /> Saved Pitches
@@ -382,7 +413,69 @@ export default function DashboardPage() {
              </div>
           </TabsContent>
 
-          {/* New Favorites Tab for Investors */}
+          {/* Contact Requests Tab for Startups */}
+          <TabsContent value="requests">
+             <div className="grid gap-6">
+                {loadingStartupContactRequests ? (
+                  <div className="flex justify-center p-12"><Loader2 className="animate-spin w-8 h-8 text-primary" /></div>
+                ) : (startupContactRequests && startupContactRequests.length > 0) ? (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {startupContactRequests.map((req) => (
+                      <Card key={req.id} className="border-none shadow-sm bg-white overflow-hidden">
+                        <CardHeader className="pb-2">
+                           <div className="flex justify-between items-center mb-1">
+                               <Badge variant={req.status === 'pending' ? 'secondary' : req.status === 'accepted' ? 'default' : 'destructive'} className="capitalize">
+                                  {req.status}
+                               </Badge>
+                               <span className="text-[10px] text-muted-foreground">
+                                  {req.timestamp?.toDate ? req.timestamp.toDate().toLocaleDateString() : 'Just now'}
+                               </span>
+                           </div>
+                           <CardTitle className="text-lg font-bold">{req.investorEmail}</CardTitle>
+                           <CardDescription className="text-xs italic">
+                              Requested contact for: <span className="font-bold">{req.startupName}</span>
+                           </CardDescription>
+                        </CardHeader>
+                        <CardFooter className="pt-4 flex gap-2">
+                           {req.status === 'pending' ? (
+                             <>
+                               <Button 
+                                 size="sm" 
+                                 variant="outline" 
+                                 className="flex-1 border-green-200 text-green-600 hover:bg-green-50"
+                                 onClick={() => handleUpdateRequestStatus(req.id, 'accepted')}
+                               >
+                                 <CheckCircle2 className="w-4 h-4 mr-2" /> Accept
+                               </Button>
+                               <Button 
+                                 size="sm" 
+                                 variant="outline" 
+                                 className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
+                                 onClick={() => handleUpdateRequestStatus(req.id, 'rejected')}
+                               >
+                                 <XCircle className="w-4 h-4 mr-2" /> Reject
+                               </Button>
+                             </>
+                           ) : (
+                             <Button variant="ghost" size="sm" className="w-full text-muted-foreground" disabled>
+                               Introduction {req.status}
+                             </Button>
+                           )}
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
+                     <Inbox className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
+                     <h3 className="font-bold">Inbox clear</h3>
+                     <p className="text-sm text-muted-foreground">Introduction requests from investors will appear here.</p>
+                  </div>
+                )}
+             </div>
+          </TabsContent>
+
+          {/* Favorites Tab for Investors */}
           <TabsContent value="favorites">
              <div className="grid gap-6">
                 {loadingInvestorFavorites ? (
