@@ -1,14 +1,14 @@
 "use client";
 
-import { use, useState, useEffect } from 'react';
-import { doc, collection, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
+import { use, useState, useEffect, useMemo } from 'react';
+import { doc, collection, query, where, serverTimestamp, getDocs, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ExternalLink, DollarSign, Building2, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ExternalLink, DollarSign, Building2, Trash2, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -18,36 +18,33 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const db = useFirestore();
   const { toast } = useToast();
   const [checking, setChecking] = useState(false);
+  const [resolving, setResolving] = useState(false);
 
-  // Directly load the pitch by ID once auth is ready to ensure the page is never blocked unnecessarily
-  const pitchRef = useMemoFirebase(() => {
-    if (!user) return null;
-    return doc(db, 'pitches', id);
-  }, [db, id, user]);
-
+  // Directly load the pitch by ID
+  const pitchRef = useMemoFirebase(() => doc(db, 'pitches', id), [db, id]);
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
 
   const isInvestor = profile?.role === 'investor';
   const isOwner = user?.uid === pitch?.ownerId;
 
   const interestsQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor || !pitch || profile?.disabled === true) return null;
+    if (!user || !isInvestor || !pitch) return null;
     return query(collection(db, 'interests'), where('investorId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, isInvestor, id, pitch, profile]);
+  }, [db, user, isInvestor, id, pitch]);
   const { data: interests } = useCollection(interestsQuery);
   const isInterested = interests && interests.length > 0;
 
   const favoritesQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor || !pitch || profile?.disabled === true) return null;
+    if (!user || !isInvestor || !pitch) return null;
     return query(collection(db, 'favorites'), where('investorId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, isInvestor, id, pitch, profile]);
+  }, [db, user, isInvestor, id, pitch]);
   const { data: favorites } = useCollection(favoritesQuery);
   const isFavorited = favorites && favorites.length > 0;
 
   const contactRequestsQuery = useMemoFirebase(() => {
-    if (!user || !isInvestor || !pitch || profile?.disabled === true) return null;
+    if (!user || !isInvestor || !pitch) return null;
     return query(collection(db, 'contactRequests'), where('senderId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, isInvestor, id, pitch, profile]);
+  }, [db, user, isInvestor, id, pitch]);
   const { data: contactRequests } = useCollection(contactRequestsQuery);
   const contactRequest = contactRequests?.[0];
 
@@ -114,6 +111,47 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
     });
 
     toast({ title: "Contact Request Sent", description: "The startup will review your request shortly." });
+  };
+
+  const handleResolveConnection = async () => {
+    if (!user || !pitch || !isInvestor) return;
+    if (!confirm("This will permanently remove your connection, messages, and interest for this pitch. Proceed?")) return;
+
+    setResolving(true);
+    try {
+      // 1. Remove Interest
+      if (interests) {
+        interests.forEach(i => deleteDocumentNonBlocking(doc(db, 'interests', i.id)));
+      }
+      
+      // 2. Remove Contact Requests
+      if (contactRequests) {
+        contactRequests.forEach(r => deleteDocumentNonBlocking(doc(db, 'contactRequests', r.id)));
+      }
+
+      // 3. Remove associated messages
+      const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
+      msgsSnap.docs.forEach(d => {
+        const m = d.data();
+        if ((m.senderId === user.uid && m.receiverId === pitch.ownerId) || (m.senderId === pitch.ownerId && m.receiverId === user.uid)) {
+          deleteDocumentNonBlocking(doc(db, 'messages', d.id));
+        }
+      });
+
+      addDocumentNonBlocking(collection(db, 'notifications'), {
+        userId: pitch.ownerId,
+        type: 'system',
+        text: `An investor has resolved their connection to "${pitch.startupName}".`,
+        read: false,
+        timestamp: serverTimestamp(),
+      });
+
+      toast({ title: "Connection Resolved", description: "All interest and communication records have been cleared." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Could not fully resolve connection." });
+    } finally {
+      setResolving(false);
+    }
   };
 
   const handleRequestDeletion = async () => {
@@ -199,14 +237,28 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                       </Button>
                     )}
                     {isInvestor && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={handleToggleFavorite} 
-                        className={`gap-2 rounded-full border-muted-foreground/20 font-bold transition-all ${isFavorited ? "text-accent bg-accent/5 border-accent/20" : "text-muted-foreground hover:text-accent"}`}
-                      >
-                        {isFavorited ? <><BookmarkCheck className="w-4 h-4 fill-current" /> Saved</> : <><Bookmark className="w-4 h-4" /> Save</>}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                         {isInterested && (
+                           <Button 
+                             variant="outline" 
+                             size="sm" 
+                             className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                             onClick={handleResolveConnection}
+                             disabled={resolving}
+                           >
+                             {resolving ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+                             Resolve Connection
+                           </Button>
+                         )}
+                         <Button 
+                           variant="outline" 
+                           size="sm" 
+                           onClick={handleToggleFavorite} 
+                           className={`gap-2 rounded-full border-muted-foreground/20 font-bold transition-all ${isFavorited ? "text-accent bg-accent/5 border-accent/20" : "text-muted-foreground hover:text-accent"}`}
+                         >
+                           {isFavorited ? <><BookmarkCheck className="w-4 h-4 fill-current" /> Saved</> : <><Bookmark className="w-4 h-4" /> Save</>}
+                         </Button>
+                      </div>
                     )}
                   </div>
                 </div>
