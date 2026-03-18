@@ -18,8 +18,9 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
 
   // Load all notifications for this user, strictly filtered by userId and deferred until panel open.
+  // reinforced guard: ensure user and authorized profile exist before querying
   const notificationsQuery = useMemoFirebase(() => {
-    if (!open || !user?.uid) return null;
+    if (!open || !user?.uid || !profile) return null;
     
     return query(
       collection(db, 'notifications'),
@@ -27,7 +28,7 @@ export function NotificationCenter() {
       orderBy('timestamp', 'desc'),
       limit(50)
     );
-  }, [db, user?.uid, open]);
+  }, [db, user?.uid, profile, open]);
 
   const { data: notifications, isLoading } = useCollection(notificationsQuery);
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
