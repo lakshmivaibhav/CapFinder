@@ -24,14 +24,12 @@ export default function MessagesPage() {
 
   // 1. Fetch all accepted contact requests where user is sender or receiver
   const connectionsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !profile) return null;
     return query(
       collection(db, 'contactRequests'),
       where('status', '==', 'accepted'),
-      // Firestore rules allow list for either sender or receiver
-      // However, client-side we need a query that matches what we want to see.
-      // Since 'OR' is limited, we'll fetch where user is involved.
-      where(profile?.role === 'investor' ? 'senderId' : 'receiverId', '==', user.uid)
+      // Ensure query filters by current user to satisfy standard security rule proving
+      where(profile.role === 'investor' ? 'senderId' : 'receiverId', '==', user.uid)
     );
   }, [db, user, profile]);
 
@@ -43,6 +41,7 @@ export default function MessagesPage() {
     return query(
       collection(db, 'messages'),
       where('pitchId', '==', selectedConnection.pitchId),
+      // Use specific participant IDs to get the correct thread
       where('senderId', 'in', [selectedConnection.senderId, selectedConnection.receiverId]),
       orderBy('timestamp', 'asc')
     );
