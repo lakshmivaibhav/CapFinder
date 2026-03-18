@@ -1,18 +1,17 @@
-
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, limit, doc, getDoc, orderBy, serverTimestamp, where } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, limit, doc, getDoc, where } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, ClipboardList, Clock, Users, MessageSquare, AlertTriangle, CheckCircle2, XCircle, Sparkles, Zap } from 'lucide-react';
+import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, Users, MessageSquare, AlertTriangle, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours } from 'date-fns';
 import Link from 'next/link';
@@ -134,15 +133,6 @@ function AdminDashboardContent() {
       if (requestId) {
         updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status: 'resolved' });
       }
-      
-      addDocumentNonBlocking(collection(db, 'logs'), {
-        userId: user?.uid,
-        action: isAuto ? 'auto_pitch_deleted' : 'pitch_deleted',
-        targetId: pitchId,
-        details: isAuto ? `System auto-deleted stale pitch request for ${name}` : `Admin approved deletion of pitch: ${name}`,
-        timestamp: serverTimestamp()
-      });
-
       if (!isAuto) toast({ title: "Pitch Deleted" });
     }
   };
@@ -153,15 +143,6 @@ function AdminDashboardContent() {
       if (requestId) {
         updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status: 'resolved' });
       }
-
-      addDocumentNonBlocking(collection(db, 'logs'), {
-        userId: user?.uid,
-        action: isAuto ? 'auto_user_deleted' : 'user_deleted',
-        targetId: userId,
-        details: isAuto ? `System auto-deleted stale account request for ${email}` : `Admin approved deletion of user: ${email}`,
-        timestamp: serverTimestamp()
-      });
-
       if (!isAuto) toast({ title: "User Profile Deleted" });
     }
   };
@@ -189,15 +170,6 @@ function AdminDashboardContent() {
     const action = currentDisabledStatus ? 'enable' : 'disable';
     if (confirm(`Are you sure you want to ${action} the account for ${email}?`)) {
       updateDocumentNonBlocking(doc(db, 'users', userId), { disabled: !currentDisabledStatus });
-      
-      addDocumentNonBlocking(collection(db, 'logs'), {
-        userId: user?.uid,
-        action: currentDisabledStatus ? 'user_enabled' : 'user_disabled',
-        targetId: userId,
-        details: `Admin ${currentDisabledStatus ? 'enabled' : 'disabled'} user profile: ${email}`,
-        timestamp: serverTimestamp()
-      });
-
       toast({ title: currentDisabledStatus ? "User Enabled" : "User Disabled" });
     }
   };
@@ -209,15 +181,6 @@ function AdminDashboardContent() {
         role: newRole,
         updatedAt: new Date()
       });
-
-      addDocumentNonBlocking(collection(db, 'logs'), {
-        userId: user?.uid,
-        action: 'role_changed',
-        targetId: userId,
-        details: `Role changed from ${currentRole} to ${newRole} for ${userEmail}`,
-        timestamp: serverTimestamp()
-      });
-      
       toast({ title: "Role Updated Successfully" });
     }
   };
@@ -412,7 +375,7 @@ function AdminDashboardContent() {
                     </TableHeader>
                     <TableBody>
                       {loadingDeleteRequests ? (
-                        <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                        <TableRow><TableCell colSpan={4} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableRow>
                       ) : allDeleteRequests?.length === 0 ? (
                         <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground italic">No pending requests.</TableCell></TableRow>
                       ) : allDeleteRequests?.map((req) => (

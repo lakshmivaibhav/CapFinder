@@ -1,12 +1,11 @@
-
 "use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { useAuth, useFirestore, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, getDoc, collection } from 'firebase/firestore';
+import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { doc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,13 +46,6 @@ export default function LoginPage() {
         disabled: userDoc.exists() ? (userDoc.data().disabled || false) : false
       }, { merge: true });
 
-      addDocumentNonBlocking(collection(db, 'logs'), {
-        userId: userCredential.user.uid,
-        action: 'login',
-        timestamp: serverTimestamp(),
-        details: `User logged in with email: ${email}`
-      });
-      
       toast({ title: "Welcome back!", description: "Redirecting to your dashboard..." });
       router.push('/dashboard');
     } catch (error: any) {

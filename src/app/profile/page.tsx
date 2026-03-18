@@ -1,23 +1,20 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc, collection, serverTimestamp, query, where, limit, orderBy } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Save, User, ArrowLeft, Trash2, History, Clock, Activity, FileText } from 'lucide-react';
+import { Loader2, Save, User, ArrowLeft, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { format } from 'date-fns';
 
 export default function ProfilePage() {
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
@@ -86,23 +83,14 @@ export default function ProfilePage() {
     setChecking(true);
     try {
       if (confirm("Request account deletion? An administrator will review your request.")) {
-        addDocumentNonBlocking(collection(db, 'deleteRequests'), {
+        addDocumentNonBlocking(doc(db, 'deleteRequests', `${user.uid}_delete`), {
           userId: user.uid,
           targetType: 'account',
           targetId: user.uid,
           status: 'pending',
-          timestamp: serverTimestamp(),
+          timestamp: new Date(),
           details: `User requested account deletion: ${user.email}`
         });
-
-        addDocumentNonBlocking(collection(db, 'logs'), {
-          userId: user.uid,
-          action: 'delete_request_created',
-          targetId: user.uid,
-          timestamp: serverTimestamp(),
-          details: `Account deletion request submitted for ${user.email}`
-        });
-
         toast({ title: "Deletion Request Sent" });
       }
     } finally {
