@@ -71,7 +71,7 @@ function AdminDashboardContent() {
 
   const usersQuery = useMemoFirebase(() => {
     if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
-    return query(collection(db, 'users'), where('disabled', 'in', [true, false]), limit(500));
+    return query(collection(db, 'users'), limit(500));
   }, [db, user, profile]);
 
   const pitchesQuery = useMemoFirebase(() => {

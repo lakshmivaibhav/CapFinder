@@ -13,14 +13,14 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 export function NotificationCenter() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
-  // Load all notifications for this user, strictly filtered by userId and deferred until panel open.
+  // Robustly defer the query until the panel is opened and the user UID is verified.
+  // Use a strictly identity-filtered query to comply with security rules.
   const notificationsQuery = useMemoFirebase(() => {
-    // CRITICAL: Disable global background listening. Query only when open and authorized.
-    if (!open || !user?.uid || !profile) return null;
+    if (!open || !user?.uid) return null;
     
     return query(
       collection(db, 'notifications'),
@@ -28,7 +28,7 @@ export function NotificationCenter() {
       orderBy('timestamp', 'desc'),
       limit(50)
     );
-  }, [db, user?.uid, profile, open]);
+  }, [db, user?.uid, open]);
 
   const { data: notifications, isLoading } = useCollection(notificationsQuery);
   const unreadCount = notifications?.filter(n => !n.read).length || 0;

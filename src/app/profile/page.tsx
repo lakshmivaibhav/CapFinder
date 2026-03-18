@@ -125,7 +125,7 @@ export default function ProfilePage() {
       }
 
       if (confirm("Request account deletion? An administrator will review your request.")) {
-        addDocumentNonBlocking(doc(db, 'deleteRequests', `${user.uid}_delete`), {
+        addDocumentNonBlocking(collection(db, 'deleteRequests'), {
           userId: user.uid,
           targetType: 'account',
           targetId: user.uid,
