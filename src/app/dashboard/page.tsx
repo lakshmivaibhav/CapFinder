@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Unified guards for queries
+  // Unified guards for queries - strictly derived from Firestore profile
   const isStartup = profile?.role === 'startup';
   const isInvestor = profile?.role === 'investor';
 
@@ -63,11 +63,22 @@ export default function DashboardPage() {
     if (!authLoading && !user) {
       router.push('/login');
     } else if (!authLoading && user && !profile) {
+      // If user is authenticated but no Firestore doc exists, send to onboarding
       router.push('/onboarding');
     }
   }, [user, profile, authLoading, router]);
 
-  if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
+  if (authLoading || (user && !profile)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4">
+          <Loader2 className="animate-spin mx-auto w-12 h-12 text-primary" />
+          <p className="text-muted-foreground font-medium">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user || !profile) return null;
 
   return (
@@ -78,7 +89,9 @@ export default function DashboardPage() {
         <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold tracking-tight">Welcome, {profile.name || user.email}</h1>
-            <p className="text-muted-foreground">Logged in as <span className="font-bold text-primary capitalize">{profile.role}</span></p>
+            <p className="text-muted-foreground">
+              Dashboard for <span className="font-bold text-primary capitalize">{profile.role}</span>
+            </p>
           </div>
           <div className="flex gap-3">
             {isStartup ? (
@@ -89,8 +102,8 @@ export default function DashboardPage() {
               </Link>
             ) : (
               <Link href="/pitches">
-                <Button className="h-11 px-6 shadow-md gap-2 variant-outline">
-                  <Search className="w-5 h-5" /> Browse Marketplace
+                <Button className="h-11 px-6 shadow-md gap-2 bg-accent text-white hover:bg-accent/90">
+                  <Search className="w-5 h-5" /> Explore Marketplace
                 </Button>
               </Link>
             )}
@@ -105,7 +118,7 @@ export default function DashboardPage() {
                 {isStartup ? <Megaphone className="w-6 h-6" /> : <LayoutGrid className="w-6 h-6" />}
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'My Live Pitches' : 'Market Pitches'}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'My Live Pitches' : 'Opportunities'}</p>
                 <p className="text-2xl font-bold">{isStartup ? (startupPitches?.length || 0) : (allPitches?.length || 0)}</p>
               </div>
             </CardContent>
@@ -113,10 +126,10 @@ export default function DashboardPage() {
           <Card className="border-none shadow-sm bg-accent/5">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center text-white">
-                <Users className="w-6 h-6" />
+                {isStartup ? <Users className="w-6 h-6" /> : <Star className="w-6 h-6" />}
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Investor Leads' : 'My Interests'}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Total Leads' : 'My Watchlist'}</p>
                 <p className="text-2xl font-bold">{isStartup ? (startupInterests?.length || 0) : (investorInterests?.length || 0)}</p>
               </div>
             </CardContent>
@@ -127,14 +140,16 @@ export default function DashboardPage() {
                 <DollarSign className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Total Goal' : 'Avg. Opportunity'}</p>
-                <p className="text-2xl font-bold">${isStartup ? (profile.fundingNeeded || '0') : '1.2M'}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Funding Goal' : 'Avg. Ticket'}</p>
+                <p className="text-2xl font-bold">
+                  ${isStartup ? (profile.fundingNeeded || '0') : '1.2M'}
+                </p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Role-Based Tabbed Content */}
+        {/* Branched Dashboard Content */}
         <Tabs defaultValue="primary" className="space-y-6">
           <TabsList className="bg-muted/50 p-1">
             <TabsTrigger value="primary" className="px-6 py-2 gap-2">
@@ -187,13 +202,13 @@ export default function DashboardPage() {
                             <Badge variant="secondary" className="bg-primary/5 text-primary border-none">{pitch.industry}</Badge>
                             <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase">
                               <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                              {startupInterests?.filter(i => i.pitchId === pitch.id).length || 0} interests
+                              {startupInterests?.filter(i => i.pitchId === pitch.id).length || 0} leads
                             </div>
                           </div>
                           <CardTitle className="text-xl font-bold line-clamp-1 group-hover:text-primary transition-colors">
                             {pitch.startupName}
                           </CardTitle>
-                          <CardDescription className="line-clamp-2">
+                          <CardDescription className="line-clamp-2 italic">
                             {pitch.description}
                           </CardDescription>
                         </CardHeader>
@@ -217,8 +232,8 @@ export default function DashboardPage() {
                 ) : (
                   <Card className="border-dashed border-2 py-16 text-center bg-white">
                     <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-bold">No pitches posted yet</h3>
-                    <p className="text-muted-foreground mb-6 max-w-sm mx-auto">Founders can create multiple pitches to showcase different products or ventures.</p>
+                    <h3 className="text-lg font-bold">You haven't posted any pitches</h3>
+                    <p className="text-muted-foreground mb-6 max-w-sm mx-auto">Founders can showcase multiple ventures to attract different types of capital.</p>
                     <Link href="/pitches/new">
                       <Button variant="outline" className="border-primary text-primary hover:bg-primary/5">Create Your First Pitch</Button>
                     </Link>
@@ -259,7 +274,7 @@ export default function DashboardPage() {
                 ) : (
                   <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
                     <Search className="w-10 h-10 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">No active pitches found in the marketplace.</p>
+                    <p className="text-muted-foreground">The marketplace is currently quiet. Check back later!</p>
                   </div>
                 )}
               </div>
@@ -277,9 +292,9 @@ export default function DashboardPage() {
                         <Card key={interest.id} className="border-none shadow-sm bg-white overflow-hidden">
                           <CardHeader className="pb-2">
                             <div className="flex justify-between items-center mb-1">
-                               <p className="text-[10px] font-bold text-accent uppercase tracking-wider">Investor Connection</p>
+                               <p className="text-[10px] font-bold text-accent uppercase tracking-wider">New Connection</p>
                                <Badge variant="outline" className="text-[9px] h-4">
-                                  {interest.timestamp?.toDate ? interest.timestamp.toDate().toLocaleDateString() : 'Recent'}
+                                  {interest.timestamp?.toDate ? interest.timestamp.toDate().toLocaleDateString() : 'Just now'}
                                </Badge>
                             </div>
                             <CardTitle className="text-lg font-bold">{interest.investorEmail}</CardTitle>
@@ -290,7 +305,7 @@ export default function DashboardPage() {
                           <CardFooter className="pt-4">
                             <Button variant="outline" size="sm" className="w-full gap-2 border-accent/20 text-accent hover:bg-accent/5" asChild>
                               <Link href={`mailto:${interest.investorEmail}`}>
-                                <Mail className="w-3 h-3" /> Contact Investor
+                                <Mail className="w-3 h-3" /> Send Introduction
                               </Link>
                             </Button>
                           </CardFooter>
@@ -300,8 +315,8 @@ export default function DashboardPage() {
                   ) : (
                     <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
                        <Users className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
-                       <h3 className="font-bold">No interest leads yet</h3>
-                       <p className="text-sm text-muted-foreground">Try refining your pitches or posting new ones to attract investors.</p>
+                       <h3 className="font-bold">No leads yet</h3>
+                       <p className="text-sm text-muted-foreground">Founders often find more success by adding more detail to their pitches.</p>
                     </div>
                   )
                 ) : (
@@ -324,7 +339,7 @@ export default function DashboardPage() {
                               {interest.startupName}
                             </CardTitle>
                             <CardDescription className="text-xs">
-                              You expressed interest on {interest.timestamp?.toDate ? interest.timestamp.toDate().toLocaleDateString() : 'recently'}
+                              Expressed interest on {interest.timestamp?.toDate ? interest.timestamp.toDate().toLocaleDateString() : 'recently'}
                             </CardDescription>
                           </CardHeader>
                           <CardFooter className="pt-0">
@@ -340,10 +355,10 @@ export default function DashboardPage() {
                   ) : (
                     <div className="text-center py-20 bg-muted/20 rounded-2xl border-2 border-dashed">
                        <Star className="w-10 h-10 text-muted-foreground mx-auto mb-4 opacity-50" />
-                       <h3 className="font-bold">Watchlist is empty</h3>
-                       <p className="text-sm text-muted-foreground">You haven't marked any pitches of interest yet.</p>
+                       <h3 className="font-bold">Your watchlist is empty</h3>
+                       <p className="text-sm text-muted-foreground">Mark pitches as interesting to track them here and connect with founders.</p>
                        <Link href="/pitches">
-                         <Button variant="link" className="mt-2 text-primary">Browse Marketplace</Button>
+                         <Button variant="link" className="mt-2 text-primary">Browse the Market</Button>
                        </Link>
                     </div>
                   )

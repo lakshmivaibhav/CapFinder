@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -6,11 +7,11 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { auth } from '@/lib/firebase';
 import { signOut } from 'firebase/auth';
-import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle } from 'lucide-react';
+import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -23,7 +24,7 @@ export function Navbar() {
 
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Pitches', href: '/pitches', icon: Search },
+    { label: pathname === '/pitches' ? 'Marketplace' : 'Browse', href: '/pitches', icon: Search },
     { label: 'Profile', href: '/profile', icon: User },
   ];
 
@@ -56,17 +57,23 @@ export function Navbar() {
       </div>
 
       <div className="flex items-center gap-3">
-        {profile?.role === 'startup' && (
-          <Link href="/pitches/new" className="hidden sm:block">
-            <Button size="sm" className="gap-2 bg-primary">
-              <PlusCircle className="w-4 h-4" />
-              New Pitch
+        {loading ? (
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        ) : (
+          <>
+            {profile?.role === 'startup' && (
+              <Link href="/pitches/new" className="hidden sm:block">
+                <Button size="sm" className="gap-2 bg-primary">
+                  <PlusCircle className="w-4 h-4" />
+                  New Pitch
+                </Button>
+              </Link>
+            )}
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout" className="text-muted-foreground hover:text-destructive">
+              <LogOut className="w-5 h-5" />
             </Button>
-          </Link>
+          </>
         )}
-        <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout" className="text-muted-foreground hover:text-destructive">
-          <LogOut className="w-5 h-5" />
-        </Button>
       </div>
     </nav>
   );

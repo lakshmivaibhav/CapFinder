@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -10,14 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowLeft, Send, Sparkles } from 'lucide-react';
+import { Loader2, ArrowLeft, Send, Sparkles, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { refineStartupPitch } from '@/ai/flows/startup-pitch-refinement-assistant';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 export default function NewPitchPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [refining, setRefining] = useState(false);
   const [aiResult, setAiResult] = useState<{ refinedPitchDescription: string, suggestions: string[] } | null>(null);
@@ -33,6 +34,18 @@ export default function NewPitchPage() {
 
   const router = useRouter();
   const { toast } = useToast();
+
+  // Role Guard: Only startups can access this page
+  useEffect(() => {
+    if (!authLoading && user && profile && profile.role !== 'startup') {
+      toast({ 
+        variant: "destructive", 
+        title: "Access Denied", 
+        description: "Only startup accounts can create investment pitches." 
+      });
+      router.push('/dashboard');
+    }
+  }, [user, profile, authLoading, router, toast]);
 
   const handleRefineWithAI = async () => {
     if (!formData.description) {
@@ -65,7 +78,7 @@ export default function NewPitchPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || profile?.role !== 'startup') return;
     setLoading(true);
     try {
       await addDoc(collection(db, 'pitches'), {
@@ -73,7 +86,7 @@ export default function NewPitchPage() {
         ownerId: user.uid,
         createdAt: serverTimestamp(),
       });
-      toast({ title: "Pitch posted!", description: "Investors can now view your proposal." });
+      toast({ title: "Pitch posted!", description: "Investors can now view your proposal in the marketplace." });
       router.push('/dashboard');
     } catch (error: any) {
       toast({ variant: "destructive", title: "Post failed", description: error.message });
@@ -82,8 +95,25 @@ export default function NewPitchPage() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="p-20 text-center">
+        <Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" />
+      </div>
+    );
+  }
+
   if (!user || profile?.role !== 'startup') {
-    return <div className="p-20 text-center">Access Denied</div>;
+    return (
+      <div className="p-20 text-center space-y-4">
+        <ShieldAlert className="w-16 h-16 text-destructive mx-auto" />
+        <h2 className="text-2xl font-bold">Unauthorized Access</h2>
+        <p className="text-muted-foreground">This page is reserved for startup accounts only.</p>
+        <Link href="/dashboard">
+          <Button variant="link">Return to Dashboard</Button>
+        </Link>
+      </div>
+    );
   }
 
   return (
