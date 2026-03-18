@@ -28,8 +28,7 @@ export default function DashboardPage() {
     if (!user || !isStartup) return null;
     return query(
       collection(db, 'pitches'), 
-      where('ownerId', '==', user.uid), 
-      orderBy('createdAt', 'desc')
+      where('ownerId', '==', user.uid)
     );
   }, [db, user, isStartup]);
 
@@ -37,8 +36,7 @@ export default function DashboardPage() {
     if (!user || !isStartup) return null;
     return query(
       collection(db, 'interests'), 
-      where('startupOwnerId', '==', user.uid), 
-      orderBy('timestamp', 'desc')
+      where('startupOwnerId', '==', user.uid)
     );
   }, [db, user, isStartup]);
 
@@ -52,8 +50,7 @@ export default function DashboardPage() {
     if (!user || !isInvestor) return null;
     return query(
       collection(db, 'interests'), 
-      where('investorId', '==', user.uid), 
-      orderBy('timestamp', 'desc')
+      where('investorId', '==', user.uid)
     );
   }, [db, user, isInvestor]);
 

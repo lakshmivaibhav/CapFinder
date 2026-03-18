@@ -30,15 +30,8 @@ service cloud.firestore {
     }
 
     match /interests/{interestId} {
-      // Split 'list' permissions to ensure queries with specific filters are correctly authorized.
-      // This allows investors to list interests they created.
-      allow list: if isSignedIn() && resource.data.investorId == request.auth.uid;
-      
-      // This allows startups to list interests created for their pitches.
-      allow list: if isSignedIn() && resource.data.startupOwnerId == request.auth.uid;
-      
-      // 'get' is permitted if the user is either the investor or the startup owner.
-      allow get: if isSignedIn() && (
+      // Unify list and get rules to ensure queries with filters are correctly authorized.
+      allow read: if isSignedIn() && (
         resource.data.investorId == request.auth.uid || 
         resource.data.startupOwnerId == request.auth.uid
       );
