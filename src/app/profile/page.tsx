@@ -1,17 +1,16 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc, collection, serverTimestamp, getDocs, query, where, or } from 'firebase/firestore';
+import { doc, updateDoc, collection, serverTimestamp, getDocs, query, where, or, limit } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Save, User, ArrowLeft, Camera, Briefcase, Mail, Shield, ShieldCheck, Trash2 } from 'lucide-react';
+import { Loader2, Save, User, ArrowLeft, Camera, Briefcase, Mail, Shield, ShieldCheck, Trash2, Megaphone, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +21,7 @@ export default function ProfilePage() {
   const db = useFirestore();
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [checkingPitch, setCheckingPitch] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -33,6 +33,13 @@ export default function ProfilePage() {
 
   const router = useRouter();
   const { toast } = useToast();
+
+  // Fetch user's pitches for deletion management
+  const myPitchesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'pitches'), where('ownerId', '==', user.uid));
+  }, [db, user]);
+  const { data: myPitches, isLoading: loadingPitches } = useCollection(myPitchesQuery);
 
   useEffect(() => {
     if (profile) {
@@ -87,7 +94,8 @@ export default function ProfilePage() {
       // Check for active messages
       const messagesSnap = await getDocs(query(
         collection(db, 'messages'),
-        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid))
+        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid)),
+        limit(1)
       ));
       
       if (!messagesSnap.empty) {
@@ -103,7 +111,8 @@ export default function ProfilePage() {
       // Check for pending/accepted contact requests
       const requestsSnap = await getDocs(query(
         collection(db, 'contactRequests'),
-        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid))
+        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid)),
+        limit(1)
       ));
 
       if (!requestsSnap.empty) {
@@ -119,7 +128,8 @@ export default function ProfilePage() {
       // Check for interests
       const interestsSnap = await getDocs(query(
         collection(db, 'interests'),
-        or(where('investorId', '==', user.uid), where('startupOwnerId', '==', user.uid))
+        or(where('investorId', '==', user.uid), where('startupOwnerId', '==', user.uid)),
+        limit(1)
       ));
 
       if (!interestsSnap.empty) {
@@ -163,6 +173,75 @@ export default function ProfilePage() {
     }
   };
 
+  const handleRequestPitchDeletion = async (pitchId: string, pitchName: string) => {
+    if (!user) return;
+    
+    setCheckingPitch(pitchId);
+    try {
+      const interestsSnap = await getDocs(query(collection(db, 'interests'), where('pitchId', '==', pitchId), limit(1)));
+      if (!interestsSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Cannot Delete Pitch",
+          description: "There are investors currently interested in this pitch. Please resolve these leads first."
+        });
+        setCheckingPitch(null);
+        return;
+      }
+
+      const requestsSnap = await getDocs(query(collection(db, 'contactRequests'), where('pitchId', '==', pitchId), limit(1)));
+      if (!requestsSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Cannot Delete Pitch",
+          description: "There are active introduction requests for this pitch."
+        });
+        setCheckingPitch(null);
+        return;
+      }
+
+      const messagesSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitchId), limit(1)));
+      if (!messagesSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Cannot Delete Pitch",
+          description: "There are active message threads linked to this pitch."
+        });
+        setCheckingPitch(null);
+        return;
+      }
+
+      if (confirm(`Are you sure you want to request deletion of the pitch "${pitchName}"? An administrator will review your request.`)) {
+        addDocumentNonBlocking(collection(db, 'deleteRequests'), {
+          userId: user.uid,
+          targetType: 'pitch',
+          targetId: pitchId,
+          status: 'pending',
+          timestamp: serverTimestamp(),
+          details: `Startup owner requested deletion of pitch: ${pitchName}`
+        });
+        
+        addDocumentNonBlocking(collection(db, 'logs'), {
+          userId: user.uid,
+          action: 'delete_request_created',
+          targetId: pitchId,
+          timestamp: serverTimestamp(),
+          details: `Deletion request submitted for pitch ${pitchName}`
+        });
+
+        toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });
+      }
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Check Failed",
+        description: "Could not verify pitch status. Please try again."
+      });
+    } finally {
+      setCheckingPitch(null);
+    }
+  };
+
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
   if (!user) { router.push('/login'); return null; }
 
@@ -170,7 +249,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto py-12 px-6 w-full space-y-8">
+      <main className="max-w-5xl mx-auto py-12 px-6 w-full space-y-8">
         <div className="flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors font-medium">
             <ArrowLeft className="w-4 h-4" /> Back to Dashboard
@@ -183,8 +262,9 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="md:col-span-1 space-y-6">
+        <div className="grid md:grid-cols-12 gap-8">
+          {/* Sidebar / Identity Card */}
+          <div className="md:col-span-4 space-y-6">
             <Card className="border-none shadow-sm text-center p-6 bg-white overflow-hidden">
               <div className="relative inline-block mx-auto mb-4 mt-2">
                 <div className="w-32 h-32 bg-primary/5 rounded-3xl flex items-center justify-center border-2 border-primary/10 shadow-inner group">
@@ -217,22 +297,23 @@ export default function ProfilePage() {
                   disabled={checking}
                 >
                   {checking ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                  Request Account Deletion
+                  Delete Account
                 </Button>
+                <p className="text-[10px] text-muted-foreground mt-2 italic">Requests account removal.</p>
               </div>
             </Card>
 
             <Card className="border-none shadow-sm bg-primary/5 p-6 border-l-4 border-l-primary">
               <h4 className="text-xs font-bold uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
-                <Shield className="w-4 h-4" /> Role Security
+                <Shield className="w-4 h-4" /> Role Notice
               </h4>
               <p className="text-[10px] text-muted-foreground leading-relaxed italic">
-                Professional roles are established during registration and are locked to preserve ecosystem trust. Contact support for role reassignment.
+                Professional roles are locked to preserve ecosystem trust. 
               </p>
             </Card>
           </div>
 
-          <div className="md:col-span-2">
+          <div className="md:col-span-8 space-y-8">
             <Card className="border-none shadow-sm bg-white overflow-hidden">
               <div className="bg-primary/5 border-b p-8">
                 <CardTitle className="text-2xl font-bold">Profile Settings</CardTitle>
@@ -261,14 +342,6 @@ export default function ProfilePage() {
                         className="h-11 focus-visible:ring-primary"
                       />
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Professional Role</Label>
-                    <div className="h-11 flex items-center px-4 border rounded-md bg-muted/30 text-muted-foreground capitalize font-bold text-xs tracking-wide">
-                      {formData.role}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground italic px-1">Role management is handled by system administrators.</p>
                   </div>
 
                   <div className="space-y-2">
@@ -318,6 +391,57 @@ export default function ProfilePage() {
                 </form>
               </CardContent>
             </Card>
+
+            {profile?.role === 'startup' && (
+              <Card className="border-none shadow-sm bg-white overflow-hidden">
+                <CardHeader className="p-8 pb-4">
+                  <div className="flex items-center gap-2">
+                    <Megaphone className="w-5 h-5 text-primary" />
+                    <CardTitle className="text-xl font-bold">My Active Pitches</CardTitle>
+                  </div>
+                  <CardDescription>Manage your investment proposals and content removal.</CardDescription>
+                </CardHeader>
+                <CardContent className="px-8 pb-8 pt-2">
+                  {loadingPitches ? (
+                    <div className="flex justify-center py-6"><Loader2 className="animate-spin w-6 h-6 text-primary" /></div>
+                  ) : myPitches && myPitches.length > 0 ? (
+                    <div className="space-y-4">
+                      {myPitches.map((pitch) => (
+                        <div key={pitch.id} className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-primary/5 hover:border-primary/20 transition-all">
+                          <div className="min-w-0 flex-1 mr-4">
+                            <h4 className="font-bold text-sm truncate">{pitch.startupName}</h4>
+                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">{pitch.industry}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Link href={`/pitches/${pitch.id}`}>
+                              <Button variant="outline" size="sm" className="h-8 text-[10px] uppercase font-bold">View</Button>
+                            </Link>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-8 text-[10px] uppercase font-bold text-destructive hover:bg-red-50"
+                              onClick={() => handleRequestPitchDeletion(pitch.id, pitch.startupName)}
+                              disabled={checkingPitch === pitch.id}
+                            >
+                              {checkingPitch === pitch.id ? <Loader2 className="animate-spin w-3 h-3 mr-1" /> : <Trash2 className="w-3 h-3 mr-1" />}
+                              Delete Pitch
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10 bg-muted/5 rounded-2xl border-2 border-dashed">
+                      <AlertTriangle className="w-8 h-8 text-muted-foreground opacity-20 mx-auto mb-2" />
+                      <p className="text-xs text-muted-foreground font-medium">No active pitches found.</p>
+                      <Link href="/pitches/new">
+                        <Button variant="link" size="sm">Create your first pitch</Button>
+                      </Link>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
