@@ -15,7 +15,6 @@ import { Loader2, Save, User, ArrowLeft, Camera, Briefcase, Mail, Shield } from 
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Link from 'next/link';
 
 export default function ProfilePage() {
@@ -55,15 +54,18 @@ export default function ProfilePage() {
       // Convert fundingNeeded to a number if it exists
       const numericFunding = formData.fundingNeeded ? parseFloat(formData.fundingNeeded) : 0;
       
-      await updateDoc(doc(db, 'users', user.uid), {
+      // SECURITY: Explicitly exclude 'role' from the update payload
+      // Roles can only be changed by an Administrator.
+      const updateData = {
         name: formData.name,
         company: formData.company,
         bio: formData.bio,
-        role: formData.role,
         fundingNeeded: numericFunding,
         investmentInterest: formData.investmentInterest,
         updatedAt: new Date(),
-      });
+      };
+      
+      await updateDoc(doc(db, 'users', user.uid), updateData);
       
       await refreshProfile();
       toast({ title: "Profile updated!", description: "Your changes have been saved successfully." });
@@ -155,20 +157,11 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="role" className="text-sm font-semibold">Your Role</Label>
-                    <Select 
-                      value={formData.role} 
-                      onValueChange={(val) => setFormData({...formData, role: val})}
-                    >
-                      <SelectTrigger className="h-11 focus-visible:ring-primary">
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="startup">Startup Founder</SelectItem>
-                        <SelectItem value="investor">Strategic Investor</SelectItem>
-                        <SelectItem value="admin">System Administrator</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-sm font-semibold">Your Account Role</Label>
+                    <div className="h-11 flex items-center px-4 border rounded-md bg-muted/30 text-muted-foreground capitalize font-medium text-sm">
+                      {formData.role}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic px-1">Role is locked for security. Contact an administrator to request a role change.</p>
                   </div>
 
                   <div className="space-y-2">

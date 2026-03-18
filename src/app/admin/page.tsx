@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -15,6 +16,7 @@ import { Loader2, Trash2, User, Megaphone, Inbox, MessageSquare, ShieldAlert, Al
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminDashboardPage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -59,6 +61,14 @@ export default function AdminDashboardPage() {
     toast({ 
       title: currentStatus ? "User Enabled" : "User Disabled", 
       description: "The user account status has been updated." 
+    });
+  };
+
+  const handleChangeRole = (userId: string, newRole: string) => {
+    updateDocumentNonBlocking(doc(db, 'users', userId), { role: newRole });
+    toast({ 
+      title: "Role Updated", 
+      description: `User role has been changed to ${newRole}.` 
     });
   };
 
@@ -135,7 +145,19 @@ export default function AdminDashboardPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="capitalize">{u.role}</Badge>
+                          <Select 
+                            defaultValue={u.role} 
+                            onValueChange={(val) => handleChangeRole(u.id, val)}
+                          >
+                            <SelectTrigger className="h-8 w-32 border-none bg-muted/50 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="startup">Startup</SelectItem>
+                              <SelectItem value="investor">Investor</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell>
                           {u.disabled ? (
