@@ -29,9 +29,13 @@ service cloud.firestore {
     }
 
     match /interests/{interestId} {
-      // Unify read permissions to ensure Firestore queries with OR logic are correctly authorized.
-      // This covers both 'get' and 'list' operations.
-      allow read: if isSignedIn() && (
+      // Split 'list' permissions to ensure queries with specific filters are correctly authorized.
+      // This is a more robust pattern for queries filtered by one branch of an OR logic.
+      allow list: if isSignedIn() && resource.data.investorId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.startupOwnerId == request.auth.uid;
+      
+      // 'get' remains combined as it is a direct document access
+      allow get: if isSignedIn() && (
         resource.data.investorId == request.auth.uid || 
         resource.data.startupOwnerId == request.auth.uid
       );

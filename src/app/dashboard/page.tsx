@@ -17,22 +17,26 @@ export default function DashboardPage() {
   const db = useFirestore();
   const router = useRouter();
 
-  // Memoized Queries with explicit role guards to prevent permission errors
+  // Memoized Queries with explicit role guards and direct UID matching to satisfy security rules
   const pitchesQuery = useMemoFirebase(() => {
     if (!user || !profile || !profile.role) return null;
     if (profile.role === 'startup') {
-      return query(collection(db, 'pitches'), where('ownerId', '==', user.uid), orderBy('createdAt', 'desc'));
+      // Direct ownerId filter satisfies security rules
+      return query(collection(db, 'pitches'), where('ownerId', '==', user.uid));
     }
-    return query(collection(db, 'pitches'), orderBy('createdAt', 'desc'), limit(5));
+    // General read for investors is allowed
+    return query(collection(db, 'pitches'), limit(10));
   }, [db, user, profile]);
 
   const interestsQuery = useMemoFirebase(() => {
     if (!user || !profile || !profile.role) return null;
+    
+    // Split queries by role to match the specific 'list' rules in firestore.rules
     if (profile.role === 'startup') {
-      return query(collection(db, 'interests'), where('startupOwnerId', '==', user.uid), orderBy('timestamp', 'desc'));
+      return query(collection(db, 'interests'), where('startupOwnerId', '==', user.uid));
     }
     if (profile.role === 'investor') {
-      return query(collection(db, 'interests'), where('investorId', '==', user.uid), orderBy('timestamp', 'desc'));
+      return query(collection(db, 'interests'), where('investorId', '==', user.uid));
     }
     return null;
   }, [db, user, profile]);
@@ -219,7 +223,7 @@ export default function DashboardPage() {
                         </p>
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm" className="h-8 text-xs flex-1" asChild>
-                            <Link href={`mailto:${interest.investorEmail}`}>
+                            <Link href={`mailto:${profile?.role === 'startup' ? interest.investorEmail : interest.contactEmail}`}>
                               <Mail className="w-3 h-3 mr-2" /> Message
                             </Link>
                           </Button>

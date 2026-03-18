@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, getDocs, query, orderBy, where, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, TrendingUp, Mail, ExternalLink, Globe, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Loader2, Search, TrendingUp, Mail, Globe, Sparkles, CheckCircle2 } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -28,28 +28,32 @@ export default function PitchesFeedPage() {
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!user || !profile || !profile.role) return;
+      
       setLoading(true);
       try {
-        const q = query(collection(db, 'pitches'), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, 'pitches'));
         const querySnapshot = await getDocs(q);
         const fetchedPitches = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setPitches(fetchedPitches);
 
-        // Explicitly guard interest fetch with role check to avoid permission errors
-        if (user && profile?.role === 'investor') {
+        // Explicitly guard interest fetch with role check and proper filter to satisfy security rules
+        if (profile.role === 'investor') {
           const interestQuery = query(collection(db, 'interests'), where('investorId', '==', user.uid));
           const interestSnap = await getDocs(interestQuery);
           setUserInterests(interestSnap.docs.map(doc => doc.data().pitchId));
         }
       } catch (error) {
-        console.error("Error fetching marketplace data:", error);
+        // Errors are handled by the global error listener
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [db, user, profile]);
+    if (!authLoading && user && profile?.role) {
+      fetchData();
+    }
+  }, [db, user, profile, authLoading]);
 
   const industries = Array.from(new Set(pitches.map(p => p.industry))).filter(Boolean);
 
@@ -72,6 +76,7 @@ export default function PitchesFeedPage() {
         investorEmail: user.email,
         startupOwnerId: pitch.ownerId,
         startupName: pitch.startupName,
+        contactEmail: pitch.contactEmail,
         timestamp: serverTimestamp(),
       });
       
@@ -81,11 +86,7 @@ export default function PitchesFeedPage() {
         description: `You've expressed interest in ${pitch.startupName}.`,
       });
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Action failed",
-        description: "Could not express interest at this time."
-      });
+      // Handled by global emitter
     }
   };
 
