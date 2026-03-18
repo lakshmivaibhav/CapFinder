@@ -9,7 +9,7 @@ import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, MessageSquare, TrendingUp, Globe, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ShieldCheck } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, MessageSquare, TrendingUp, Globe, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ShieldCheck, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -220,6 +220,11 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                       &quot;{ownerProfile.bio || "This founder focuses on high-impact innovation and strategic growth."}&quot;
                     </div>
                     <div className="pt-6 border-t space-y-4">
+                       <Link href={`/users/${pitch.ownerId}`} className="w-full">
+                         <Button variant="outline" size="sm" className="w-full gap-2 text-xs font-bold">
+                           View Full Profile <ExternalLink className="w-3 h-3" />
+                         </Button>
+                       </Link>
                        <div className="flex flex-col gap-2">
                          <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-tighter">Account Status</p>
                          <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 w-fit px-3 py-1 rounded-full text-xs font-bold">

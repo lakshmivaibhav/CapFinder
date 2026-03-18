@@ -9,7 +9,7 @@ import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark, Inbox, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Plus, Megaphone, Calendar, ArrowRight, Users, DollarSign, Mail, Heart, LayoutGrid, Star, Search, Bookmark, Inbox, CheckCircle2, XCircle, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -347,12 +347,17 @@ export default function DashboardPage() {
                                   {interest.timestamp?.toDate ? interest.timestamp.toDate().toLocaleDateString() : 'Just now'}
                                </Badge>
                             </div>
-                            <CardTitle className="text-lg font-bold">{interest.investorEmail}</CardTitle>
+                            <CardTitle className="text-lg font-bold truncate">{interest.investorEmail}</CardTitle>
                             <CardDescription className="text-xs">
                                Interested in: <span className="font-semibold text-foreground">{interest.startupName}</span>
                             </CardDescription>
                           </CardHeader>
-                          <CardFooter className="pt-4">
+                          <CardFooter className="pt-4 flex flex-col gap-2">
+                            <Link href={`/users/${interest.investorId}`} className="w-full">
+                              <Button variant="outline" size="sm" className="w-full gap-2 border-primary/20 text-primary hover:bg-primary/5">
+                                <User className="w-3 h-3" /> View Investor Profile
+                              </Button>
+                            </Link>
                             <Button variant="outline" size="sm" className="w-full gap-2 border-accent/20 text-accent hover:bg-accent/5" asChild>
                               <Link href={`mailto:${interest.investorEmail}`}>
                                 <Mail className="w-3 h-3" /> Send Introduction
@@ -434,14 +439,18 @@ export default function DashboardPage() {
                                   {req.timestamp?.toDate ? req.timestamp.toDate().toLocaleDateString() : 'Just now'}
                                </span>
                            </div>
-                           <CardTitle className="text-lg font-bold">{req.investorEmail}</CardTitle>
+                           <CardTitle className="text-lg font-bold truncate">
+                             <Link href={`/users/${req.senderId}`} className="hover:text-primary transition-colors">
+                               {req.investorEmail}
+                             </Link>
+                           </CardTitle>
                            <CardDescription className="text-xs italic">
                               Requested contact for: <span className="font-bold">{req.startupName}</span>
                            </CardDescription>
                         </CardHeader>
-                        <CardFooter className="pt-4 flex gap-2">
+                        <CardFooter className="pt-4 flex flex-col gap-2">
                            {req.status === 'pending' ? (
-                             <>
+                             <div className="flex gap-2 w-full">
                                <Button 
                                  size="sm" 
                                  variant="outline" 
@@ -458,12 +467,17 @@ export default function DashboardPage() {
                                >
                                  <XCircle className="w-4 h-4 mr-2" /> Reject
                                </Button>
-                             </>
+                             </div>
                            ) : (
                              <Button variant="ghost" size="sm" className="w-full text-muted-foreground" disabled>
                                Introduction {req.status}
                              </Button>
                            )}
+                           <Link href={`/users/${req.senderId}`} className="w-full">
+                             <Button variant="ghost" size="sm" className="w-full text-xs font-bold text-muted-foreground hover:text-primary">
+                               View Investor Profile <ArrowRight className="ml-1 w-3 h-3" />
+                             </Button>
+                           </Link>
                         </CardFooter>
                       </Card>
                     ))}

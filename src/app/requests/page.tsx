@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -7,9 +8,10 @@ import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Inbox, CheckCircle2, XCircle, Mail, Clock } from 'lucide-react';
+import { Loader2, Inbox, CheckCircle2, XCircle, Mail, Clock, User, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import Link from 'next/link';
 
 export default function RequestsPage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -72,15 +74,29 @@ export default function RequestsPage() {
                         {req.timestamp?.toDate ? format(req.timestamp.toDate(), 'PPP p') : 'Just now'}
                       </span>
                     </div>
-                    <CardTitle className="text-xl font-bold mb-2">{req.investorEmail}</CardTitle>
+                    <CardTitle className="text-xl font-bold mb-2 flex items-center gap-2">
+                      {req.investorEmail}
+                      <Link href={`/users/${req.senderId}`}>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary">
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                    </CardTitle>
                     <CardDescription className="text-sm">
                       Interested in your pitch: <span className="font-semibold text-foreground">{req.startupName}</span>
                     </CardDescription>
+                    <div className="mt-4">
+                       <Link href={`/users/${req.senderId}`}>
+                         <Button variant="link" size="sm" className="p-0 h-auto text-xs text-primary gap-1">
+                           <User className="w-3 h-3" /> View Investor Profile
+                         </Button>
+                       </Link>
+                    </div>
                   </div>
                   
-                  <div className="bg-muted/30 p-6 flex items-center justify-center gap-3 border-t md:border-t-0 md:border-l min-w-[240px]">
+                  <div className="bg-muted/30 p-6 flex flex-col items-center justify-center gap-3 border-t md:border-t-0 md:border-l min-w-[240px]">
                     {req.status === 'pending' ? (
-                      <>
+                      <div className="flex gap-2 w-full">
                         <Button 
                           variant="outline" 
                           className="flex-1 border-green-200 text-green-600 hover:bg-green-50 bg-white"
@@ -95,15 +111,20 @@ export default function RequestsPage() {
                         >
                           <XCircle className="w-4 h-4 mr-2" /> Reject
                         </Button>
-                      </>
+                      </div>
                     ) : req.status === 'accepted' ? (
-                      <div className="text-center space-y-2">
+                      <div className="text-center space-y-2 w-full">
                         <p className="text-xs font-medium text-emerald-600 mb-2">Introduction Approved</p>
                         <Button variant="secondary" size="sm" className="w-full gap-2" asChild>
                           <a href={`mailto:${req.investorEmail}`}>
                             <Mail className="w-4 h-4" /> Email Investor
                           </a>
                         </Button>
+                        <Link href="/messages" className="w-full block mt-2">
+                          <Button variant="default" size="sm" className="w-full bg-primary">
+                            Open Chat
+                          </Button>
+                        </Link>
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">Request Declined</p>

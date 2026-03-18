@@ -10,9 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Send, MessageSquare, Clock, CheckCheck } from 'lucide-react';
+import { Loader2, Send, MessageSquare, Clock, CheckCheck, User, ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import Link from 'next/link';
 
 export default function MessagesPage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -97,6 +98,10 @@ export default function MessagesPage() {
   if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
   if (!user) return null;
 
+  const getPartnerId = (conn: any) => {
+    return user.uid === conn.senderId ? conn.receiverId : conn.senderId;
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col h-screen overflow-hidden">
       <Navbar />
@@ -172,6 +177,13 @@ export default function MessagesPage() {
                     <h3 className="font-bold">{selectedConnection.startupName}</h3>
                     <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Project Collaboration</p>
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Link href={`/users/${getPartnerId(selectedConnection)}`}>
+                    <Button variant="ghost" size="sm" className="gap-2 text-xs font-bold text-muted-foreground hover:text-primary">
+                      <User className="w-4 h-4" /> Partner Profile
+                    </Button>
+                  </Link>
                 </div>
               </div>
 
