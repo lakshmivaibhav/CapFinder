@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -83,7 +82,7 @@ export default function AdminDashboardPage() {
   const { data: allLogs, isLoading: loadingLogs } = useCollection(logsQuery);
 
   const handleDeletePitch = (pitchId: string, name: string) => {
-    if (confirm(`Are you sure you want to delete the pitch for "${name}"?`)) {
+    if (confirm(`Are you sure you want to PERMANENTLY delete the pitch for "${name}"? This action cannot be undone.`)) {
       deleteDocumentNonBlocking(doc(db, 'pitches', pitchId));
       
       addDocumentNonBlocking(collection(db, 'logs'), {
@@ -99,7 +98,7 @@ export default function AdminDashboardPage() {
   };
 
   const handleDeleteUser = (userId: string, email: string) => {
-    if (confirm(`Are you sure you want to delete the profile for "${email}"?`)) {
+    if (confirm(`Are you sure you want to PERMANENTLY delete the profile for "${email}"? This will remove all their access to the platform.`)) {
       deleteDocumentNonBlocking(doc(db, 'users', userId));
 
       addDocumentNonBlocking(collection(db, 'logs'), {
@@ -114,21 +113,24 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const toggleUserStatus = (userId: string, currentStatus: boolean) => {
-    updateDocumentNonBlocking(doc(db, 'users', userId), { disabled: !currentStatus });
-    
-    addDocumentNonBlocking(collection(db, 'logs'), {
-      userId: user?.uid,
-      action: 'user_status_toggled',
-      targetId: userId,
-      details: `Admin ${currentStatus ? 'enabled' : 'disabled'} user profile`,
-      timestamp: serverTimestamp()
-    });
+  const toggleUserStatus = (userId: string, email: string, currentDisabledStatus: boolean) => {
+    const action = currentDisabledStatus ? 'enable' : 'disable';
+    if (confirm(`Are you sure you want to ${action} the account for ${email}?`)) {
+      updateDocumentNonBlocking(doc(db, 'users', userId), { disabled: !currentDisabledStatus });
+      
+      addDocumentNonBlocking(collection(db, 'logs'), {
+        userId: user?.uid,
+        action: currentDisabledStatus ? 'user_enabled' : 'user_disabled',
+        targetId: userId,
+        details: `Admin ${currentDisabledStatus ? 'enabled' : 'disabled'} user profile: ${email}`,
+        timestamp: serverTimestamp()
+      });
 
-    toast({ 
-      title: currentStatus ? "User Enabled" : "User Disabled", 
-      description: "The user account status has been updated." 
-    });
+      toast({ 
+        title: currentDisabledStatus ? "User Enabled" : "User Disabled", 
+        description: `The account for ${email} has been ${currentDisabledStatus ? 'reactivated' : 'suspended'}.` 
+      });
+    }
   };
 
   const handleChangeRole = (userId: string, userEmail: string, currentRole: string, newRole: string) => {
@@ -260,7 +262,7 @@ export default function AdminDashboardPage() {
                             variant="ghost" 
                             size="icon" 
                             className={u.disabled ? "text-green-600 hover:bg-green-50" : "text-amber-600 hover:bg-amber-50"}
-                            onClick={() => toggleUserStatus(u.id, !!u.disabled)}
+                            onClick={() => toggleUserStatus(u.id, u.email, !!u.disabled)}
                           >
                             {u.disabled ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
                           </Button>
