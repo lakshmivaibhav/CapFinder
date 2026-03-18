@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -9,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, TrendingUp, Mail, Globe, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Loader2, Search, TrendingUp, Mail, Globe, Sparkles, CheckCircle2, FilterX, Landmark } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,6 +21,7 @@ export default function PitchesFeedPage() {
   
   const [search, setSearch] = useState('');
   const [industryFilter, setIndustryFilter] = useState('all');
+  const [fundingFilter, setFundingFilter] = useState('all');
 
   // Fetch all pitches
   const pitchesQuery = useMemoFirebase(() => query(collection(db, 'pitches')), [db]);
@@ -39,11 +39,23 @@ export default function PitchesFeedPage() {
   const industries = Array.from(new Set(pitches?.map(p => p.industry) || [])).filter(Boolean);
 
   const filteredPitches = pitches?.filter(p => {
-    const matchesSearch = (p.startupName?.toLowerCase() || "").includes(search.toLowerCase()) || 
-                          (p.industry?.toLowerCase() || "").includes(search.toLowerCase()) ||
-                          (p.description?.toLowerCase() || "").includes(search.toLowerCase());
+    // 1. Partial Search by Startup Name
+    const matchesSearch = (p.startupName?.toLowerCase() || "").includes(search.toLowerCase());
+    
+    // 2. Industry Filter
     const matchesIndustry = industryFilter === 'all' || p.industry === industryFilter;
-    return matchesSearch && matchesIndustry;
+    
+    // 3. Funding Range Filter
+    const fundingVal = parseFloat(p.fundingNeeded?.toString().replace(/,/g, '') || "0");
+    const matchesFunding = fundingFilter === 'all' || (() => {
+      if (fundingFilter === '0-100k') return fundingVal <= 100000;
+      if (fundingFilter === '100k-500k') return fundingVal > 100000 && fundingVal <= 500000;
+      if (fundingFilter === '500k-1m') return fundingVal > 500000 && fundingVal <= 1000000;
+      if (fundingFilter === '1m-plus') return fundingVal > 1000000;
+      return true;
+    })();
+
+    return matchesSearch && matchesIndustry && matchesFunding;
   }) || [];
 
   const handleShowInterest = async (pitch: any) => {
@@ -73,34 +85,72 @@ export default function PitchesFeedPage() {
       <Navbar />
 
       <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full space-y-8">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="flex flex-col gap-6">
           <div className="space-y-2">
-            <h1 className="text-4xl font-bold tracking-tight">Marketplace</h1>
+            <h1 className="text-4xl font-bold tracking-tight">Investment Marketplace</h1>
             <p className="text-muted-foreground text-lg">
-              Explore {pitches?.length || 0} active investment opportunities.
+              Discover and connect with {pitches?.length || 0} high-potential ventures.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3 w-full md:w-auto">
-            <div className="relative flex-1 min-w-[240px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input 
-                placeholder="Search startups, keywords..." 
-                className="pl-10 h-11 bg-white border-none shadow-sm"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+
+          <div className="p-6 bg-white rounded-2xl shadow-sm border space-y-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+              <Landmark className="w-4 h-4" />
+              Filter Opportunities
             </div>
-            <Select value={industryFilter} onValueChange={setIndustryFilter}>
-              <SelectTrigger className="w-[180px] h-11 bg-white border-none shadow-sm">
-                <SelectValue placeholder="Industry" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Industries</SelectItem>
-                {industries.map(ind => (
-                  <SelectItem key={ind as string} value={ind as string}>{ind as string}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+              <div className="md:col-span-5 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input 
+                  placeholder="Search by startup name..." 
+                  className="pl-10 h-11 bg-muted/30 border-none"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="md:col-span-3">
+                <Select value={industryFilter} onValueChange={setIndustryFilter}>
+                  <SelectTrigger className="h-11 bg-muted/30 border-none">
+                    <SelectValue placeholder="All Industries" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Industries</SelectItem>
+                    {industries.map(ind => (
+                      <SelectItem key={ind as string} value={ind as string}>{ind as string}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-3">
+                <Select value={fundingFilter} onValueChange={setFundingFilter}>
+                  <SelectTrigger className="h-11 bg-muted/30 border-none">
+                    <SelectValue placeholder="Funding Amount" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any Funding Amount</SelectItem>
+                    <SelectItem value="0-100k">Up to $100k</SelectItem>
+                    <SelectItem value="100k-500k">$100k - $500k</SelectItem>
+                    <SelectItem value="500k-1m">$500k - $1M</SelectItem>
+                    <SelectItem value="1m-plus">$1M+</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-1">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-11 w-full text-muted-foreground hover:text-primary transition-colors"
+                  onClick={() => { setSearch(''); setIndustryFilter('all'); setFundingFilter('all'); }}
+                  title="Clear Filters"
+                >
+                  <FilterX className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -130,7 +180,9 @@ export default function PitchesFeedPage() {
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1">
                         <TrendingUp className="w-3 h-3" /> Target
                       </p>
-                      <p className="text-lg font-bold text-primary">${pitch.fundingNeeded}</p>
+                      <p className="text-lg font-bold text-primary">
+                        ${typeof pitch.fundingNeeded === 'number' ? pitch.fundingNeeded.toLocaleString() : pitch.fundingNeeded}
+                      </p>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1">
@@ -164,11 +216,12 @@ export default function PitchesFeedPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-40 bg-white rounded-3xl shadow-inner border border-dashed">
-            <h3 className="text-2xl font-bold mb-2">No results found</h3>
-            <p className="text-muted-foreground">Try adjusting your search or filters.</p>
-            <Button variant="link" onClick={() => { setSearch(''); setIndustryFilter('all'); }} className="mt-4">
-              Clear all filters
+          <div className="text-center py-40 bg-white rounded-3xl shadow-sm border border-dashed">
+            <FilterX className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <h3 className="text-2xl font-bold mb-2">No matching startups</h3>
+            <p className="text-muted-foreground">Try broadening your search or adjusting your filters.</p>
+            <Button variant="link" onClick={() => { setSearch(''); setIndustryFilter('all'); setFundingFilter('all'); }} className="mt-4 text-primary">
+              Reset all filters
             </Button>
           </div>
         )}
