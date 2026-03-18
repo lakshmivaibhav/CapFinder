@@ -21,9 +21,9 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
 
   // Directly load the pitch by ID once auth is ready to ensure the page is never blocked unnecessarily
   const pitchRef = useMemoFirebase(() => {
-    if (!user || !profile) return null;
+    if (!user) return null;
     return doc(db, 'pitches', id);
-  }, [db, id, user, profile]);
+  }, [db, id, user]);
 
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
 

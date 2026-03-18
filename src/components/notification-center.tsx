@@ -13,14 +13,13 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 export function NotificationCenter() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile } = useAuth();
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
-  // Load all notifications for this user, sorted by time.
-  // The query only runs when the panel is open AND the user/profile are authorized.
+  // Load all notifications for this user, strictly filtered by userId and deferred until panel open.
   const notificationsQuery = useMemoFirebase(() => {
-    if (!open || !user?.uid || !profile || profile.disabled === true) return null;
+    if (!open || !user?.uid) return null;
     
     return query(
       collection(db, 'notifications'),
@@ -28,7 +27,7 @@ export function NotificationCenter() {
       orderBy('timestamp', 'desc'),
       limit(50)
     );
-  }, [db, user?.uid, profile, open]);
+  }, [db, user?.uid, open]);
 
   const { data: notifications, isLoading } = useCollection(notificationsQuery);
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
