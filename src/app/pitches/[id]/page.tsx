@@ -111,16 +111,15 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
         where('investorId', '==', user.uid), 
         where('pitchId', '==', pitch.id)
       ));
-      console.log(`Deleting ${intSnap.size} interests`);
       intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
 
-      // 2. Delete Connection (Contact Request) document (senderId field)
+      // 2. Delete ContactRequest document (senderId field) - only if accepted
       const reqSnap = await getDocs(query(
         collection(db, 'contactRequests'), 
         where('senderId', '==', user.uid), 
-        where('pitchId', '==', pitch.id)
+        where('pitchId', '==', pitch.id),
+        where('status', '==', 'accepted')
       ));
-      console.log(`Deleting ${reqSnap.size} requests`);
       reqSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id)));
 
       // 3. Remove all chat messages for this pitch between these users
@@ -134,7 +133,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
 
       toast({ title: "Connection resolved successfully", description: "Records for this pitch are being cleared." });
     } catch (error: any) {
-      console.error("Resolve failed:", error);
       toast({ variant: "destructive", title: "Resolve failed", description: error.message || "Could not fully resolve connection." });
     } finally {
       setResolving(false);
@@ -211,7 +209,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                     )}
                     {isInvestor && (
                       <div className="flex items-center gap-2">
-                         {(isInterested || contactRequest) && (
+                         {(isInterested || (contactRequest && contactRequest.status === 'accepted')) && (
                            <Button 
                              variant="outline" 
                              size="sm" 
