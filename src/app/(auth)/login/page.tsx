@@ -41,8 +41,10 @@ export default function LoginPage() {
         return;
       }
 
+      // Ensure disabled status is explicitly set if missing to prevent isAuthorized() failures
       setDocumentNonBlocking(doc(db, 'users', userCredential.user.uid), {
-        lastActive: serverTimestamp()
+        lastActive: serverTimestamp(),
+        disabled: userDoc.exists() ? (userDoc.data().disabled || false) : false
       }, { merge: true });
 
       addDocumentNonBlocking(collection(db, 'logs'), {

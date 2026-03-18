@@ -28,12 +28,13 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Initialize profile with lastActive and createdAt (using set with merge for upsert safety)
+      // Initialize profile with critical fields for security rule authorization
       setDocumentNonBlocking(doc(db, 'users', userCredential.user.uid), {
         id: userCredential.user.uid,
         email: userCredential.user.email,
         lastActive: serverTimestamp(),
         createdAt: serverTimestamp(),
+        disabled: false, // Explicitly set for isAuthorized() rule
       }, { merge: true });
 
       toast({ title: "Account created!", description: "Welcome to CapFinder." });

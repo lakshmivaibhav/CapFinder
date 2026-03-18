@@ -7,7 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Optimized profile fetch: using get().data safely
+    // Helper to fetch profile with a single get() call for efficiency
     function getProfile() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
@@ -16,21 +16,16 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
-    // Hardened isAdmin check with safe field access
-    function isAdmin() {
-      return isSignedIn() && 
-             profileExists() && 
-             getProfile().get('role', '') == 'admin';
-    }
-
     function isAuthorized() {
       return isSignedIn() && 
              profileExists() && 
              getProfile().get('disabled', false) == false;
     }
 
-    function hasRole(role) {
-      return isAuthorized() && getProfile().get('role', '') == role;
+    function isAdmin() {
+      return isSignedIn() && 
+             profileExists() && 
+             getProfile().get('role', '') == 'admin';
     }
 
     function isContactAccepted(senderId, receiverId, pitchId) {
@@ -99,7 +94,8 @@ service cloud.firestore {
     }
 
     match /notifications/{notificationId} {
-      allow read: if isAuthorized() && resource.data.userId == request.auth.uid;
+      // Identity check first for efficient list evaluation
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid && isAuthorized();
       allow create: if isAuthorized();
       allow update: if isAuthorized() && resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if isAuthorized() && resource.data.userId == request.auth.uid;

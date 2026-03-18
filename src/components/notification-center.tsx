@@ -19,8 +19,9 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
 
   const notificationsQuery = useMemoFirebase(() => {
-    // CRITICAL: Only query if BOTH user and profile exist to satisfy security rules (isAuthorized)
-    if (!user || !profile) return null;
+    // CRITICAL: Ensure profile is non-null to avoid permission errors on initial login
+    if (!user || !profile || !profile.uid) return null;
+    
     return query(
       collection(db, 'notifications'),
       where('userId', '==', user.uid),
