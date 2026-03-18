@@ -48,7 +48,9 @@ export default function ProfilePage() {
    * This ensures that the query matches the identity-based read rule for non-administrative list operations.
    */
   const myLogsQuery = useMemoFirebase(() => {
-    if (!user || !profile || profile.disabled === true) return null;
+    // CRITICAL: Ensure profile is loaded and authorized. 
+    // The security rules for 'logs' list require 'isAuthorized' which depends on the user's profile existence.
+    if (!user || !profile || !profile.role || profile.disabled === true) return null;
     return query(
       collection(db, 'logs'), 
       where('userId', '==', user.uid),
