@@ -243,37 +243,40 @@ export default function DashboardPage() {
                 ) : (startupPitches && startupPitches.length > 0) ? (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {startupPitches.map((pitch) => (
-                      <Card key={pitch.id} className="group hover:shadow-lg transition-all border-none shadow-sm overflow-hidden bg-white">
-                        <CardHeader className="pb-3">
-                          <div className="flex justify-between items-start mb-2">
-                            <Badge variant="secondary" className="bg-primary/5 text-primary border-none">{pitch.industry}</Badge>
-                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase">
-                              <Heart className="w-3 h-3 text-red-500 fill-red-500" />
-                              {startupInterests?.filter(i => i.pitchId === pitch.id).length || 0} leads
+                      <Link key={pitch.id} href={`/pitches/${pitch.id}`}>
+                        <Card className="group h-full hover:shadow-lg transition-all border-none shadow-sm overflow-hidden bg-white">
+                          <CardHeader className="pb-3">
+                            <div className="flex justify-between items-start mb-2">
+                              <Badge variant="secondary" className="bg-primary/5 text-primary border-none">{pitch.industry}</Badge>
+                              <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-bold uppercase">
+                                <Heart className="w-3 h-3 text-red-500 fill-red-500" />
+                                {startupInterests?.filter(i => i.pitchId === pitch.id).length || 0} leads
+                              </div>
                             </div>
-                          </div>
-                          <CardTitle className="text-xl font-bold line-clamp-1 group-hover:text-primary transition-colors">
-                            {pitch.startupName}
-                          </CardTitle>
-                          <CardDescription className="line-clamp-2 italic">
-                            {pitch.description}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="pb-4">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground flex items-center gap-1">
-                              <DollarSign className="w-4 h-4" /> Goal
-                            </span>
-                            <span className="font-bold text-primary">${pitch.fundingNeeded}</span>
-                          </div>
-                        </CardContent>
-                        <CardFooter className="pt-4 border-t bg-muted/10 flex justify-between items-center">
-                          <div className="text-[10px] text-muted-foreground flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {pitch.createdAt?.toDate ? pitch.createdAt.toDate().toLocaleDateString() : 'Just now'}
-                          </div>
-                        </CardFooter>
-                      </Card>
+                            <CardTitle className="text-xl font-bold line-clamp-1 group-hover:text-primary transition-colors">
+                              {pitch.startupName}
+                            </CardTitle>
+                            <CardDescription className="line-clamp-2 italic">
+                              {pitch.description}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="pb-4">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground flex items-center gap-1">
+                                <DollarSign className="w-4 h-4" /> Goal
+                              </span>
+                              <span className="font-bold text-primary">${pitch.fundingNeeded}</span>
+                            </div>
+                          </CardContent>
+                          <CardFooter className="pt-4 border-t bg-muted/10 flex justify-between items-center">
+                            <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {pitch.createdAt?.toDate ? pitch.createdAt.toDate().toLocaleDateString() : 'Just now'}
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </CardFooter>
+                        </Card>
+                      </Link>
                     ))}
                   </div>
                 ) : (
@@ -294,28 +297,28 @@ export default function DashboardPage() {
                 ) : (allPitches && allPitches.length > 0) ? (
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {allPitches.map((pitch) => (
-                      <Card key={pitch.id} className="group hover:shadow-lg transition-all border-none shadow-sm bg-white overflow-hidden">
-                        <CardHeader className="pb-3">
-                          <Badge variant="secondary" className="w-fit mb-2 bg-primary/5 text-primary border-none">{pitch.industry}</Badge>
-                          <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors">{pitch.startupName}</CardTitle>
-                          <CardDescription className="line-clamp-3 italic text-xs leading-relaxed">
-                            &quot;{pitch.description}&quot;
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="p-3 bg-muted/30 rounded-lg flex items-center justify-between">
-                            <span className="text-xs font-medium text-muted-foreground">Target Funding</span>
-                            <span className="text-sm font-bold text-primary">${pitch.fundingNeeded}</span>
-                          </div>
-                        </CardContent>
-                        <CardFooter className="pt-4 border-t bg-muted/10">
-                          <Link href="/pitches" className="w-full">
+                      <Link key={pitch.id} href={`/pitches/${pitch.id}`}>
+                        <Card className="group h-full hover:shadow-lg transition-all border-none shadow-sm bg-white overflow-hidden">
+                          <CardHeader className="pb-3">
+                            <Badge variant="secondary" className="w-fit mb-2 bg-primary/5 text-primary border-none">{pitch.industry}</Badge>
+                            <CardTitle className="text-xl font-bold group-hover:text-primary transition-colors">{pitch.startupName}</CardTitle>
+                            <CardDescription className="line-clamp-3 italic text-xs leading-relaxed">
+                              &quot;{pitch.description}&quot;
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="p-3 bg-muted/30 rounded-lg flex items-center justify-between">
+                              <span className="text-xs font-medium text-muted-foreground">Target Funding</span>
+                              <span className="text-sm font-bold text-primary">${pitch.fundingNeeded}</span>
+                            </div>
+                          </CardContent>
+                          <CardFooter className="pt-4 border-t bg-muted/10">
                             <Button variant="ghost" className="w-full text-xs gap-2">
-                              Explore details <ArrowRight className="w-3 h-3" />
+                              View Details <ArrowRight className="w-3 h-3" />
                             </Button>
-                          </Link>
-                        </CardFooter>
-                      </Card>
+                          </CardFooter>
+                        </Card>
+                      </Link>
                     ))}
                   </div>
                 ) : (
@@ -390,7 +393,7 @@ export default function DashboardPage() {
                             </CardDescription>
                           </CardHeader>
                           <CardFooter className="pt-0">
-                            <Link href="/pitches" className="w-full">
+                            <Link href={`/pitches/${interest.pitchId}`} className="w-full">
                               <Button variant="ghost" className="w-full text-xs justify-between group-hover:bg-primary/5">
                                 View Details <ArrowRight className="w-3 h-3" />
                               </Button>
@@ -499,7 +502,7 @@ export default function DashboardPage() {
                           </CardDescription>
                         </CardHeader>
                         <CardFooter className="pt-0">
-                          <Link href="/pitches" className="w-full">
+                          <Link href={`/pitches/${fav.pitchId}`} className="w-full">
                             <Button variant="ghost" className="w-full text-xs justify-between group-hover:bg-primary/5">
                               View in Marketplace <ArrowRight className="w-3 h-3" />
                             </Button>

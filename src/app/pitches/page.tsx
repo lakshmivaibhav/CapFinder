@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, TrendingUp, Mail, Globe, Sparkles, CheckCircle2, FilterX, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, XCircle } from 'lucide-react';
+import { Loader2, Search, TrendingUp, Mail, Globe, Sparkles, CheckCircle2, FilterX, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, XCircle, ArrowRight } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -286,8 +286,9 @@ export default function PitchesFeedPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPitches.map((pitch) => (
               <Card key={pitch.id} className="flex flex-col group hover:shadow-xl transition-all border-none shadow-sm overflow-hidden rounded-2xl bg-white relative">
-                <CardHeader className="space-y-4">
-                  <div className="flex justify-between items-start">
+                <Link href={`/pitches/${pitch.id}`} className="absolute inset-0 z-0" />
+                <CardHeader className="space-y-4 relative z-10 pointer-events-none">
+                  <div className="flex justify-between items-start pointer-events-auto">
                     <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-3 py-1">
                       {pitch.industry}
                     </Badge>
@@ -296,7 +297,7 @@ export default function PitchesFeedPage() {
                         variant="ghost"
                         size="icon"
                         className={`h-8 w-8 rounded-full ${favoritePitchIds.includes(pitch.id) ? 'text-accent' : 'text-muted-foreground hover:text-accent'}`}
-                        onClick={() => handleToggleFavorite(pitch)}
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleFavorite(pitch); }}
                       >
                         {favoritePitchIds.includes(pitch.id) ? <BookmarkCheck className="w-5 h-5 fill-current" /> : <Bookmark className="w-5 h-5" />}
                       </Button>
@@ -304,7 +305,7 @@ export default function PitchesFeedPage() {
                   </div>
                   <CardTitle className="text-2xl font-bold group-hover:text-primary transition-colors">{pitch.startupName}</CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 space-y-6">
+                <CardContent className="flex-1 space-y-6 relative z-10 pointer-events-none">
                   <div className="text-muted-foreground text-sm line-clamp-4 leading-relaxed bg-muted/30 p-4 rounded-xl italic">
                     &quot;{pitch.description}&quot;
                   </div>
@@ -320,14 +321,14 @@ export default function PitchesFeedPage() {
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1">
-                        <Globe className="w-3 h-3" /> Stage
+                        <ArrowRight className="w-3 h-3" /> Details
                       </p>
-                      <p className="text-lg font-bold">Seed</p>
+                      <p className="text-sm font-bold flex items-center gap-1">Learn More <ArrowRight className="w-3 h-3" /></p>
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="p-6 pt-0 flex gap-2">
-                  {getContactButton(pitch)}
+                <CardFooter className="p-6 pt-0 flex gap-2 relative z-10">
+                  <div className="flex-1">{getContactButton(pitch)}</div>
                   {profile?.role === 'investor' && (
                     <Button 
                       className={`flex-1 h-10 shadow-sm ${userInterests.includes(pitch.id) ? 'bg-green-600 hover:bg-green-600' : 'bg-primary'}`}
