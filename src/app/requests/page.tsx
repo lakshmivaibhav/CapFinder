@@ -4,8 +4,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, doc, serverTimestamp } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,8 +47,19 @@ export default function RequestsPage() {
 
   const { data: requests, isLoading: loadingRequests } = useCollection(requestsQuery);
 
-  const handleUpdateStatus = (requestId: string, status: 'accepted' | 'rejected') => {
-    updateDocumentNonBlocking(doc(db, 'contactRequests', requestId), { status });
+  const handleUpdateStatus = (req: any, status: 'accepted' | 'rejected') => {
+    updateDocumentNonBlocking(doc(db, 'contactRequests', req.id), { status });
+    
+    if (status === 'accepted') {
+      addDocumentNonBlocking(collection(db, 'notifications'), {
+        userId: req.senderId,
+        type: 'contact_accepted',
+        text: `Your contact request for ${req.startupName} has been accepted!`,
+        read: false,
+        timestamp: serverTimestamp(),
+      });
+    }
+
     toast({
       title: `Request ${status}`,
       description: status === 'accepted' ? 'Investor can now see your contact details and message you.' : 'Introduction request declined.',
@@ -121,14 +132,14 @@ export default function RequestsPage() {
                         <Button 
                           variant="outline" 
                           className="flex-1 border-green-200 text-green-600 hover:bg-green-50 bg-white"
-                          onClick={() => handleUpdateStatus(req.id, 'accepted')}
+                          onClick={() => handleUpdateStatus(req, 'accepted')}
                         >
                           <CheckCircle2 className="w-4 h-4 mr-2" /> Accept
                         </Button>
                         <Button 
                           variant="outline" 
                           className="flex-1 border-red-200 text-red-600 hover:bg-red-50 bg-white"
-                          onClick={() => handleUpdateStatus(req.id, 'rejected')}
+                          onClick={() => handleUpdateStatus(req, 'rejected')}
                         >
                           <XCircle className="w-4 h-4 mr-2" /> Reject
                         </Button>

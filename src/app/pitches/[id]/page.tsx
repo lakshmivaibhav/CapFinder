@@ -59,6 +59,14 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       timestamp: serverTimestamp(),
     });
 
+    addDocumentNonBlocking(collection(db, 'notifications'), {
+      userId: pitch.ownerId,
+      type: 'interest',
+      text: `An investor is interested in your pitch: ${pitch.startupName}`,
+      read: false,
+      timestamp: serverTimestamp(),
+    });
+
     addDocumentNonBlocking(collection(db, 'logs'), {
       userId: user.uid,
       action: 'interest_registered',
@@ -100,6 +108,14 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       timestamp: serverTimestamp(),
     }, { merge: true });
 
+    addDocumentNonBlocking(collection(db, 'notifications'), {
+      userId: pitch.ownerId,
+      type: 'contact_request',
+      text: `New contact request for ${pitch.startupName} from ${user.email}`,
+      read: false,
+      timestamp: serverTimestamp(),
+    });
+
     addDocumentNonBlocking(collection(db, 'logs'), {
       userId: user.uid,
       action: 'contact_request_sent',
@@ -116,7 +132,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
     
     setDeleting(true);
     try {
-      // Check for active interests
       const interestsSnap = await getDocs(query(collection(db, 'interests'), where('pitchId', '==', pitch.id)));
       if (!interestsSnap.empty) {
         toast({
@@ -128,7 +143,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
         return;
       }
 
-      // Check for active contact requests
       const requestsSnap = await getDocs(query(collection(db, 'contactRequests'), where('pitchId', '==', pitch.id)));
       if (!requestsSnap.empty) {
         toast({
@@ -140,7 +154,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
         return;
       }
 
-      // Check for active messages
       const messagesSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
       if (!messagesSnap.empty) {
         toast({

@@ -87,6 +87,14 @@ export default function MessagesPage() {
       read: false,
     });
 
+    addDocumentNonBlocking(collection(db, 'notifications'), {
+      userId: receiverId,
+      type: 'message',
+      text: `New message for ${selectedConnection.startupName} from ${user.email}`,
+      read: false,
+      timestamp: serverTimestamp(),
+    });
+
     addDocumentNonBlocking(collection(db, 'logs'), {
       userId: user.uid,
       action: 'message_sent',
