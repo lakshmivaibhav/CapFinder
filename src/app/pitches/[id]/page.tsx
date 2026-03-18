@@ -1,6 +1,7 @@
+
 "use client";
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import { doc, collection, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -8,7 +9,7 @@ import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, MessageSquare, TrendingUp, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ExternalLink, DollarSign, Building2, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, MessageSquare, TrendingUp, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ExternalLink, DollarSign, Building2, Trash2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,7 +18,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const { user, profile, loading: authLoading } = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
-  const [deleting, setDeleting] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   const pitchRef = useMemoFirebase(() => doc(db, 'pitches', id), [db, id]);
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
@@ -25,24 +26,27 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const ownerRef = useMemoFirebase(() => pitch ? doc(db, 'users', pitch.ownerId) : null, [db, pitch]);
   const { data: ownerProfile, isLoading: loadingOwner } = useDoc(ownerRef);
 
+  const isInvestor = profile?.role === 'investor';
+  const isOwner = user?.uid === pitch?.ownerId;
+
   const interestsQuery = useMemoFirebase(() => {
-    if (!user || profile?.role !== 'investor') return null;
+    if (!user || !isInvestor) return null;
     return query(collection(db, 'interests'), where('investorId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, profile, id]);
+  }, [db, user, isInvestor, id]);
   const { data: interests } = useCollection(interestsQuery);
   const isInterested = interests && interests.length > 0;
 
   const favoritesQuery = useMemoFirebase(() => {
-    if (!user || profile?.role !== 'investor') return null;
+    if (!user || !isInvestor) return null;
     return query(collection(db, 'favorites'), where('investorId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, profile, id]);
+  }, [db, user, isInvestor, id]);
   const { data: favorites } = useCollection(favoritesQuery);
   const isFavorited = favorites && favorites.length > 0;
 
   const contactRequestsQuery = useMemoFirebase(() => {
-    if (!user || profile?.role !== 'investor') return null;
+    if (!user || !isInvestor) return null;
     return query(collection(db, 'contactRequests'), where('senderId', '==', user.uid), where('pitchId', '==', id));
-  }, [db, user, profile, id]);
+  }, [db, user, isInvestor, id]);
   const { data: contactRequests } = useCollection(contactRequestsQuery);
   const contactRequest = contactRequests?.[0];
 
@@ -111,40 +115,35 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   };
 
   const handleRequestDeletion = async () => {
-    if (!user || !pitch || pitch.ownerId !== user.uid) return;
+    if (!user || !pitch || !isOwner) return;
     
-    setDeleting(true);
+    setChecking(true);
     try {
+      // 1. Check for active interests
       const interestsSnap = await getDocs(query(collection(db, 'interests'), where('pitchId', '==', pitch.id)));
-      if (!interestsSnap.empty) {
-        toast({
-          variant: "destructive",
-          title: "Cannot Delete Pitch",
-          description: "There are investors currently interested in this pitch. Please resolve these leads first."
-        });
-        setDeleting(false);
-        return;
-      }
-
       const requestsSnap = await getDocs(query(collection(db, 'contactRequests'), where('pitchId', '==', pitch.id)));
-      if (!requestsSnap.empty) {
-        toast({
-          variant: "destructive",
-          title: "Cannot Delete Pitch",
-          description: "There are active introduction requests for this pitch."
-        });
-        setDeleting(false);
-        return;
-      }
-
       const messagesSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
-      if (!messagesSnap.empty) {
+
+      if (!interestsSnap.empty || !requestsSnap.empty || !messagesSnap.empty) {
         toast({
           variant: "destructive",
-          title: "Cannot Delete Pitch",
-          description: "There are active message threads linked to this pitch."
+          title: "Deletion Blocked",
+          description: "This pitch has active connections. We've notified connected investors to resolve their interests."
         });
-        setDeleting(false);
+
+        // Notify investors
+        interestsSnap.docs.forEach(d => {
+          const interestData = d.data();
+          addDocumentNonBlocking(collection(db, 'notifications'), {
+            userId: interestData.investorId,
+            type: 'system',
+            text: `The startup owner of "${pitch.startupName}" wishes to delete this pitch. Please resolve your interest/connection.`,
+            read: false,
+            timestamp: serverTimestamp(),
+          });
+        });
+        
+        setChecking(false);
         return;
       }
 
@@ -160,22 +159,15 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
 
         toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });
       }
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Check Failed",
-        description: "Could not verify pitch status. Please try again."
-      });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Could not verify pitch status." });
     } finally {
-      setDeleting(false);
+      setChecking(false);
     }
   };
 
   if (loadingPitch || authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-10 h-10 text-primary" /></div>;
   if (!pitch) return <div className="p-20 text-center font-bold text-destructive">Pitch not found.</div>;
-
-  const isInvestor = profile?.role === 'investor';
-  const isOwner = user?.uid === pitch.ownerId;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -190,11 +182,9 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
             <Card className="border-none shadow-md overflow-hidden bg-white rounded-2xl">
               <CardHeader className="p-8 pb-4 space-y-6">
                 <div className="flex items-center justify-between">
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="bg-primary/10 text-primary border-none px-4 py-1.5 text-xs font-bold uppercase tracking-wider">
-                      {pitch.industry}
-                    </Badge>
-                  </div>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-none px-4 py-1.5 text-xs font-bold uppercase">
+                    {pitch.industry}
+                  </Badge>
                   <div className="flex items-center gap-2">
                     {isOwner && (
                       <Button 
@@ -202,10 +192,10 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                         size="sm" 
                         className="text-destructive hover:bg-destructive/10"
                         onClick={handleRequestDeletion}
-                        disabled={deleting}
+                        disabled={checking}
                       >
-                        {deleting ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                        Request Deletion
+                        {checking ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                        Delete Pitch
                       </Button>
                     )}
                     {isInvestor && (
@@ -215,20 +205,14 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                         onClick={handleToggleFavorite} 
                         className={`gap-2 rounded-full border-muted-foreground/20 font-bold transition-all ${isFavorited ? "text-accent bg-accent/5 border-accent/20" : "text-muted-foreground hover:text-accent"}`}
                       >
-                        {isFavorited ? (
-                          <><BookmarkCheck className="w-4 h-4 fill-current" /> Saved</>
-                        ) : (
-                          <><Bookmark className="w-4 h-4" /> Save Pitch</>
-                        )}
+                        {isFavorited ? <><BookmarkCheck className="w-4 h-4 fill-current" /> Saved</> : <><Bookmark className="w-4 h-4" /> Save</>}
                       </Button>
                     )}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <CardTitle className="text-4xl md:text-5xl font-black tracking-tight text-foreground">
-                    {pitch.startupName}
-                  </CardTitle>
+                  <CardTitle className="text-4xl md:text-5xl font-black tracking-tight">{pitch.startupName}</CardTitle>
                   <div className="flex items-center gap-4 text-xs text-muted-foreground font-semibold uppercase tracking-widest">
                     <span className="flex items-center gap-1.5"><Clock className="w-4 h-4 text-primary" /> Posted {pitch.createdAt?.toDate ? pitch.createdAt.toDate().toLocaleDateString() : 'Recently'}</span>
                   </div>
@@ -240,7 +224,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                   &quot;{pitch.description}&quot;
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-6 bg-primary/5 rounded-2xl space-y-2 border border-primary/10 flex flex-col items-center text-center">
                     <DollarSign className="w-5 h-5 text-primary" />
                     <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-extrabold">Target Funding</p>
@@ -259,7 +243,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                    <div className="flex-1 flex flex-col gap-2">
                      {!contactRequest ? (
                        <Button className="w-full h-14 text-lg font-bold shadow-lg bg-primary hover:bg-primary/90" onClick={handleRequestContact}>
-                         <Mail className="mr-2 w-5 h-5" /> Request Contact Info
+                         <Mail className="mr-2 w-5 h-5" /> Request Contact
                        </Button>
                      ) : contactRequest.status === 'pending' ? (
                        <Button className="w-full h-14 text-lg font-bold" variant="secondary" disabled>
@@ -267,35 +251,31 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                        </Button>
                      ) : contactRequest.status === 'accepted' ? (
                        <div className="flex gap-2">
-                          <Button className="flex-1 h-14 text-lg font-bold bg-green-600 hover:bg-green-700 shadow-md" asChild>
+                          <Button className="flex-1 h-14 text-lg font-bold bg-green-600 hover:bg-green-700" asChild>
                             <a href={`mailto:${pitch.contactEmail}`}>
                               <Mail className="mr-2 w-5 h-5" /> Email Founder
                             </a>
                           </Button>
-                          <Button className="flex-1 h-14 text-lg font-bold shadow-md bg-accent hover:bg-accent/90" asChild>
+                          <Button className="flex-1 h-14 text-lg font-bold bg-accent hover:bg-accent/90" asChild>
                             <Link href="/messages">
-                              <MessageSquare className="mr-2 w-5 h-5" /> Chat Now
+                              <MessageSquare className="mr-2 w-5 h-5" /> Chat
                             </Link>
                           </Button>
                        </div>
                      ) : (
                        <Button className="w-full h-14 text-lg font-bold" variant="outline" disabled>
-                         <XCircle className="mr-2 w-5 h-5" /> Request Declined
+                         <XCircle className="mr-2 w-5 h-5" /> Declined
                        </Button>
                      )}
                    </div>
 
                    <Button 
-                    className={`flex-1 h-14 text-lg font-bold transition-all ${isInterested ? 'bg-emerald-600 hover:bg-emerald-700 border-none' : 'border-primary text-primary hover:bg-primary/5'}`} 
+                    className={`flex-1 h-14 text-lg font-bold transition-all ${isInterested ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-primary text-primary hover:bg-primary/5'}`} 
                     onClick={handleShowInterest}
                     variant={isInterested ? "default" : "outline"}
                     disabled={isInterested}
                    >
-                     {isInterested ? (
-                       <><CheckCircle2 className="mr-2 w-5 h-5" /> Interest Shown</>
-                     ) : (
-                       <><Sparkles className="mr-2 w-5 h-5" /> Express Interest</>
-                     )}
+                     {isInterested ? <><CheckCircle2 className="mr-2 w-5 h-5" /> Interested</> : <><Sparkles className="mr-2 w-5 h-5" /> Show Interest</>}
                    </Button>
                 </CardFooter>
               )}
@@ -305,8 +285,8 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
           <div className="lg:col-span-4 space-y-6">
             <Card className="border-none shadow-md bg-white overflow-hidden rounded-2xl">
               <CardHeader className="bg-primary/5 border-b py-5 px-6">
-                <CardTitle className="text-lg font-black flex items-center gap-2 text-primary">
-                  <User className="w-5 h-5" /> ABOUT THE FOUNDER
+                <CardTitle className="text-lg font-black flex items-center gap-2 text-primary uppercase">
+                  <User className="w-5 h-5" /> Founder Profile
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
@@ -322,19 +302,17 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                         <Link href={`/profile/${pitch.ownerId}`} className="group block">
                           <h4 className="font-black text-lg text-foreground truncate group-hover:text-primary transition-colors">{ownerProfile.name || 'Founder'}</h4>
                         </Link>
-                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">{ownerProfile.company || 'Venture Lead'}</p>
+                        <p className="text-[10px] font-black text-primary uppercase tracking-widest">{ownerProfile.company || 'Organization'}</p>
                       </div>
                     </div>
-                    <div className="pt-4 space-y-4">
-                       <Link href={`/profile/${pitch.ownerId}`} className="w-full block">
-                         <Button variant="outline" className="w-full gap-2 text-xs font-black uppercase tracking-widest border-primary/20 hover:bg-primary/5">
-                           View Professional Profile <ExternalLink className="w-3 h-3" />
-                         </Button>
-                       </Link>
-                    </div>
+                    <Link href={`/profile/${pitch.ownerId}`} className="w-full block">
+                      <Button variant="outline" className="w-full gap-2 text-xs font-black uppercase tracking-widest">
+                        Professional Profile <ExternalLink className="w-3 h-3" />
+                      </Button>
+                    </Link>
                   </>
                 ) : (
-                  <div className="text-center py-6 text-sm text-muted-foreground italic">Profile details are private.</div>
+                  <div className="text-center py-6 text-sm text-muted-foreground italic">Profile is private.</div>
                 )}
               </CardContent>
             </Card>

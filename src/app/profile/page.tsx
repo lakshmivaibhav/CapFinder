@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDocs, collection, query, where, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Save, User, ArrowLeft, Trash2 } from 'lucide-react';
+import { Loader2, Save, User, ArrowLeft, Trash2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +35,6 @@ export default function ProfilePage() {
     role: '',
   });
 
-  // Route protection
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/login');
@@ -61,19 +60,17 @@ export default function ProfilePage() {
     setSaving(true);
     try {
       const numericFunding = formData.fundingNeeded ? parseFloat(formData.fundingNeeded) : 0;
-      const updateData = {
+      await updateDoc(doc(db, 'users', user.uid), {
         name: formData.name,
         company: formData.company,
         bio: formData.bio,
         fundingNeeded: numericFunding,
         investmentInterest: formData.investmentInterest,
-        updatedAt: new Date(),
-      };
-      await updateDoc(doc(db, 'users', user.uid), updateData);
+        updatedAt: serverTimestamp(),
+      });
       await refreshProfile();
       toast({ title: "Profile updated!" });
-      router.push('/dashboard');
-    } catch (error: any) {
+    } catch (error) {
       toast({ variant: "destructive", title: "Error saving profile" });
     } finally {
       setSaving(false);
@@ -81,20 +78,68 @@ export default function ProfilePage() {
   };
 
   const handleRequestAccountDeletion = async () => {
-    if (!user) return;
+    if (!user || !profile) return;
     setChecking(true);
     try {
+      const isInvestor = profile.role === 'investor';
+      
+      // Check for active connections
+      const interestsQuery = isInvestor 
+        ? query(collection(db, 'interests'), where('investorId', '==', user.uid))
+        : query(collection(db, 'interests'), where('startupOwnerId', '==', user.uid));
+      
+      const requestsQuery = isInvestor
+        ? query(collection(db, 'contactRequests'), where('senderId', '==', user.uid))
+        : query(collection(db, 'contactRequests'), where('receiverId', '==', user.uid));
+
+      const [interestsSnap, requestsSnap] = await Promise.all([
+        getDocs(interestsQuery),
+        getDocs(requestsSnap)
+      ]);
+
+      if (!interestsSnap.empty || !requestsSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Deletion Blocked",
+          description: "You have active connections. We've notified your partners to resolve these first."
+        });
+
+        // Notify counterparts
+        const snaps = [...interestsSnap.docs, ...requestsSnap.docs];
+        snaps.forEach(d => {
+          const data = d.data();
+          const targetId = isInvestor 
+            ? (data.startupOwnerId || data.receiverId)
+            : (data.investorId || data.senderId);
+          
+          if (targetId) {
+            addDocumentNonBlocking(collection(db, 'notifications'), {
+              userId: targetId,
+              type: 'system',
+              text: `A partner you are connected with (${user.email}) has requested account deletion. Please resolve your active connections.`,
+              read: false,
+              timestamp: serverTimestamp(),
+            });
+          }
+        });
+
+        setChecking(false);
+        return;
+      }
+
       if (confirm("Request account deletion? An administrator will review your request.")) {
         addDocumentNonBlocking(doc(db, 'deleteRequests', `${user.uid}_delete`), {
           userId: user.uid,
           targetType: 'account',
           targetId: user.uid,
           status: 'pending',
-          timestamp: new Date(),
+          timestamp: serverTimestamp(),
           details: `User requested account deletion: ${user.email}`
         });
         toast({ title: "Deletion Request Sent" });
       }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Could not verify account status." });
     } finally {
       setChecking(false);
     }
@@ -106,11 +151,10 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-
       <main className="max-w-5xl mx-auto py-12 px-6 w-full space-y-8">
         <div className="flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary font-medium">
-            <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+            <ArrowLeft className="w-4 h-4" /> Dashboard
           </Link>
           <Badge variant="outline" className="px-3 py-1 capitalize border-primary/20 text-primary font-bold">
             {formData.role} Account
@@ -125,19 +169,19 @@ export default function ProfilePage() {
                   <User className="text-primary w-16 h-16" />
                 </div>
               </div>
-              <h2 className="text-xl font-bold line-clamp-1">{formData.name || 'Set your name'}</h2>
-              <p className="text-xs text-muted-foreground mb-4 break-all">{user.email}</p>
+              <h2 className="text-xl font-bold truncate">{formData.name || 'Anonymous User'}</h2>
+              <p className="text-xs text-muted-foreground mb-4 truncate">{user.email}</p>
               
               <div className="pt-4 mt-4 border-t border-dashed">
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="w-full text-destructive hover:bg-red-50"
+                  className="w-full text-destructive hover:bg-red-50 gap-2"
                   onClick={handleRequestAccountDeletion}
                   disabled={checking}
                 >
-                  {checking ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                  Delete Account
+                  {checking ? <Loader2 className="animate-spin w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
+                  Request Account Deletion
                 </Button>
               </div>
             </Card>
@@ -146,29 +190,28 @@ export default function ProfilePage() {
           <div className="md:col-span-8 space-y-8">
             <Card className="border-none shadow-sm bg-white overflow-hidden">
               <CardHeader className="bg-primary/5 border-b p-8">
-                <CardTitle className="text-2xl font-bold">Profile Settings</CardTitle>
+                <CardTitle className="text-2xl font-bold">Account Settings</CardTitle>
+                <CardDescription>Update your professional presence on CapFinder.</CardDescription>
               </CardHeader>
               <CardContent className="p-8">
                 <form onSubmit={handleSave} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="name">Legal Name / Representative</Label>
+                      <Label htmlFor="name">Display Name</Label>
                       <Input id="name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="company">Official Organization</Label>
+                      <Label htmlFor="company">Company / Group</Label>
                       <Input id="company" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} />
                     </div>
                   </div>
-
                   <div className="space-y-2">
-                    <Label htmlFor="bio">Professional Bio</Label>
-                    <Textarea id="bio" value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})} />
+                    <Label htmlFor="bio">Professional Summary</Label>
+                    <Textarea id="bio" value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})} className="min-h-[120px]" />
                   </div>
-
                   <Button type="submit" className="w-full h-12 bg-primary font-bold gap-2" disabled={saving}>
                     {saving ? <Loader2 className="animate-spin" /> : <Save className="w-5 h-5" />}
-                    Sync Profile Changes
+                    Save Profile Changes
                   </Button>
                 </form>
               </CardContent>
