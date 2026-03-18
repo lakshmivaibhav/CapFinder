@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescri
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Bell, Clock, CheckCircle2, MessageSquare, Briefcase, TrendingUp, Sparkles, Trash2, Loader2 } from 'lucide-react';
+import { Bell, Clock, CheckCircle2, MessageSquare, Briefcase, TrendingUp, Sparkles, Trash2, Loader2, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 
@@ -17,10 +17,9 @@ export function NotificationCenter() {
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
-  // CRITICAL: Load notifications ONLY when the panel is open to avoid background permission errors.
-  // Rule requires isAuthorized() which checks for a verified profile.
+  // Simplified query: Load all notifications for this user, sorted by time.
+  // We only initiate when the panel is open and user is verified to avoid permission errors.
   const notificationsQuery = useMemoFirebase(() => {
-    // Strengthened guard: specifically ensure user and authorized profile exist and panel is open
     if (!open || !user?.uid || !profile || profile.disabled === true) return null;
     
     return query(
@@ -29,7 +28,7 @@ export function NotificationCenter() {
       orderBy('timestamp', 'desc'),
       limit(50)
     );
-  }, [db, user, profile, open]);
+  }, [db, user?.uid, profile, open]);
 
   const { data: notifications, isLoading } = useCollection(notificationsQuery);
   const unreadCount = notifications?.filter(n => !n.read).length || 0;
@@ -55,6 +54,8 @@ export function NotificationCenter() {
       case 'contact_request': return <Briefcase className="w-4 h-4 text-primary" />;
       case 'contact_accepted': return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
       case 'message': return <MessageSquare className="w-4 h-4 text-accent" />;
+      case 'system': return <ShieldAlert className="w-4 h-4 text-destructive" />;
+      case 'delete_blocked': return <AlertTriangle className="w-4 h-4 text-amber-500" />;
       default: return <Sparkles className="w-4 h-4 text-amber-500" />;
     }
   };

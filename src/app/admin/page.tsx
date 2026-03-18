@@ -69,7 +69,6 @@ function AdminDashboardContent() {
   const { toast } = useToast();
   const [processingStale, setProcessingStale] = useState(false);
 
-  // Strengthened guards: only run if user is authenticated and is a verified admin
   const usersQuery = useMemoFirebase(() => {
     if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
     return query(collection(db, 'users'), where('disabled', 'in', [true, false]), limit(500));
