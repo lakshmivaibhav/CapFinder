@@ -5,7 +5,7 @@ import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, limit, doc, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -85,7 +85,7 @@ export default function DashboardPage() {
 
     setResolving(pitchId);
     try {
-      // 1. Delete Interest document
+      // 1. Delete Interest documents
       const intSnap = await getDocs(query(
         collection(db, 'interests'), 
         where('investorId', '==', user.uid), 
@@ -93,7 +93,7 @@ export default function DashboardPage() {
       ));
       intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
 
-      // 2. Delete Connection (Contact Request) document
+      // 2. Delete Connection (Contact Request) documents
       const reqSnap = await getDocs(query(
         collection(db, 'contactRequests'), 
         where('senderId', '==', user.uid), 
@@ -101,7 +101,7 @@ export default function DashboardPage() {
       ));
       reqSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id)));
 
-      // 3. Remove chat messages for this pitch
+      // 3. Remove chat messages for this pitch between these users
       const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitchId)));
       msgsSnap.docs.forEach(d => {
         const m = d.data();
@@ -111,8 +111,8 @@ export default function DashboardPage() {
       });
 
       toast({ title: "Connection resolved successfully", description: "All records for this pitch have been cleared." });
-    } catch (e) {
-      toast({ variant: "destructive", title: "Error", description: "Failed to resolve connection." });
+    } catch (e: any) {
+      toast({ variant: "destructive", title: "Resolve failed", description: e.message || "Failed to clear connection records." });
     } finally {
       setResolving(null);
     }
@@ -268,6 +268,7 @@ export default function DashboardPage() {
                             className="h-8 text-[10px] text-amber-600 hover:bg-amber-50 z-10"
                             onClick={(e) => {
                               e.preventDefault();
+                              e.stopPropagation();
                               handleResolveConnection(pitch.id, pitch.ownerId, pitch.startupName);
                             }}
                             disabled={resolving === pitch.id}

@@ -95,7 +95,11 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
     toast({ title: "Contact Request Sent", description: "The startup will review your request shortly." });
   };
 
-  const handleResolveConnection = async () => {
+  const handleResolveConnection = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!user || !pitch || !isInvestor) return;
     if (!confirm("This will permanently remove your connection, messages, and interest for this pitch. Proceed?")) return;
 
@@ -127,8 +131,8 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       });
 
       toast({ title: "Connection resolved successfully", description: "All records for this pitch have been cleared." });
-    } catch (error) {
-      toast({ variant: "destructive", title: "Error", description: "Could not fully resolve connection." });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Resolve failed", description: error.message || "Could not fully resolve connection." });
     } finally {
       setResolving(false);
     }
@@ -163,7 +167,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
         });
         toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({ variant: "destructive", title: "Error", description: "Could not verify pitch status." });
     } finally {
       setChecking(false);
@@ -209,7 +213,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                              variant="outline" 
                              size="sm" 
                              className="text-amber-600 border-amber-200 hover:bg-amber-50"
-                             onClick={handleResolveConnection}
+                             onClick={(e) => handleResolveConnection(e)}
                              disabled={resolving}
                            >
                              {resolving ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
