@@ -64,12 +64,18 @@ export default function DashboardPage() {
     return query(collection(db, 'favorites'), where('investorId', '==', user.uid));
   }, [db, user, profile, isInvestor]);
 
+  const investorContactRequestsQuery = useMemoFirebase(() => {
+    if (!user || !profile || !isInvestor || profile.disabled === true) return null;
+    return query(collection(db, 'contactRequests'), where('senderId', '==', user.uid));
+  }, [db, user, profile, isInvestor]);
+
   const { data: startupPitches } = useCollection(startupPitchesQuery);
   const { data: startupInterests } = useCollection(startupInterestsQuery);
   const { data: startupContactRequests } = useCollection(startupContactRequestsQuery);
   const { data: allPitches } = useCollection(allPitchesQuery);
   const { data: investorInterests } = useCollection(investorInterestsQuery);
   const { data: investorFavorites } = useCollection(investorFavoritesQuery);
+  const { data: investorContactRequests } = useCollection(investorContactRequestsQuery);
 
   const pendingRequestsCount = startupContactRequests?.filter(r => r.status === 'pending').length || 0;
 
@@ -79,15 +85,23 @@ export default function DashboardPage() {
 
     setResolving(pitchId);
     try {
-      // 1. Delete Interest
-      const intSnap = await getDocs(query(collection(db, 'interests'), where('investorId', '==', user.uid), where('pitchId', '==', pitchId)));
+      // 1. Delete Interest document
+      const intSnap = await getDocs(query(
+        collection(db, 'interests'), 
+        where('investorId', '==', user.uid), 
+        where('pitchId', '==', pitchId)
+      ));
       intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
 
-      // 2. Delete Contact Request
-      const reqSnap = await getDocs(query(collection(db, 'contactRequests'), where('senderId', '==', user.uid), where('pitchId', '==', pitchId)));
+      // 2. Delete Connection (Contact Request) document
+      const reqSnap = await getDocs(query(
+        collection(db, 'contactRequests'), 
+        where('senderId', '==', user.uid), 
+        where('pitchId', '==', pitchId)
+      ));
       reqSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id)));
 
-      // 3. Delete Messages
+      // 3. Remove chat messages for this pitch
       const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitchId)));
       msgsSnap.docs.forEach(d => {
         const m = d.data();
@@ -96,7 +110,7 @@ export default function DashboardPage() {
         }
       });
 
-      toast({ title: "Connection Resolved", description: "All records for this pitch have been cleared." });
+      toast({ title: "Connection resolved successfully", description: "All records for this pitch have been cleared." });
     } catch (e) {
       toast({ variant: "destructive", title: "Error", description: "Failed to resolve connection." });
     } finally {
@@ -236,37 +250,47 @@ export default function DashboardPage() {
 
           <TabsContent value="primary">
             <div className="grid md:grid-cols-3 gap-6">
-              {(isStartup ? startupPitches : allPitches)?.map((pitch) => (
-                <Card key={pitch.id} className="relative group overflow-hidden">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <Badge variant="outline">{pitch.industry}</Badge>
-                      {isInvestor && (
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-8 text-[10px] text-amber-600 hover:bg-amber-50"
-                          onClick={() => handleResolveConnection(pitch.id, pitch.ownerId, pitch.startupName)}
-                          disabled={resolving === pitch.id}
-                        >
-                          {resolving === pitch.id ? <Loader2 className="animate-spin w-3 h-3" /> : <Zap className="w-3 h-3 mr-1" />}
-                          Resolve
-                        </Button>
-                      )}
-                    </div>
-                    <CardTitle className="text-lg font-bold">{pitch.startupName}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{pitch.description}</p>
-                    <div className="mt-4 flex justify-between items-center text-sm">
-                      <span className="font-bold text-primary">${pitch.fundingNeeded?.toLocaleString()}</span>
-                      <Link href={`/pitches/${pitch.id}`}>
-                        <Button variant="ghost" size="sm" className="gap-1">View <ArrowRight className="w-3 h-3" /></Button>
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {(isStartup ? startupPitches : allPitches)?.map((pitch) => {
+                const hasActiveConnection = isInvestor && (
+                  investorInterests?.some(i => i.pitchId === pitch.id) || 
+                  investorContactRequests?.some(r => r.pitchId === pitch.id)
+                );
+                
+                return (
+                  <Card key={pitch.id} className="relative group overflow-hidden">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <Badge variant="outline">{pitch.industry}</Badge>
+                        {hasActiveConnection && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 text-[10px] text-amber-600 hover:bg-amber-50 z-10"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleResolveConnection(pitch.id, pitch.ownerId, pitch.startupName);
+                            }}
+                            disabled={resolving === pitch.id}
+                          >
+                            {resolving === pitch.id ? <Loader2 className="animate-spin w-3 h-3" /> : <Zap className="w-3 h-3 mr-1" />}
+                            Resolve
+                          </Button>
+                        )}
+                      </div>
+                      <CardTitle className="text-lg font-bold">{pitch.startupName}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{pitch.description}</p>
+                      <div className="mt-4 flex justify-between items-center text-sm">
+                        <span className="font-bold text-primary">${pitch.fundingNeeded?.toLocaleString()}</span>
+                        <Link href={`/pitches/${pitch.id}`}>
+                          <Button variant="ghost" size="sm" className="gap-1">View <ArrowRight className="w-3 h-3" /></Button>
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </TabsContent>
 

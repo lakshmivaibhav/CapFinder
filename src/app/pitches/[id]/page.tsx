@@ -101,15 +101,23 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
 
     setResolving(true);
     try {
-      // 1. Delete Interests
-      if (interests) {
-        interests.forEach(i => deleteDocumentNonBlocking(doc(db, 'interests', i.id)));
-      }
-      // 2. Delete Contact Requests
-      if (contactRequests) {
-        contactRequests.forEach(r => deleteDocumentNonBlocking(doc(db, 'contactRequests', r.id)));
-      }
-      // 3. Delete Messages
+      // 1. Delete Interests for this pitch and user
+      const intSnap = await getDocs(query(
+        collection(db, 'interests'), 
+        where('investorId', '==', user.uid), 
+        where('pitchId', '==', pitch.id)
+      ));
+      intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
+
+      // 2. Delete Connection (Contact Request) document
+      const reqSnap = await getDocs(query(
+        collection(db, 'contactRequests'), 
+        where('senderId', '==', user.uid), 
+        where('pitchId', '==', pitch.id)
+      ));
+      reqSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id)));
+
+      // 3. Remove all chat messages for this pitch between these users
       const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
       msgsSnap.docs.forEach(d => {
         const m = d.data();
@@ -117,7 +125,8 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
           deleteDocumentNonBlocking(doc(db, 'messages', d.id));
         }
       });
-      toast({ title: "Connection Resolved", description: "All records for this pitch have been cleared." });
+
+      toast({ title: "Connection resolved successfully", description: "All records for this pitch have been cleared." });
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "Could not fully resolve connection." });
     } finally {
@@ -195,7 +204,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                     )}
                     {isInvestor && (
                       <div className="flex items-center gap-2">
-                         {isInterested && (
+                         {(isInterested || contactRequest) && (
                            <Button 
                              variant="outline" 
                              size="sm" 
