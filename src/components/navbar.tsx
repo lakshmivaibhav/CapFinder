@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -10,7 +11,6 @@ import { collection, query, where } from 'firebase/firestore';
 import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, MessageSquare, Inbox, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { NotificationCenter } from '@/components/notification-center';
 
 export function Navbar() {
   const { user, profile, loading } = useAuth();
@@ -25,7 +25,6 @@ export function Navbar() {
   };
 
   const unreadMessagesQuery = useMemoFirebase(() => {
-    // Strengthened guard: ensure user and profile are fully resolved before querying
     if (!user?.uid || !profile?.role || profile.disabled === true) return null;
     return query(
       collection(db, 'messages'),
@@ -38,7 +37,6 @@ export function Navbar() {
   const unreadCount = unreadMessages?.length || 0;
 
   const pendingRequestsQuery = useMemoFirebase(() => {
-    // Strengthened guard: ensure user and profile are fully resolved before querying
     if (!user?.uid || !profile?.role || profile.disabled === true) return null;
     return query(
       collection(db, 'contactRequests'),
@@ -119,7 +117,6 @@ export function Navbar() {
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
         ) : (
           <>
-            {profile && profile.role && profile.disabled === false && <NotificationCenter />}
             <div className="h-8 w-[1px] bg-border mx-1 hidden sm:block" />
             {profile?.role === 'startup' && (
               <Link href="/pitches/new" className="hidden sm:block">

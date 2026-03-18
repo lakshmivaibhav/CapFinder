@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -41,7 +42,7 @@ service cloud.firestore {
     }
 
     match /pitches/{pitchId} {
-      allow read: if isSignedIn(); // Broaden read for authorized exploration
+      allow read: if isSignedIn();
       allow create: if isAuthorized() && (getProfile().get('role', '') == 'startup' || isAdmin()) && request.resource.data.ownerId == request.auth.uid;
       allow update: if isAuthorized() && (resource.data.ownerId == request.auth.uid || isAdmin());
       allow delete: if isAuthorized() && (resource.data.ownerId == request.auth.uid || isAdmin());
@@ -105,15 +106,6 @@ service cloud.firestore {
       );
       
       allow delete: if isAdmin();
-    }
-
-    match /notifications/{notificationId} {
-      // Relax rules to allow users to see their own notifications without full profile synchronization.
-      allow list: if isSignedIn() && (request.query.filters.userId == request.auth.uid || isAdmin());
-      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     match /logs/{logId} {

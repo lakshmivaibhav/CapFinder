@@ -229,21 +229,6 @@
       },
       "required": ["senderId", "receiverId", "pitchId", "text", "timestamp", "read"]
     },
-    "Notification": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Notification",
-      "type": "object",
-      "description": "A system notification for a user.",
-      "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "type": { "type": "string" },
-        "text": { "type": "string" },
-        "read": { "type": "boolean" },
-        "timestamp": { "type": "string", "format": "date-time" }
-      },
-      "required": ["userId", "type", "text", "read", "timestamp"]
-    },
     "Log": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Log",
@@ -342,16 +327,6 @@
             "$ref": "#/backend/entities/Message"
           },
           "description": "Stores private messages between partners."
-        }
-      },
-      {
-        "path": "/notifications/{notificationId}",
-        "definition": {
-          "entityName": "Notification",
-          "schema": {
-            "$ref": "#/backend/entities/Notification"
-          },
-          "description": "User notifications."
         }
       },
       {
