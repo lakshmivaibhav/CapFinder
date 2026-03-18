@@ -7,6 +7,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Optimized profile fetch: single get() call
     function getProfile() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
@@ -16,7 +17,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && profileExists() && getProfile().get('role', '') == 'admin';
+      return isSignedIn() && profileExists() && getProfile().role == 'admin';
     }
 
     function isAuthorized() {
@@ -24,7 +25,7 @@ service cloud.firestore {
     }
 
     function hasRole(role) {
-      return isAuthorized() && getProfile().get('role', '') == role;
+      return isAuthorized() && getProfile().role == role;
     }
 
     function isContactAccepted(senderId, receiverId, pitchId) {
@@ -42,7 +43,7 @@ service cloud.firestore {
 
     match /pitches/{pitchId} {
       allow read: if isAuthorized();
-      allow create: if isAuthorized() && (getProfile().get('role', '') == 'startup' || getProfile().get('role', '') == 'admin') && request.resource.data.ownerId == request.auth.uid;
+      allow create: if isAuthorized() && (getProfile().role == 'startup' || getProfile().role == 'admin') && request.resource.data.ownerId == request.auth.uid;
       allow update: if isAuthorized() && (resource.data.ownerId == request.auth.uid || isAdmin());
       allow delete: if isAuthorized() && (resource.data.ownerId == request.auth.uid || isAdmin());
     }
@@ -53,13 +54,13 @@ service cloud.firestore {
         resource.data.startupOwnerId == request.auth.uid ||
         isAdmin()
       );
-      allow create: if isAuthorized() && (getProfile().get('role', '') == 'investor' || getProfile().get('role', '') == 'admin') && request.resource.data.investorId == request.auth.uid;
+      allow create: if isAuthorized() && (getProfile().role == 'investor' || getProfile().role == 'admin') && request.resource.data.investorId == request.auth.uid;
       allow delete: if isAuthorized() && (resource.data.investorId == request.auth.uid || isAdmin());
     }
 
     match /favorites/{favoriteId} {
       allow read: if isAuthorized() && (resource.data.investorId == request.auth.uid || isAdmin());
-      allow create: if isAuthorized() && (getProfile().get('role', '') == 'investor' || getProfile().get('role', '') == 'admin') && request.resource.data.investorId == request.auth.uid;
+      allow create: if isAuthorized() && (getProfile().role == 'investor' || getProfile().role == 'admin') && request.resource.data.investorId == request.auth.uid;
       allow delete: if isAuthorized() && (resource.data.investorId == request.auth.uid || isAdmin());
     }
 
@@ -69,7 +70,7 @@ service cloud.firestore {
         resource.data.receiverId == request.auth.uid ||
         isAdmin()
       );
-      allow create: if isAuthorized() && (getProfile().get('role', '') == 'investor' || getProfile().get('role', '') == 'admin') && request.resource.data.senderId == request.auth.uid;
+      allow create: if isAuthorized() && (getProfile().role == 'investor' || getProfile().role == 'admin') && request.resource.data.senderId == request.auth.uid;
       allow update: if isAuthorized() && (
         (resource.data.receiverId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])) ||
         isAdmin()
@@ -98,8 +99,9 @@ service cloud.firestore {
     }
 
     match /deleteRequests/{requestId} {
-      // Prioritize admin access to avoid query evaluation conflicts with per-document owner rules
-      allow read: if isAdmin() || (isAuthorized() && resource.data.userId == request.auth.uid);
+      // Explicitly split list and get to handle admin collection queries vs owner individual reads
+      allow list: if isAdmin();
+      allow get: if isAdmin() || (isAuthorized() && resource.data.userId == request.auth.uid);
       allow create: if isAuthorized() && request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin();
       allow delete: if isAdmin();
