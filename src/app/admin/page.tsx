@@ -46,6 +46,7 @@ export default function AdminDashboardPage() {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         const userData = userDoc.data();
         
+        // Ensure exact string match for 'admin'
         if (userDoc.exists() && userData?.role === 'admin') {
           setIsVerifiedAdmin(true);
         } else {
@@ -57,6 +58,7 @@ export default function AdminDashboardPage() {
           router.push('/dashboard');
         }
       } catch (error) {
+        console.error("Admin Verification Error:", error);
         router.push('/dashboard');
       } finally {
         setVerifying(false);
@@ -83,8 +85,7 @@ export default function AdminDashboardPage() {
 
 /**
  * AdminDashboardContent - Phase 2: Administrative Content
- * This component is only rendered after Phase 1 confirmation. All hooks for sensitive
- * data (pitches, logs, deleteRequests, etc.) are safely initialized here.
+ * This component is only rendered after Phase 1 confirmation.
  */
 function AdminDashboardContent() {
   const { user } = useAuth();
@@ -97,8 +98,12 @@ function AdminDashboardContent() {
   const pitchesQuery = useMemoFirebase(() => query(collection(db, 'pitches'), limit(500)), [db]);
   const requestsQuery = useMemoFirebase(() => query(collection(db, 'contactRequests'), limit(500)), [db]);
   const messagesQuery = useMemoFirebase(() => query(collection(db, 'messages'), limit(500)), [db]);
+  
+  // Use a simpler query for logs and requests during initial stabilization
   const logsQuery = useMemoFirebase(() => query(collection(db, 'logs'), orderBy('timestamp', 'desc'), limit(100)), [db]);
-  const deleteRequestsQuery = useMemoFirebase(() => query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), orderBy('timestamp', 'desc')), [db]);
+  
+  // Simplified query to avoid immediate requirement for complex composite indexes if not yet created
+  const deleteRequestsQuery = useMemoFirebase(() => query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), limit(100)), [db]);
 
   const { data: allUsers, isLoading: loadingUsers } = useCollection(usersQuery);
   const { data: allPitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
