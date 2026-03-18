@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useState } from 'react';
@@ -9,7 +8,7 @@ import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, MessageSquare, TrendingUp, Globe, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ShieldCheck, ExternalLink, DollarSign, Building2, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, MessageSquare, TrendingUp, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, ExternalLink, DollarSign, Building2, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
@@ -67,14 +66,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       timestamp: serverTimestamp(),
     });
 
-    addDocumentNonBlocking(collection(db, 'logs'), {
-      userId: user.uid,
-      action: 'interest_registered',
-      targetId: pitch.id,
-      timestamp: serverTimestamp(),
-      details: `Investor registered interest in ${pitch.startupName}`
-    });
-
     toast({ title: "Interest Registered", description: `The founders of ${pitch.startupName} have been notified.` });
   };
 
@@ -114,14 +105,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       text: `New contact request for ${pitch.startupName} from ${user.email}`,
       read: false,
       timestamp: serverTimestamp(),
-    });
-
-    addDocumentNonBlocking(collection(db, 'logs'), {
-      userId: user.uid,
-      action: 'contact_request_sent',
-      targetId: pitch.id,
-      timestamp: serverTimestamp(),
-      details: `Contact request sent to founder of ${pitch.startupName}`
     });
 
     toast({ title: "Contact Request Sent", description: "The startup will review your request shortly." });
@@ -173,14 +156,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
           status: 'pending',
           timestamp: serverTimestamp(),
           details: `Startup owner requested deletion of pitch: ${pitch.startupName}`
-        });
-        
-        addDocumentNonBlocking(collection(db, 'logs'), {
-          userId: user.uid,
-          action: 'delete_request_created',
-          targetId: pitch.id,
-          timestamp: serverTimestamp(),
-          details: `Deletion request submitted for pitch ${pitch.startupName}`
         });
 
         toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });

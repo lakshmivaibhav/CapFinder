@@ -1,9 +1,8 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, serverTimestamp, doc, addDoc } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, doc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Navbar } from '@/components/navbar';
@@ -11,10 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Send, MessageSquare, Clock, CheckCheck, User } from 'lucide-react';
+import { Loader2, Send, MessageSquare, Clock, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import Link from 'next/link';
 
 export default function MessagesPage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -93,14 +91,6 @@ export default function MessagesPage() {
       text: `New message for ${selectedConnection.startupName} from ${user.email}`,
       read: false,
       timestamp: serverTimestamp(),
-    });
-
-    addDocumentNonBlocking(collection(db, 'logs'), {
-      userId: user.uid,
-      action: 'message_sent',
-      targetId: selectedConnection.pitchId,
-      timestamp: serverTimestamp(),
-      details: `Private message sent between partners`
     });
 
     setMessageText('');

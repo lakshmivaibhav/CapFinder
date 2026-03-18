@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -82,18 +81,10 @@ export default function NewPitchPage() {
     setLoading(true);
     
     try {
-      const pitchRef = await addDocumentNonBlocking(collection(db, 'pitches'), {
+      await addDocumentNonBlocking(collection(db, 'pitches'), {
         ...formData,
         ownerId: user.uid,
         createdAt: serverTimestamp(),
-      });
-
-      addDocumentNonBlocking(collection(db, 'logs'), {
-        userId: user.uid,
-        action: 'pitch_created',
-        targetId: pitchRef?.id || 'unknown',
-        timestamp: serverTimestamp(),
-        details: `New pitch created for ${formData.startupName}`
       });
 
       toast({ title: "Pitch posted!", description: "Investors can now view your proposal in the marketplace." });
