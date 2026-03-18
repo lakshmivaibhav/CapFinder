@@ -18,9 +18,8 @@ export function NotificationCenter() {
   const [open, setOpen] = useState(false);
 
   // Load all notifications for this user, strictly filtered by userId and deferred until panel open.
-  // reinforced guard: ensure user and authorized profile exist before querying
   const notificationsQuery = useMemoFirebase(() => {
-    // CRITICAL: Disable global background listening. Query only when open.
+    // CRITICAL: Disable global background listening. Query only when open and authorized.
     if (!open || !user?.uid || !profile) return null;
     
     return query(
