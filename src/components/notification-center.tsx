@@ -17,8 +17,8 @@ export function NotificationCenter() {
   const db = useFirestore();
   const [open, setOpen] = useState(false);
 
-  // Simplified query: Load all notifications for this user, sorted by time.
-  // We only initiate when the panel is open and user is verified to avoid permission errors.
+  // Load all notifications for this user, sorted by time.
+  // The query only runs when the panel is open AND the user/profile are authorized.
   const notificationsQuery = useMemoFirebase(() => {
     if (!open || !user?.uid || !profile || profile.disabled === true) return null;
     
