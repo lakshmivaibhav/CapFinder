@@ -20,7 +20,8 @@ export function NotificationCenter() {
   // CRITICAL: Load notifications ONLY when the panel is open to avoid background permission errors.
   // Rule requires isAuthorized() which checks for a verified profile.
   const notificationsQuery = useMemoFirebase(() => {
-    if (!open || !user || !profile || profile.disabled === true) return null;
+    // Strengthened guard: specifically ensure user and authorized profile exist and panel is open
+    if (!open || !user?.uid || !profile || profile.disabled === true) return null;
     
     return query(
       collection(db, 'notifications'),

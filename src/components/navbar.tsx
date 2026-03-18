@@ -25,7 +25,8 @@ export function Navbar() {
   };
 
   const unreadMessagesQuery = useMemoFirebase(() => {
-    if (!user || !profile || !profile.role || profile.disabled === true) return null;
+    // Strengthened guard: ensure user and profile are fully resolved before querying
+    if (!user?.uid || !profile?.role || profile.disabled === true) return null;
     return query(
       collection(db, 'messages'),
       where('receiverId', '==', user.uid),
@@ -37,7 +38,8 @@ export function Navbar() {
   const unreadCount = unreadMessages?.length || 0;
 
   const pendingRequestsQuery = useMemoFirebase(() => {
-    if (!user || !profile || !profile.role || profile.disabled === true) return null;
+    // Strengthened guard: ensure user and profile are fully resolved before querying
+    if (!user?.uid || !profile?.role || profile.disabled === true) return null;
     return query(
       collection(db, 'contactRequests'),
       where('receiverId', '==', user.uid),

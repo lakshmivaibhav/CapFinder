@@ -69,28 +69,29 @@ function AdminDashboardContent() {
   const { toast } = useToast();
   const [processingStale, setProcessingStale] = useState(false);
 
+  // Strengthened guards: only run if user is authenticated and is a verified admin
   const usersQuery = useMemoFirebase(() => {
-    if (!user || !profile || profile.role !== 'admin' || profile.disabled === true) return null;
+    if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
     return query(collection(db, 'users'), where('disabled', 'in', [true, false]), limit(500));
   }, [db, user, profile]);
 
   const pitchesQuery = useMemoFirebase(() => {
-    if (!user || !profile || profile.role !== 'admin' || profile.disabled === true) return null;
+    if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
     return query(collection(db, 'pitches'), limit(500));
   }, [db, user, profile]);
 
   const requestsQuery = useMemoFirebase(() => {
-    if (!user || !profile || profile.role !== 'admin' || profile.disabled === true) return null;
+    if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
     return query(collection(db, 'contactRequests'), limit(500));
   }, [db, user, profile]);
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!user || !profile || profile.role !== 'admin' || profile.disabled === true) return null;
+    if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
     return query(collection(db, 'messages'), limit(500));
   }, [db, user, profile]);
   
   const deleteRequestsQuery = useMemoFirebase(() => {
-    if (!user || !profile || profile.role !== 'admin' || profile.disabled === true) return null;
+    if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
     return query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), limit(100));
   }, [db, user, profile]);
 
@@ -254,7 +255,7 @@ function AdminDashboardContent() {
                       <TableHead>Startup</TableHead>
                       <TableHead>Goal</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
+                    </TableHeader>
                   </TableHeader>
                   <TableBody>
                     {loadingPitches ? (
