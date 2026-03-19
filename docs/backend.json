@@ -93,7 +93,11 @@
         },
         "industry": {
           "type": "string",
-          "description": "The industry or sector in which the startup primarily operates."
+          "description": "The legacy industry field (text format)."
+        },
+        "category": {
+          "type": "string",
+          "description": "The standardized category of the startup (e.g., AI, Fintech, SaaS)."
         },
         "contactEmail": {
           "type": "string",
@@ -112,7 +116,6 @@
         "startupName",
         "description",
         "fundingNeeded",
-        "industry",
         "contactEmail",
         "postedDate"
       ]
@@ -150,7 +153,7 @@
         },
         "industry": {
           "type": "string",
-          "description": "The industry of the startup (denormalized for UI)."
+          "description": "The industry/category of the startup (denormalized for UI)."
         },
         "timestamp": {
           "type": "string",
@@ -190,7 +193,7 @@
         },
         "industry": {
           "type": "string",
-          "description": "Denormalized industry for display."
+          "description": "Denormalized industry/category for display."
         },
         "timestamp": {
           "type": "string",

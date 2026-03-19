@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -16,6 +17,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+const CATEGORIES = [
+  "AI",
+  "Fintech",
+  "SaaS",
+  "Health",
+  "EdTech",
+  "Web3",
+  "Ecommerce",
+  "Robotics",
+  "Gaming",
+  "Other"
+];
+
 export default function PitchesFeedPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
   const db = useFirestore();
@@ -23,7 +37,7 @@ export default function PitchesFeedPage() {
   const { toast } = useToast();
   
   const [search, setSearch] = useState('');
-  const [industryFilter, setIndustryFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [fundingFilter, setFundingFilter] = useState('all');
 
   useEffect(() => {
@@ -74,11 +88,11 @@ export default function PitchesFeedPage() {
   const favoritePitchIds = userFavoritesData?.map(f => f.pitchId) || [];
   const contactRequests = userContactRequestsData || [];
 
-  const industries = Array.from(new Set(pitches?.map(p => p.industry) || [])).filter(Boolean);
   const filteredPitches = pitches?.filter(p => {
     const searchLower = search.toLowerCase();
-    const matchesSearch = (p.startupName?.toLowerCase() || "").includes(searchLower) || (p.description?.toLowerCase() || "").includes(searchLower) || (p.industry?.toLowerCase() || "").includes(searchLower);
-    const matchesIndustry = industryFilter === 'all' || p.industry === industryFilter;
+    const pCategory = p.category || p.industry || 'Other';
+    const matchesSearch = (p.startupName?.toLowerCase() || "").includes(searchLower) || (p.description?.toLowerCase() || "").includes(searchLower) || (pCategory.toLowerCase()).includes(searchLower);
+    const matchesCategory = categoryFilter === 'all' || pCategory === categoryFilter;
     const fundingVal = parseFloat(p.fundingNeeded?.toString().replace(/,/g, '') || "0");
     const matchesFunding = fundingFilter === 'all' || (() => {
       if (fundingFilter === '0-100k') return fundingVal <= 100000;
@@ -87,7 +101,7 @@ export default function PitchesFeedPage() {
       if (fundingFilter === '1m-plus') return fundingVal > 1000000;
       return true;
     })();
-    return matchesSearch && matchesIndustry && matchesFunding;
+    return matchesSearch && matchesCategory && matchesFunding;
   }) || [];
 
   const filteredInvestors = investors?.filter(i => {
@@ -106,7 +120,7 @@ export default function PitchesFeedPage() {
         pitchId: pitch.id,
         investorId: user.uid,
         startupName: pitch.startupName,
-        industry: pitch.industry,
+        industry: pitch.category || pitch.industry || 'Other',
         timestamp: serverTimestamp(),
       });
       toast({ title: "Pitch saved" });
@@ -121,7 +135,7 @@ export default function PitchesFeedPage() {
       investorEmail: user.email,
       startupOwnerId: pitch.ownerId,
       startupName: pitch.startupName,
-      industry: pitch.industry,
+      industry: pitch.category || pitch.industry || 'Other',
       timestamp: serverTimestamp(),
     });
     toast({ title: "Interest shown!" });
@@ -188,7 +202,7 @@ export default function PitchesFeedPage() {
               <div className="md:col-span-5 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
                 <Input 
-                  placeholder={isStartup ? "Filter investors..." : "Search ventures, industry, tech..."}
+                  placeholder={isStartup ? "Filter investors..." : "Search ventures, category, tech..."}
                   className="pl-12 h-14 bg-white/80 border-none shadow-inner rounded-2xl text-lg font-medium placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 transition-all"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -198,14 +212,14 @@ export default function PitchesFeedPage() {
               {!isStartup && (
                 <>
                   <div className="md:col-span-3">
-                    <Select value={industryFilter} onValueChange={setIndustryFilter}>
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                       <SelectTrigger className="h-14 bg-white/80 border-none shadow-inner rounded-2xl font-bold px-6 focus:ring-2 focus:ring-primary/20 transition-all">
-                        <SelectValue placeholder="Industry" />
+                        <SelectValue placeholder="Category" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl shadow-2xl">
-                        <SelectItem value="all">Global (All)</SelectItem>
-                        {industries.sort().map(ind => (
-                          <SelectItem key={ind as string} value={ind as string}>{ind as string}</SelectItem>
+                        <SelectItem value="all">All Categories</SelectItem>
+                        {CATEGORIES.map(cat => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -228,7 +242,7 @@ export default function PitchesFeedPage() {
               )}
 
               <div className="md:col-span-1">
-                <Button variant="ghost" size="icon" className="h-14 w-full rounded-2xl hover:bg-white transition-all active:scale-95" onClick={() => { setSearch(''); setIndustryFilter('all'); setFundingFilter('all'); }}>
+                <Button variant="ghost" size="icon" className="h-14 w-full rounded-2xl hover:bg-white transition-all active:scale-95" onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); }}>
                   <FilterX className="w-6 h-6 text-muted-foreground" />
                 </Button>
               </div>
@@ -255,7 +269,7 @@ export default function PitchesFeedPage() {
                     <CardHeader className="space-y-5 relative z-10 pointer-events-none p-8">
                       <div className="flex justify-between items-start pointer-events-auto">
                         <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-4 py-1.5 font-black uppercase tracking-widest text-[9px] rounded-lg">
-                          {pitch.industry}
+                          {pitch.category || pitch.industry || 'Other'}
                         </Badge>
                         {isInvestor && (
                           <Button 
@@ -311,7 +325,7 @@ export default function PitchesFeedPage() {
                 </div>
                 <h3 className="text-3xl font-black mb-4">No matching ventures</h3>
                 <p className="text-muted-foreground text-lg mb-8 max-w-md">Try refining your discovery filters or search terms to see more opportunities.</p>
-                <Button variant="outline" size="lg" className="rounded-2xl px-10 border-2 font-bold transition-all hover:bg-primary/5 active:scale-95" onClick={() => { setSearch(''); setIndustryFilter('all'); setFundingFilter('all'); }}>Reset Filters</Button>
+                <Button variant="outline" size="lg" className="rounded-2xl px-10 border-2 font-bold transition-all hover:bg-primary/5 active:scale-95" onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); }}>Reset Filters</Button>
               </div>
             )}
           </TabsContent>

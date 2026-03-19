@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useState, useMemo } from 'react';
@@ -55,7 +56,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       investorEmail: user.email,
       startupOwnerId: pitch.ownerId,
       startupName: pitch.startupName,
-      industry: pitch.industry,
+      industry: pitch.category || pitch.industry || 'Other',
       timestamp: serverTimestamp(),
     });
     toast({ title: "Interest Registered", description: `The founders of ${pitch.startupName} have been notified.` });
@@ -72,7 +73,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
         pitchId: pitch.id,
         investorId: user.uid,
         startupName: pitch.startupName,
-        industry: pitch.industry,
+        industry: pitch.category || pitch.industry || 'Other',
         timestamp: serverTimestamp(),
       });
       toast({ title: "Saved to favorites" });
@@ -182,7 +183,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
               <CardHeader className="p-10 pb-6 space-y-10">
                 <div className="flex items-center justify-between">
                   <Badge className="bg-primary/10 text-primary border-none px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl">
-                    {pitch.industry}
+                    {pitch.category || pitch.industry || 'Other'}
                   </Badge>
                   <div className="flex items-center gap-3">
                     {isOwner && (
@@ -254,7 +255,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                       <Building2 className="w-6 h-6 text-accent" />
                     </div>
                     <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-black">Market Sector</p>
-                    <p className="text-3xl font-black text-foreground">{pitch.industry}</p>
+                    <p className="text-3xl font-black text-foreground">{pitch.category || pitch.industry || 'Other'}</p>
                   </div>
                 </div>
               </CardContent>

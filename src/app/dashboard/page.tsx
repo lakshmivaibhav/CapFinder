@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -127,10 +128,10 @@ export default function DashboardPage() {
     return allPitches
       .map(pitch => {
         let score = 0;
-        const industry = (pitch.industry || '').toLowerCase();
+        const pCategory = (pitch.category || pitch.industry || 'Other').toLowerCase();
         const description = (pitch.description || '').toLowerCase();
         interests.forEach(interest => {
-          if (industry.includes(interest)) score += 10;
+          if (pCategory.includes(interest)) score += 10;
           if (description.includes(interest)) score += 2;
         });
         return { ...pitch, score };
@@ -238,7 +239,7 @@ export default function DashboardPage() {
                 <Link key={pitch.id} href={`/startup/${pitch.id}`}>
                   <Card className="group hover:border-accent border-2 border-transparent transition-all h-full shadow-md hover:shadow-xl rounded-2xl flex flex-col">
                     <CardHeader className="pb-4">
-                      <Badge className="w-fit bg-accent/10 text-accent border-none font-black text-[9px] uppercase tracking-wider mb-2">{pitch.industry}</Badge>
+                      <Badge className="w-fit bg-accent/10 text-accent border-none font-black text-[9px] uppercase tracking-wider mb-2">{pitch.category || pitch.industry || 'Other'}</Badge>
                       <CardTitle className="text-xl font-black group-hover:text-accent transition-colors line-clamp-1">{pitch.startupName}</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1">
@@ -282,7 +283,7 @@ export default function DashboardPage() {
                     <Card key={pitch.id} className="relative group overflow-hidden border-none shadow-md hover:shadow-xl transition-all rounded-2xl flex flex-col">
                       <CardHeader className="pb-4">
                         <div className="flex justify-between items-start mb-2">
-                          <Badge variant="outline" className="border-primary/20 text-primary font-bold uppercase text-[9px] tracking-widest">{pitch.industry}</Badge>
+                          <Badge variant="outline" className="border-primary/20 text-primary font-bold uppercase text-[9px] tracking-widest">{pitch.category || pitch.industry || 'Other'}</Badge>
                           {hasActiveConnection && (
                             <Button 
                               variant="ghost" 

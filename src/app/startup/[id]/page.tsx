@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useState, useMemo } from 'react';
@@ -59,7 +60,7 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
       investorEmail: user.email,
       startupOwnerId: pitch.ownerId,
       startupName: pitch.startupName,
-      industry: pitch.industry,
+      industry: pitch.category || pitch.industry || 'Other',
       timestamp: serverTimestamp(),
     });
     toast({ title: "Interest Registered", description: `The founders of ${pitch.startupName} have been notified.` });
@@ -135,7 +136,7 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
               <CardHeader className="p-10 pb-6 space-y-8">
                 <div className="flex items-center justify-between">
                   <Badge className="bg-primary/10 text-primary border-none px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl">
-                    {pitch.industry}
+                    {pitch.category || pitch.industry || 'Other'}
                   </Badge>
                   {isInvestor && (isInterested || (contactRequest && contactRequest.status === 'accepted')) && (
                     <Button 
@@ -181,7 +182,7 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
                       <Building2 className="w-6 h-6 text-accent" />
                     </div>
                     <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-black">Market Sector</p>
-                    <p className="text-3xl font-black text-foreground">{pitch.industry}</p>
+                    <p className="text-3xl font-black text-foreground">{pitch.category || pitch.industry || 'Other'}</p>
                   </div>
                 </div>
               </CardContent>

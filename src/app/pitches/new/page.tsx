@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -15,6 +16,20 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { refineStartupPitch } from '@/ai/flows/startup-pitch-refinement-assistant';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const CATEGORIES = [
+  "AI",
+  "Fintech",
+  "SaaS",
+  "Health",
+  "EdTech",
+  "Web3",
+  "Ecommerce",
+  "Robotics",
+  "Gaming",
+  "Other"
+];
 
 export default function NewPitchPage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -28,7 +43,7 @@ export default function NewPitchPage() {
     startupName: '',
     description: '',
     fundingNeeded: '',
-    industry: '',
+    category: '',
     contactEmail: '',
   });
 
@@ -56,7 +71,7 @@ export default function NewPitchPage() {
       const result = await refineStartupPitch({
         pitchDescription: formData.description,
         startupName: formData.startupName,
-        industry: formData.industry,
+        industry: formData.category,
         fundingNeeded: formData.fundingNeeded
       });
       setAiResult(result);
@@ -78,11 +93,16 @@ export default function NewPitchPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || (profile?.role !== 'startup' && profile?.role !== 'admin')) return;
+    if (!formData.category) {
+      toast({ variant: "destructive", title: "Selection Required", description: "Please select a venture category." });
+      return;
+    }
     setLoading(true);
     
     try {
       await addDocumentNonBlocking(collection(db, 'pitches'), {
         ...formData,
+        industry: formData.category, // Save both for backward compatibility
         ownerId: user.uid,
         createdAt: serverTimestamp(),
       });
@@ -133,23 +153,27 @@ export default function NewPitchPage() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="startupName">Startup Name</Label>
-                <Input 
+                <input 
                   id="startupName" 
                   required
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.startupName}
                   onChange={(e) => setFormData({...formData, startupName: e.target.value})}
                   placeholder="e.g. InnovateX"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="industry">Industry</Label>
-                <Input 
-                  id="industry" 
-                  required
-                  value={formData.industry}
-                  onChange={(e) => setFormData({...formData, industry: e.target.value})}
-                  placeholder="e.g. Artificial Intelligence"
-                />
+                <Label htmlFor="category">Venture Category</Label>
+                <Select value={formData.category} onValueChange={(val) => setFormData({...formData, category: val})}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -184,9 +208,10 @@ export default function NewPitchPage() {
                 <Input 
                   id="fundingNeeded" 
                   required
+                  type="number"
                   value={formData.fundingNeeded}
                   onChange={(e) => setFormData({...formData, fundingNeeded: e.target.value})}
-                  placeholder="e.g. 1,000,000"
+                  placeholder="e.g. 1000000"
                 />
               </div>
               <div className="space-y-2">
