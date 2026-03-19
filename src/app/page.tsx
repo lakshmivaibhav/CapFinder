@@ -41,6 +41,7 @@ export default function HomePage() {
 
       try {
         // Fetch all stats concurrently but handle errors individually to maximize data visibility
+        // Some collections (like interests/requests) might be restricted by security rules for non-admins
         const [pitchesSnap, usersSnap, verifiedSnap, interestsSnap, requestsSnap] = await Promise.all([
           getDocs(collection(db, 'pitches')).catch(() => null),
           getDocs(collection(db, 'users')).catch(() => null),
