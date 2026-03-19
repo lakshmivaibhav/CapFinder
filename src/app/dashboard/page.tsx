@@ -346,7 +346,7 @@ export default function DashboardPage() {
                       <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-bold uppercase">{interest.industry}</Badge>
                     </CardContent>
                     <CardFooter className="pt-2">
-                      <Link href={isStartup ? `/profile/${interest.investorId}` : `/startup/${interest.pitchId}`} className="w-full">
+                      <Link href={isStartup ? `/investor/${interest.investorId}` : `/startup/${interest.pitchId}`} className="w-full">
                         <Button variant="outline" className="w-full h-11 rounded-xl font-bold border-2 hover:bg-primary/5">View Context</Button>
                       </Link>
                     </CardFooter>

@@ -103,7 +103,7 @@ export default function RequestsPage() {
                         <div className="space-y-1">
                           <h2 className="text-2xl font-black tracking-tight flex items-center gap-3">
                             {req.investorEmail}
-                            <Link href={`/profile/${req.senderId}`}>
+                            <Link href={`/investor/${req.senderId}`}>
                               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-primary/10 hover:text-primary">
                                 <ExternalLink className="w-4 h-4" />
                               </Button>

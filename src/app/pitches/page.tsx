@@ -322,7 +322,7 @@ export default function PitchesFeedPage() {
             ) : filteredInvestors.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredInvestors.map((investor) => (
-                  <Link key={investor.id} href={`/profile/${investor.id}`}>
+                  <Link key={investor.id} href={`/investor/${investor.id}`}>
                     <Card className="group h-full hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white hover:-translate-y-1">
                       <CardHeader className="p-8 pb-4">
                         <div className="flex justify-between items-start mb-6">
