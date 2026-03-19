@@ -1,8 +1,14 @@
+"use client";
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Briefcase, TrendingUp, Users, ShieldCheck, ArrowRight } from 'lucide-react';
+import { useAuth } from '@/components/auth-provider';
 
 export default function HomePage() {
+  const { user } = useAuth();
+  const browseLink = user ? '/pitches' : '/login';
+
   return (
     <div className="flex flex-col min-h-screen">
       <header className="px-6 h-20 flex items-center justify-between border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
@@ -37,9 +43,11 @@ export default function HomePage() {
                   Get Started <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Button size="lg" variant="outline" className="h-14 px-8 text-lg border-primary text-primary hover:bg-primary/5">
-                Browse Pitches
-              </Button>
+              <Link href={browseLink}>
+                <Button size="lg" variant="outline" className="h-14 px-8 text-lg border-primary text-primary hover:bg-primary/5">
+                  Browse Pitches
+                </Button>
+              </Link>
             </div>
           </div>
         </section>

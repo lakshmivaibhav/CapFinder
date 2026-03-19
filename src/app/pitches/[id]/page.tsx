@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useState, useMemo } from 'react';
@@ -105,36 +104,31 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
 
     setResolving(true);
     try {
-      // 1. Delete Interests for this pitch and user (filtered by investorId to avoid index issues)
+      // 1. Delete Interests
       const intSnap = await getDocs(query(
         collection(db, 'interests'), 
+        where('pitchId', '==', pitch.id),
         where('investorId', '==', user.uid)
       ));
       intSnap.docs.forEach(d => {
-        if (d.data().pitchId === pitch.id) {
-          console.log('Resolving interest doc:', d.id);
-          deleteDocumentNonBlocking(doc(db, 'interests', d.id));
-        }
+        deleteDocumentNonBlocking(doc(db, 'interests', d.id));
       });
 
-      // 2. Delete ContactRequest documents (filtered by senderId to avoid index issues)
+      // 2. Delete ContactRequests
       const reqSnap = await getDocs(query(
         collection(db, 'contactRequests'), 
+        where('pitchId', '==', pitch.id),
         where('senderId', '==', user.uid)
       ));
       reqSnap.docs.forEach(d => {
-        if (d.data().pitchId === pitch.id) {
-          console.log('Resolving request doc:', d.id);
-          deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id));
-        }
+        deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id));
       });
 
-      // 3. Remove all chat messages for this pitch between these users
+      // 3. Remove chat messages
       const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
       msgsSnap.docs.forEach(d => {
         const m = d.data();
         if ((m.senderId === user.uid && m.receiverId === pitch.ownerId) || (m.senderId === pitch.ownerId && m.receiverId === user.uid)) {
-          console.log('Resolving message doc:', d.id);
           deleteDocumentNonBlocking(doc(db, 'messages', d.id));
         }
       });
@@ -144,7 +138,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
         description: "Records for this pitch have been cleared." 
       });
     } catch (error: any) {
-      console.error("Resolve error:", error);
       toast({ 
         variant: "destructive", 
         title: "Resolve failed", 

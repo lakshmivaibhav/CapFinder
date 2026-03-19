@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -85,36 +84,34 @@ export default function DashboardPage() {
 
     setResolving(pitchId);
     try {
-      // 1. Delete Interest documents (filtered by investorId to avoid composite index and respect rules)
-      const intSnap = await getDocs(query(
-        collection(db, 'interests'), 
-        where('investorId', '==', user.uid)
-      ));
-      intSnap.docs.forEach(d => {
-        if (d.data().pitchId === pitchId) {
-          console.log('Resolving interest:', d.id);
-          deleteDocumentNonBlocking(doc(db, 'interests', d.id));
-        }
-      });
-
-      // 2. Delete ContactRequest documents (filtered by senderId to avoid composite index and respect rules)
+      // 1. Delete ContactRequest documents (Using loop on filtered results)
       const reqSnap = await getDocs(query(
         collection(db, 'contactRequests'), 
+        where('pitchId', '==', pitchId),
         where('senderId', '==', user.uid)
       ));
       reqSnap.docs.forEach(d => {
-        if (d.data().pitchId === pitchId) {
-          console.log('Resolving contact request:', d.id);
-          deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id));
-        }
+        deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id));
       });
 
-      // 3. Remove chat messages for this pitch between these users
-      const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitchId)));
+      // 2. Delete Interest documents
+      const intSnap = await getDocs(query(
+        collection(db, 'interests'), 
+        where('pitchId', '==', pitchId),
+        where('investorId', '==', user.uid)
+      ));
+      intSnap.docs.forEach(d => {
+        deleteDocumentNonBlocking(doc(db, 'interests', d.id));
+      });
+
+      // 3. Remove chat messages
+      const msgsSnap = await getDocs(query(
+        collection(db, 'messages'), 
+        where('pitchId', '==', pitchId)
+      ));
       msgsSnap.docs.forEach(d => {
         const m = d.data();
         if ((m.senderId === user.uid && m.receiverId === startupOwnerId) || (m.senderId === startupOwnerId && m.receiverId === user.uid)) {
-          console.log('Resolving message:', d.id);
           deleteDocumentNonBlocking(doc(db, 'messages', d.id));
         }
       });
@@ -124,7 +121,6 @@ export default function DashboardPage() {
         description: "Your records for this pitch have been cleared." 
       });
     } catch (e: any) {
-      console.error("Resolve error:", e);
       toast({ 
         variant: "destructive", 
         title: "Resolve failed", 
