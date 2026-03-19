@@ -12,37 +12,37 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
 export function Navbar() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, emailVerified } = useAuth();
   const firebaseAuth = useFirebaseAuth();
   const pathname = usePathname();
   const router = useRouter();
   const db = useFirestore();
 
   const handleLogout = async () => {
-    await signOut(firebaseAuth);
+    await firebaseAuth.signOut();
     router.push('/');
   };
 
   const unreadMessagesQuery = useMemoFirebase(() => {
-    if (!user?.uid || !profile?.role || profile.disabled === true) return null;
+    if (!user?.uid || !profile?.role || profile.disabled === true || !emailVerified) return null;
     return query(
       collection(db, 'messages'),
       where('receiverId', '==', user.uid),
       where('read', '==', false)
     );
-  }, [db, user, profile]);
+  }, [db, user, profile, emailVerified]);
 
   const { data: unreadMessages } = useCollection(unreadMessagesQuery);
   const unreadCount = unreadMessages?.length || 0;
 
   const pendingRequestsQuery = useMemoFirebase(() => {
-    if (!user?.uid || !profile?.role || profile.disabled === true) return null;
+    if (!user?.uid || !profile?.role || profile.disabled === true || !emailVerified) return null;
     return query(
       collection(db, 'contactRequests'),
       where('receiverId', '==', user.uid),
       where('status', '==', 'pending')
     );
-  }, [db, user, profile]);
+  }, [db, user, profile, emailVerified]);
 
   const { data: pendingRequests } = useCollection(pendingRequestsQuery);
   const requestCount = pendingRequests?.length || 0;
@@ -74,7 +74,13 @@ export function Navbar() {
       show: isAdmin 
     },
     { label: 'Account', href: '/profile', icon: User },
-  ];
+  ].filter(item => {
+    // Only show items that are not explicitly hidden for verified/role reasons
+    if (item.show === false) return false;
+    // Hide most items if not email verified
+    if (!emailVerified && item.href !== '/profile' && item.href !== '/dashboard') return false;
+    return true;
+  });
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-white/70 backdrop-blur-xl px-8 h-20 flex items-center justify-between">
@@ -87,7 +93,7 @@ export function Navbar() {
         </Link>
 
         <div className="hidden lg:flex items-center gap-2">
-          {navItems.filter(item => item.show !== false).map((item) => (
+          {navItems.map((item) => (
             <Link key={item.href} href={item.href}>
               <Button
                 variant="ghost"
@@ -118,7 +124,7 @@ export function Navbar() {
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground opacity-20" />
         ) : (
           <>
-            {profile?.role === 'startup' && (
+            {profile?.role === 'startup' && emailVerified && (
               <Link href="/pitches/new" className="hidden sm:block">
                 <Button className="gap-2.5 h-11 px-6 rounded-xl bg-primary shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all font-black uppercase tracking-widest text-[10px]">
                   <PlusCircle className="w-4 h-4" />

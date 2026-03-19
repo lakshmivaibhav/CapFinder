@@ -73,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const reloadUser = async () => {
     if (auth.currentUser) {
       await auth.currentUser.reload();
+      // Force update user state with reloaded instance to pick up emailVerified changes
       setUser({ ...auth.currentUser });
     }
   };
