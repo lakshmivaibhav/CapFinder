@@ -251,7 +251,7 @@ export default function PitchesFeedPage() {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredPitches.map((pitch) => (
                   <Card key={pitch.id} className="flex flex-col group hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white relative hover:-translate-y-1">
-                    <Link href={`/pitches/${pitch.id}`} className="absolute inset-0 z-0" />
+                    <Link href={`/startup/${pitch.id}`} className="absolute inset-0 z-0" />
                     <CardHeader className="space-y-5 relative z-10 pointer-events-none p-8">
                       <div className="flex justify-between items-start pointer-events-auto">
                         <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-4 py-1.5 font-black uppercase tracking-widest text-[9px] rounded-lg">

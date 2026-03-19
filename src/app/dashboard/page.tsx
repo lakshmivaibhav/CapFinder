@@ -235,7 +235,7 @@ export default function DashboardPage() {
             </div>
             <div className="grid md:grid-cols-3 gap-8">
               {recommendedPitches.map((pitch) => (
-                <Link key={pitch.id} href={`/pitches/${pitch.id}`}>
+                <Link key={pitch.id} href={`/startup/${pitch.id}`}>
                   <Card className="group hover:border-accent border-2 border-transparent transition-all h-full shadow-md hover:shadow-xl rounded-2xl flex flex-col">
                     <CardHeader className="pb-4">
                       <Badge className="w-fit bg-accent/10 text-accent border-none font-black text-[9px] uppercase tracking-wider mb-2">{pitch.industry}</Badge>
@@ -309,7 +309,7 @@ export default function DashboardPage() {
                             <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Goal</p>
                             <span className="font-black text-primary text-lg">${pitch.fundingNeeded?.toLocaleString()}</span>
                           </div>
-                          <Link href={`/pitches/${pitch.id}`}>
+                          <Link href={`/startup/${pitch.id}`}>
                             <Button variant="ghost" size="sm" className="gap-2 rounded-full font-bold hover:bg-primary/5">Details <ArrowRight className="w-3 h-3" /></Button>
                           </Link>
                         </div>
@@ -346,7 +346,7 @@ export default function DashboardPage() {
                       <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-bold uppercase">{interest.industry}</Badge>
                     </CardContent>
                     <CardFooter className="pt-2">
-                      <Link href={isStartup ? `/profile/${interest.investorId}` : `/pitches/${interest.pitchId}`} className="w-full">
+                      <Link href={isStartup ? `/profile/${interest.investorId}` : `/startup/${interest.pitchId}`} className="w-full">
                         <Button variant="outline" className="w-full h-11 rounded-xl font-bold border-2 hover:bg-primary/5">View Context</Button>
                       </Link>
                     </CardFooter>
