@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, TrendingUp, Mail, Globe, Sparkles, CheckCircle2, FilterX, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, XCircle, ArrowRight, Users, Building2, User, LayoutGrid } from 'lucide-react';
+import { Loader2, Search, TrendingUp, Mail, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, ArrowRight, Users, LayoutGrid, FilterX, CheckCircle2, Sparkles } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -135,11 +135,13 @@ export default function PitchesFeedPage() {
   const getContactButton = (pitch: any) => {
     if (!isInvestor) return null;
     const request = contactRequests.find(r => r.pitchId === pitch.id);
-    if (!request) return <Button variant="outline" className="flex-1 h-11 rounded-xl border-2 font-bold" onClick={() => handleRequestContact(pitch)}><Mail className="mr-2 w-4 h-4" /> Connect</Button>;
+    if (!request) return <Button variant="outline" className="flex-1 h-11 rounded-xl border-2 font-bold transition-all hover:bg-primary/5 active:scale-95" onClick={() => handleRequestContact(pitch)}><Mail className="mr-2 w-4 h-4" /> Connect</Button>;
     if (request.status === 'pending') return <Button variant="secondary" className="flex-1 h-11 rounded-xl opacity-70 cursor-default" disabled><Clock className="mr-2 w-4 h-4 animate-pulse" /> Pending</Button>;
     if (request.status === 'accepted') return (
       <div className="flex-1 flex gap-2">
-        <Link href={`/messages`} className="flex-1"><Button variant="default" className="w-full h-11 rounded-xl bg-accent hover:bg-accent/90 shadow-md font-bold">Message</Button></Link>
+        <Link href={`/messages`} className="flex-1">
+          <Button variant="default" className="w-full h-11 rounded-xl bg-accent hover:bg-accent/90 shadow-md font-bold transition-all active:scale-95">Message</Button>
+        </Link>
       </div>
     );
     return null;
@@ -162,7 +164,7 @@ export default function PitchesFeedPage() {
             </p>
           </div>
 
-          <Card className="p-8 bg-white/50 backdrop-blur-sm rounded-[2.5rem] shadow-xl border-none ring-1 ring-black/5 space-y-8">
+          <Card className="p-8 bg-white/50 backdrop-blur-sm rounded-[2.5rem] shadow-xl border-none ring-1 ring-black/5 space-y-8 transition-all hover:shadow-2xl">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
                 <Landmark className="w-6 h-6 text-primary" />
@@ -185,7 +187,7 @@ export default function PitchesFeedPage() {
                 <>
                   <div className="md:col-span-3">
                     <Select value={industryFilter} onValueChange={setIndustryFilter}>
-                      <SelectTrigger className="h-14 bg-white/80 border-none shadow-inner rounded-2xl font-bold px-6 focus:ring-2 focus:ring-primary/20">
+                      <SelectTrigger className="h-14 bg-white/80 border-none shadow-inner rounded-2xl font-bold px-6 focus:ring-2 focus:ring-primary/20 transition-all">
                         <SelectValue placeholder="Industry" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl shadow-2xl">
@@ -198,12 +200,12 @@ export default function PitchesFeedPage() {
                   </div>
                   <div className="md:col-span-3">
                     <Select value={fundingFilter} onValueChange={setFundingFilter}>
-                      <SelectTrigger className="h-14 bg-white/80 border-none shadow-inner rounded-2xl font-bold px-6 focus:ring-2 focus:ring-primary/20">
+                      <SelectTrigger className="h-14 bg-white/80 border-none shadow-inner rounded-2xl font-bold px-6 focus:ring-2 focus:ring-primary/20 transition-all">
                         <SelectValue placeholder="Capital Goal" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl shadow-2xl">
                         <SelectItem value="all">Any Amount</SelectItem>
-                        <SelectItem value="0-100k">< $100K</SelectItem>
+                        <SelectItem value="0-100k">{"< $100K"}</SelectItem>
                         <SelectItem value="100k-500k">$100K - $500K</SelectItem>
                         <SelectItem value="500k-1m">$500K - $1M</SelectItem>
                         <SelectItem value="1m-plus">$1M+</SelectItem>
@@ -214,7 +216,7 @@ export default function PitchesFeedPage() {
               )}
 
               <div className="md:col-span-1">
-                <Button variant="ghost" size="icon" className="h-14 w-full rounded-2xl hover:bg-white" onClick={() => { setSearch(''); setIndustryFilter('all'); setFundingFilter('all'); }}>
+                <Button variant="ghost" size="icon" className="h-14 w-full rounded-2xl hover:bg-white transition-all active:scale-95" onClick={() => { setSearch(''); setIndustryFilter('all'); setFundingFilter('all'); }}>
                   <FilterX className="w-6 h-6 text-muted-foreground" />
                 </Button>
               </div>
@@ -223,20 +225,20 @@ export default function PitchesFeedPage() {
         </div>
 
         <Tabs defaultValue={isStartup ? "investors" : "pitches"} className="space-y-10">
-          {isAdmin && (
+          {(isAdmin || (isStartup && isInvestor)) && (
             <TabsList className="bg-muted/50 p-1.5 rounded-2xl h-14 w-fit">
-              <TabsTrigger value="pitches" className="px-10 h-11 rounded-xl text-md font-bold data-[state=active]:shadow-lg">Ventures</TabsTrigger>
-              <TabsTrigger value="investors" className="px-10 h-11 rounded-xl text-md font-bold data-[state=active]:shadow-lg">Investors</TabsTrigger>
+              <TabsTrigger value="pitches" className="px-10 h-11 rounded-xl text-md font-bold data-[state=active]:shadow-lg transition-all">Ventures</TabsTrigger>
+              <TabsTrigger value="investors" className="px-10 h-11 rounded-xl text-md font-bold data-[state=active]:shadow-lg transition-all">Investors</TabsTrigger>
             </TabsList>
           )}
 
-          <TabsContent value="pitches">
+          <TabsContent value="pitches" className="mt-0">
             {loadingPitches ? (
               <div className="flex justify-center p-32"><Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" /></div>
             ) : filteredPitches.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredPitches.map((pitch) => (
-                  <Card key={pitch.id} className="flex flex-col group hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white relative">
+                  <Card key={pitch.id} className="flex flex-col group hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white relative hover:-translate-y-1">
                     <Link href={`/pitches/${pitch.id}`} className="absolute inset-0 z-0" />
                     <CardHeader className="space-y-5 relative z-10 pointer-events-none p-8">
                       <div className="flex justify-between items-start pointer-events-auto">
@@ -244,7 +246,12 @@ export default function PitchesFeedPage() {
                           {pitch.industry}
                         </Badge>
                         {isInvestor && (
-                          <Button variant="ghost" size="icon" className={`h-10 w-10 rounded-full transition-all ${favoritePitchIds.includes(pitch.id) ? 'bg-accent/10 text-accent' : 'text-muted-foreground hover:bg-accent/5 hover:text-accent'}`} onClick={(e) => { e.preventDefault(); handleToggleFavorite(pitch); }}>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className={`h-10 w-10 rounded-full transition-all pointer-events-auto active:scale-90 ${favoritePitchIds.includes(pitch.id) ? 'bg-accent/10 text-accent' : 'text-muted-foreground hover:bg-accent/5 hover:text-accent'}`} 
+                            onClick={(e) => { e.preventDefault(); handleToggleFavorite(pitch); }}
+                          >
                             {favoritePitchIds.includes(pitch.id) ? <BookmarkCheck className="w-6 h-6 fill-current" /> : <Bookmark className="w-6 h-6" />}
                           </Button>
                         )}
@@ -271,9 +278,13 @@ export default function PitchesFeedPage() {
                       </div>
                     </CardContent>
                     {isInvestor && (
-                      <CardFooter className="p-8 pt-0 flex gap-3 relative z-10">
+                      <CardFooter className="p-8 pt-0 flex gap-3 relative z-10 pointer-events-auto">
                         <div className="flex-1">{getContactButton(pitch)}</div>
-                        <Button className={`flex-1 h-11 rounded-xl shadow-lg font-black transition-all ${userInterests.includes(pitch.id) ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' : 'bg-primary hover:bg-primary/90 shadow-primary/20'}`} onClick={() => handleShowInterest(pitch)} disabled={userInterests.includes(pitch.id)}>
+                        <Button 
+                          className={`flex-1 h-11 rounded-xl shadow-lg font-black transition-all active:scale-95 ${userInterests.includes(pitch.id) ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' : 'bg-primary hover:bg-primary/90 shadow-primary/20'}`} 
+                          onClick={() => handleShowInterest(pitch)} 
+                          disabled={userInterests.includes(pitch.id)}
+                        >
                           {userInterests.includes(pitch.id) ? <><CheckCircle2 className="mr-2 w-5 h-5" /> Interested</> : <><Sparkles className="mr-2 w-5 h-5" /> Express Interest</>}
                         </Button>
                       </CardFooter>
@@ -286,26 +297,26 @@ export default function PitchesFeedPage() {
                 <div className="p-8 bg-muted/10 rounded-full mb-8">
                   <Search className="w-16 h-16 text-muted-foreground opacity-30" />
                 </div>
-                <h3 className="text-3xl font-black mb-4">No match found</h3>
-                <p className="text-muted-foreground text-lg mb-8 max-w-md">Try refining your discovery filters or search terms.</p>
-                <Button variant="outline" size="lg" className="rounded-2xl px-10 border-2 font-bold" onClick={() => { setSearch(''); setIndustryFilter('all'); setFundingFilter('all'); }}>Reset Filter</Button>
+                <h3 className="text-3xl font-black mb-4">No matching ventures</h3>
+                <p className="text-muted-foreground text-lg mb-8 max-w-md">Try refining your discovery filters or search terms to see more opportunities.</p>
+                <Button variant="outline" size="lg" className="rounded-2xl px-10 border-2 font-bold transition-all hover:bg-primary/5 active:scale-95" onClick={() => { setSearch(''); setIndustryFilter('all'); setFundingFilter('all'); }}>Reset Filters</Button>
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="investors">
+          <TabsContent value="investors" className="mt-0">
             {loadingInvestors ? (
               <div className="flex justify-center p-32"><Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" /></div>
             ) : filteredInvestors.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredInvestors.map((investor) => (
                   <Link key={investor.id} href={`/profile/${investor.id}`}>
-                    <Card className="group h-full hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white">
+                    <Card className="group h-full hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white hover:-translate-y-1">
                       <CardHeader className="p-8 pb-4">
                         <div className="flex justify-between items-start mb-6">
                           <Badge className="bg-primary/10 text-primary border-none font-black uppercase tracking-widest text-[9px] px-3 py-1">Capital Partner</Badge>
                           <div className="p-3 bg-primary/5 rounded-2xl group-hover:bg-primary group-hover:text-white transition-all">
-                            <User className="w-5 h-5" />
+                            <Users className="w-5 h-5" />
                           </div>
                         </div>
                         <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors">{investor.name || 'Private Member'}</CardTitle>
@@ -336,9 +347,9 @@ export default function PitchesFeedPage() {
                 <div className="p-8 bg-muted/10 rounded-full mb-8">
                   <Users className="w-16 h-16 text-muted-foreground opacity-30" />
                 </div>
-                <h3 className="text-3xl font-black mb-4">Network search empty</h3>
-                <p className="text-muted-foreground text-lg mb-8 max-w-md">Broaden your criteria to find more matching investors.</p>
-                <Button variant="outline" size="lg" className="rounded-2xl px-10 border-2 font-bold" onClick={() => setSearch('')}>Clear Search</Button>
+                <h3 className="text-3xl font-black mb-4">No matching investors</h3>
+                <p className="text-muted-foreground text-lg mb-8 max-w-md">Broaden your criteria to find more matching strategic partners for your venture.</p>
+                <Button variant="outline" size="lg" className="rounded-2xl px-10 border-2 font-bold transition-all hover:bg-primary/5 active:scale-95" onClick={() => setSearch('')}>Clear Search</Button>
               </div>
             )}
           </TabsContent>
