@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -33,15 +34,9 @@ export default function HomePage() {
 
   useEffect(() => {
     async function fetchStats() {
-      // Statistics require authentication to read from Firestore collections
-      if (!user) {
-        setCounts({ pitches: 0, users: 0, verifiedInvestors: 0, connections: 0 });
-        return;
-      }
-
+      // Statistics now work for guests due to updated security rules
       try {
         // Fetch all stats concurrently but handle errors individually to maximize data visibility
-        // Some collections (like interests/requests) might be restricted by security rules for non-admins
         const [pitchesSnap, usersSnap, verifiedSnap, interestsSnap, requestsSnap] = await Promise.all([
           getDocs(collection(db, 'pitches')).catch(() => null),
           getDocs(collection(db, 'users')).catch(() => null),
@@ -62,7 +57,7 @@ export default function HomePage() {
     }
 
     fetchStats();
-  }, [db, user]);
+  }, [db]);
 
   const stats = [
     { label: 'Active Startups', value: counts.pitches, icon: Briefcase },
@@ -185,11 +180,6 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          {!user && (
-            <p className="text-center mt-8 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 italic">
-              Authenticate to view live ecosystem metrics
-            </p>
-          )}
         </section>
 
         {/* Features Section */}
