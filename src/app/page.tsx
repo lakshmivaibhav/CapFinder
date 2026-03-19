@@ -16,16 +16,51 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
 
 export default function HomePage() {
   const { user } = useAuth();
+  const db = useFirestore();
   const browseLink = user ? '/pitches' : '/login';
 
+  // Live Stats Queries
+  const pitchesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'pitches');
+  }, [db, user]);
+
+  const usersQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users');
+  }, [db, user]);
+
+  const verifiedInvestorsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'users'), where('role', '==', 'investor'), where('verified', '==', true));
+  }, [db, user]);
+
+  const interestsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'interests');
+  }, [db, user]);
+
+  const contactRequestsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'contactRequests');
+  }, [db, user]);
+
+  const { data: pitchesData } = useCollection(pitchesQuery);
+  const { data: usersData } = useCollection(usersQuery);
+  const { data: verifiedInvestorsData } = useCollection(verifiedInvestorsQuery);
+  const { data: interestsData } = useCollection(interestsQuery);
+  const { data: contactRequestsData } = useCollection(contactRequestsQuery);
+
   const stats = [
-    { label: 'Active Startups', value: '2.5K+', icon: Briefcase },
-    { label: 'Verified Investors', value: '850+', icon: ShieldCheck },
-    { label: 'Capital Deployed', value: '$1.2B+', icon: TrendingUp },
-    { label: 'Global Reach', value: '45+', icon: Globe },
+    { label: 'Active Startups', value: pitchesData?.length || 0, icon: Briefcase },
+    { label: 'Total Members', value: usersData?.length || 0, icon: Users },
+    { label: 'Verified Investors', value: verifiedInvestorsData?.length || 0, icon: ShieldCheck },
+    { label: 'Connections', value: (interestsData?.length || 0) + (contactRequestsData?.length || 0), icon: Zap },
   ];
 
   const features = [
@@ -135,11 +170,22 @@ export default function HomePage() {
                 <div className="mx-auto w-12 h-12 bg-primary/5 rounded-xl flex items-center justify-center text-primary mb-4">
                   <stat.icon className="w-6 h-6" />
                 </div>
-                <div className="text-4xl font-black tracking-tight">{stat.value}</div>
+                <div className="text-4xl font-black tracking-tight">
+                  {!user ? (
+                    <span className="text-muted-foreground opacity-20">—</span>
+                  ) : (
+                    stat.value.toLocaleString()
+                  )}
+                </div>
                 <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</div>
               </div>
             ))}
           </div>
+          {!user && (
+            <p className="text-center mt-8 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 italic">
+              Authenticate to view live ecosystem metrics
+            </p>
+          )}
         </section>
 
         {/* Features Section */}
