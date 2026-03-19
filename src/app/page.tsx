@@ -34,12 +34,14 @@ export default function HomePage() {
 
   useEffect(() => {
     async function fetchStats() {
-      if (!user) {
-        setCounts({ pitches: 0, users: 0, verifiedInvestors: 0, connections: 0 });
-        return;
-      }
-
+      // Attempt to fetch stats. If guest or restricted, they will gracefully default to 0.
       try {
+        const pitchesPromise = getDocs(collection(db, 'pitches')).catch(() => ({ size: 0 }));
+        const usersPromise = getDocs(collection(db, 'users')).catch(() => ({ size: 0 }));
+        const verifiedPromise = getDocs(query(collection(db, 'users'), where('role', '==', 'investor'), where('verified', '==', true))).catch(() => ({ size: 0 }));
+        const interestsPromise = getDocs(collection(db, 'interests')).catch(() => ({ size: 0 }));
+        const requestsPromise = getDocs(collection(db, 'contactRequests')).catch(() => ({ size: 0 }));
+
         const [
           pitchesSnap,
           usersSnap,
@@ -47,20 +49,21 @@ export default function HomePage() {
           interestsSnap,
           contactRequestsSnap
         ] = await Promise.all([
-          getDocs(collection(db, 'pitches')),
-          getDocs(collection(db, 'users')),
-          getDocs(query(collection(db, 'users'), where('role', '==', 'investor'), where('verified', '==', true))),
-          getDocs(collection(db, 'interests')),
-          getDocs(collection(db, 'contactRequests'))
+          pitchesPromise,
+          usersPromise,
+          verifiedPromise,
+          interestsPromise,
+          requestsPromise
         ]);
 
         setCounts({
-          pitches: pitchesSnap.size,
-          users: usersSnap.size,
-          verifiedInvestors: verifiedInvestorsSnap.size,
-          connections: interestsSnap.size + contactRequestsSnap.size
+          pitches: pitchesSnap.size || 0,
+          users: usersSnap.size || 0,
+          verifiedInvestors: verifiedInvestorsSnap.size || 0,
+          connections: (interestsSnap.size || 0) + (contactRequestsSnap.size || 0)
         });
       } catch (error) {
+        // Silently fail and keep defaults as 0
         console.error("Error fetching landing stats:", error);
       }
     }
