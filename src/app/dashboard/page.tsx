@@ -8,7 +8,7 @@ import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking
 import { collection, query, where, limit, doc, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap } from 'lucide-react';
+import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const isInvestor = profile?.role === 'investor';
   const isAdmin = profile?.role === 'admin';
 
+  // Startup Specific Queries
   const startupPitchesQuery = useMemoFirebase(() => {
     if (!user || !profile || !isStartup || profile.disabled === true) return null;
     return query(collection(db, 'pitches'), where('ownerId', '==', user.uid));
@@ -48,19 +49,10 @@ export default function DashboardPage() {
     return query(collection(db, 'contactRequests'), where('receiverId', '==', user.uid));
   }, [db, user, profile, isStartup]);
 
-  const allPitchesQuery = useMemoFirebase(() => {
-    if (!user || !profile || (!isInvestor && !isAdmin) || profile.disabled === true) return null;
-    return query(collection(db, 'pitches'), limit(50));
-  }, [db, user, profile, isInvestor, isAdmin]);
-
+  // Investor Specific Queries
   const investorInterestsQuery = useMemoFirebase(() => {
     if (!user || !profile || !isInvestor || profile.disabled === true) return null;
     return query(collection(db, 'interests'), where('investorId', '==', user.uid));
-  }, [db, user, profile, isInvestor]);
-
-  const investorFavoritesQuery = useMemoFirebase(() => {
-    if (!user || !profile || !isInvestor || profile.disabled === true) return null;
-    return query(collection(db, 'favorites'), where('investorId', '==', user.uid));
   }, [db, user, profile, isInvestor]);
 
   const investorContactRequestsQuery = useMemoFirebase(() => {
@@ -68,15 +60,26 @@ export default function DashboardPage() {
     return query(collection(db, 'contactRequests'), where('senderId', '==', user.uid));
   }, [db, user, profile, isInvestor]);
 
+  const investorMessagesQuery = useMemoFirebase(() => {
+    if (!user || !profile || !isInvestor || profile.disabled === true) return null;
+    return query(collection(db, 'messages'), where('receiverId', '==', user.uid));
+  }, [db, user, profile, isInvestor]);
+
+  // General Market Feed
+  const allPitchesQuery = useMemoFirebase(() => {
+    if (!user || !profile || (!isInvestor && !isAdmin) || profile.disabled === true) return null;
+    return query(collection(db, 'pitches'), limit(50));
+  }, [db, user, profile, isInvestor, isAdmin]);
+
   const { data: startupPitches } = useCollection(startupPitchesQuery);
   const { data: startupInterests } = useCollection(startupInterestsQuery);
   const { data: startupContactRequests } = useCollection(startupContactRequestsQuery);
-  const { data: allPitches } = useCollection(allPitchesQuery);
+  
   const { data: investorInterests } = useCollection(investorInterestsQuery);
-  const { data: investorFavorites } = useCollection(investorFavoritesQuery);
   const { data: investorContactRequests } = useCollection(investorContactRequestsQuery);
-
-  const pendingRequestsCount = startupContactRequests?.filter(r => r.status === 'pending').length || 0;
+  const { data: investorMessages } = useCollection(investorMessagesQuery);
+  
+  const { data: allPitches } = useCollection(allPitchesQuery);
 
   const handleResolveConnection = async (pitchId: string, startupOwnerId: string, startupName: string) => {
     if (!user || !isInvestor) return;
@@ -84,7 +87,6 @@ export default function DashboardPage() {
 
     setResolving(pitchId);
     try {
-      // 1. Delete ContactRequest documents (Using loop on filtered results)
       const reqSnap = await getDocs(query(
         collection(db, 'contactRequests'), 
         where('pitchId', '==', pitchId),
@@ -94,7 +96,6 @@ export default function DashboardPage() {
         deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id));
       });
 
-      // 2. Delete Interest documents
       const intSnap = await getDocs(query(
         collection(db, 'interests'), 
         where('pitchId', '==', pitchId),
@@ -104,7 +105,6 @@ export default function DashboardPage() {
         deleteDocumentNonBlocking(doc(db, 'interests', d.id));
       });
 
-      // 3. Remove chat messages
       const msgsSnap = await getDocs(query(
         collection(db, 'messages'), 
         where('pitchId', '==', pitchId)
@@ -187,6 +187,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Dynamic Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <Card className="border-none shadow-sm bg-primary/5">
             <CardContent className="p-6 flex items-center gap-4">
@@ -194,8 +195,10 @@ export default function DashboardPage() {
                 <Megaphone className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'My Pitches' : 'Opportunities'}</p>
-                <p className="text-2xl font-bold">{isStartup ? (startupPitches?.length || 0) : (allPitches?.length || 0)}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Total Pitches' : 'Total Interests'}</p>
+                <p className="text-2xl font-bold">
+                  {isStartup ? (startupPitches?.length || 0) : (investorInterests?.length || 0)}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -205,19 +208,23 @@ export default function DashboardPage() {
                 <Users className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Interests' : 'Watchlist'}</p>
-                <p className="text-2xl font-bold">{isStartup ? (startupInterests?.length || 0) : (investorInterests?.length || 0)}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Interests on Pitches' : 'Contact Requests'}</p>
+                <p className="text-2xl font-bold">
+                  {isStartup ? (startupInterests?.length || 0) : (investorContactRequests?.length || 0)}
+                </p>
               </div>
             </CardContent>
           </Card>
           <Card className="border-none shadow-sm bg-emerald-50">
             <CardContent className="p-6 flex items-center gap-4">
               <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center text-white">
-                <Inbox className="w-6 h-6" />
+                {isStartup ? <Inbox className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Requests' : 'Saved'}</p>
-                <p className="text-2xl font-bold">{isStartup ? pendingRequestsCount : (investorFavorites?.length || 0)}</p>
+                <p className="text-sm font-medium text-muted-foreground">{isStartup ? 'Total Contact Requests' : 'Total Messages'}</p>
+                <p className="text-2xl font-bold">
+                  {isStartup ? (startupContactRequests?.length || 0) : (investorMessages?.length || 0)}
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -257,7 +264,7 @@ export default function DashboardPage() {
               {isStartup ? <><Megaphone className="w-4 h-4" /> My Pitches</> : <><LayoutGrid className="w-4 h-4" /> Market Feed</>}
             </TabsTrigger>
             <TabsTrigger value="secondary" className="gap-2">
-              {isStartup ? <><Users className="w-4 h-4" /> Investor Interest</> : <><Star className="w-4 h-4" /> My Watchlist</>}
+              {isStartup ? <><Users className="w-4 h-4" /> Investor Interest</> : <><Star className="w-4 h-4" /> My Interest</>}
             </TabsTrigger>
           </TabsList>
 
