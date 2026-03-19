@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Save, User, ArrowLeft, Trash2, ShieldCheck, Mail, Building } from 'lucide-react';
+import { Loader2, Save, User, ArrowLeft, Trash2, ShieldCheck, Mail, Building, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
