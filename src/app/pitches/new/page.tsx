@@ -100,8 +100,11 @@ export default function NewPitchPage() {
     setLoading(true);
     
     try {
+      // Save data ensuring correct types for sorting and filtering
       await addDocumentNonBlocking(collection(db, 'pitches'), {
         ...formData,
+        fundingNeeded: Number(formData.fundingNeeded) || 0,
+        ownerVerified: !!profile?.verified,
         industry: formData.category, // Save both for backward compatibility
         ownerId: user.uid,
         createdAt: serverTimestamp(),

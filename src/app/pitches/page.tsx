@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
-import { collection, query, serverTimestamp, where, doc } from 'firebase/firestore';
+import { collection, query, serverTimestamp, where, doc, orderBy } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ export default function PitchesFeedPage() {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [fundingFilter, setFundingFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('latest');
 
   useEffect(() => {
     if (!authLoading) {
@@ -55,14 +57,37 @@ export default function PitchesFeedPage() {
 
   const pitchesQuery = useMemoFirebase(() => {
     if (!profile || profile.disabled === true || (!isAdmin && !isInvestor)) return null;
-    return query(collection(db, 'pitches'));
-  }, [db, profile, isAdmin, isInvestor]);
+    const colRef = collection(db, 'pitches');
+    
+    // Server-side sorting
+    if (sortBy === 'funding-high') {
+      return query(colRef, orderBy('fundingNeeded', 'desc'), orderBy('createdAt', 'desc'));
+    }
+    if (sortBy === 'funding-low') {
+      return query(colRef, orderBy('fundingNeeded', 'asc'), orderBy('createdAt', 'desc'));
+    }
+    if (sortBy === 'verified') {
+      return query(colRef, orderBy('ownerVerified', 'desc'), orderBy('createdAt', 'desc'));
+    }
+    
+    // Default: Latest
+    return query(colRef, orderBy('createdAt', 'desc'));
+  }, [db, profile, isAdmin, isInvestor, sortBy]);
+
   const { data: pitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
 
   const investorsQuery = useMemoFirebase(() => {
     if (!profile || profile.disabled === true || (!isAdmin && !isStartup)) return null;
-    return query(collection(db, 'users'), where('role', '==', 'investor'), where('disabled', '==', false));
-  }, [db, profile, isAdmin, isStartup]);
+    const colRef = collection(db, 'users');
+    const baseQuery = query(colRef, where('role', '==', 'investor'), where('disabled', '==', false));
+    
+    if (sortBy === 'verified') {
+      return query(baseQuery, orderBy('verified', 'desc'), orderBy('createdAt', 'desc'));
+    }
+    
+    return query(baseQuery, orderBy('createdAt', 'desc'));
+  }, [db, profile, isAdmin, isStartup, sortBy]);
+
   const { data: investors, isLoading: loadingInvestors } = useCollection(investorsQuery);
 
   const interestsQuery = useMemoFirebase(() => {
@@ -198,38 +223,38 @@ export default function PitchesFeedPage() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-              <div className="md:col-span-5 relative">
+              <div className="md:col-span-4 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
-                <Input 
+                <input 
                   placeholder={isStartup ? "Filter investors..." : "Search ventures, category, tech..."}
-                  className="pl-12 h-14 bg-white/80 border-none shadow-inner rounded-2xl text-lg font-medium placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="pl-12 h-14 w-full bg-white/80 border-none shadow-inner rounded-2xl text-lg font-medium placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
               </div>
 
-              {!isStartup && (
+              {!isStartup ? (
                 <>
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-2">
                     <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                       <SelectTrigger className="h-14 bg-white/80 border-none shadow-inner rounded-2xl font-bold px-6 focus:ring-2 focus:ring-primary/20 transition-all">
                         <SelectValue placeholder="Category" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl shadow-2xl">
-                        <SelectItem value="all">All Categories</SelectItem>
+                        <SelectItem value="all">All Sectors</SelectItem>
                         {CATEGORIES.map(cat => (
                           <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-2">
                     <Select value={fundingFilter} onValueChange={setFundingFilter}>
                       <SelectTrigger className="h-14 bg-white/80 border-none shadow-inner rounded-2xl font-bold px-6 focus:ring-2 focus:ring-primary/20 transition-all">
-                        <SelectValue placeholder="Capital Goal" />
+                        <SelectValue placeholder="Capital" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl shadow-2xl">
-                        <SelectItem value="all">Any Amount</SelectItem>
+                        <SelectItem value="all">Any Goal</SelectItem>
                         <SelectItem value="0-100k">{"< $100K"}</SelectItem>
                         <SelectItem value="100k-500k">$100K - $500K</SelectItem>
                         <SelectItem value="500k-1m">$500K - $1M</SelectItem>
@@ -237,11 +262,36 @@ export default function PitchesFeedPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="md:col-span-3">
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                      <SelectTrigger className="h-14 bg-white/80 border-none shadow-inner rounded-2xl font-bold px-6 focus:ring-2 focus:ring-primary/20 transition-all">
+                        <SelectValue placeholder="Sort By" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl shadow-2xl">
+                        <SelectItem value="latest">Latest Entries</SelectItem>
+                        <SelectItem value="funding-high">Goal: High to Low</SelectItem>
+                        <SelectItem value="funding-low">Goal: Low to High</SelectItem>
+                        <SelectItem value="verified">Verified First</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </>
+              ) : (
+                <div className="md:col-span-7">
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger className="h-14 bg-white/80 border-none shadow-inner rounded-2xl font-bold px-6 focus:ring-2 focus:ring-primary/20 transition-all">
+                      <SelectValue placeholder="Sort By" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl shadow-2xl">
+                      <SelectItem value="latest">Recently Joined</SelectItem>
+                      <SelectItem value="verified">Verified First</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
 
               <div className="md:col-span-1">
-                <Button variant="ghost" size="icon" className="h-14 w-full rounded-2xl hover:bg-white transition-all active:scale-95" onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); }}>
+                <Button variant="ghost" size="icon" className="h-14 w-full rounded-2xl hover:bg-white transition-all active:scale-95" onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); setSortBy('latest'); }}>
                   <FilterX className="w-6 h-6 text-muted-foreground" />
                 </Button>
               </div>
@@ -324,7 +374,7 @@ export default function PitchesFeedPage() {
                 </div>
                 <h3 className="text-3xl font-black mb-4">No matching ventures</h3>
                 <p className="text-muted-foreground text-lg mb-8 max-w-md">Try refining your discovery filters or search terms to see more opportunities.</p>
-                <Button variant="outline" size="lg" className="rounded-2xl px-10 border-2 font-bold transition-all hover:bg-primary/5 active:scale-95" onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); }}>Reset Filters</Button>
+                <Button variant="outline" size="lg" className="rounded-2xl px-10 border-2 font-bold transition-all hover:bg-primary/5 active:scale-95" onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); setSortBy('latest'); }}>Reset Filters</Button>
               </div>
             )}
           </TabsContent>
