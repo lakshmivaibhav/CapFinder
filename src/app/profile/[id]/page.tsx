@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useEffect, useState } from 'react';
@@ -98,9 +99,11 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
                     <User className="text-muted-foreground opacity-30 w-16 h-16" />
                   )}
                 </div>
-                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2.5 rounded-2xl border-4 border-white shadow-lg">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
+                {targetProfile.verified && (
+                  <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2.5 rounded-2xl border-4 border-white shadow-lg">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                )}
               </div>
               
               <div className="space-y-3 mb-8">
@@ -142,16 +145,18 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
               )}
             </Card>
 
-            <Card className="border-none shadow-xl bg-primary text-white overflow-hidden rounded-[2rem] p-10 relative">
-              <Sparkles className="absolute -right-6 -bottom-6 w-32 h-32 text-white/5 -rotate-12" />
-              <h3 className="text-xl font-black mb-4 flex items-center gap-3">
-                <ShieldCheck className="w-6 h-6" /> Platform Certified
-              </h3>
-              <p className="text-sm opacity-90 leading-relaxed font-medium italic">
-                "This identity has satisfied the preliminary verification protocols required for verified platform interactions."
-              </p>
-              <div className="h-1.5 w-full bg-white/20 rounded-full mt-6" />
-            </Card>
+            {targetProfile.verified && (
+              <Card className="border-none shadow-xl bg-primary text-white overflow-hidden rounded-[2rem] p-10 relative">
+                <Sparkles className="absolute -right-6 -bottom-6 w-32 h-32 text-white/5 -rotate-12" />
+                <h3 className="text-xl font-black mb-4 flex items-center gap-3">
+                  <ShieldCheck className="w-6 h-6" /> Platform Certified
+                </h3>
+                <p className="text-sm opacity-90 leading-relaxed font-medium italic">
+                  "This identity has satisfied the preliminary verification protocols required for verified platform interactions."
+                </p>
+                <div className="h-1.5 w-full bg-white/20 rounded-full mt-6" />
+              </Card>
+            )}
           </div>
 
           <div className="md:col-span-2 space-y-8">
@@ -162,9 +167,11 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
                     <CardTitle className="text-3xl font-black tracking-tight">Professional Summary</CardTitle>
                     <CardDescription className="text-sm font-medium uppercase tracking-widest text-muted-foreground">Expert Portfolio & Objectives</CardDescription>
                   </div>
-                  <Badge className="bg-primary text-white border-none rounded-lg px-4 py-1 text-[10px] font-black uppercase tracking-widest">
-                    Verified
-                  </Badge>
+                  {targetProfile.verified && (
+                    <Badge className="bg-primary text-white border-none rounded-lg px-4 py-1 text-[10px] font-black uppercase tracking-widest">
+                      Verified
+                    </Badge>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="p-10 space-y-12">

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useEffect, useState } from 'react';
@@ -80,9 +81,11 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ uid:
                     <User className="text-primary w-16 h-16" />
                   )}
                 </div>
-                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1.5 rounded-full border-4 border-white shadow-sm">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
+                {targetProfile.verified && (
+                  <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1.5 rounded-full border-4 border-white shadow-sm">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2 mb-4">
@@ -124,15 +127,17 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ uid:
               )}
             </Card>
 
-            <Card className="border-none shadow-sm bg-primary text-white overflow-hidden p-6">
-              <h3 className="font-bold mb-2 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" /> Verified Status
-              </h3>
-              <p className="text-[10px] opacity-80 leading-relaxed mb-4">
-                This profile has been verified by CapFinder to ensure transparency and trust within our ecosystem.
-              </p>
-              <div className="h-1 w-full bg-white/20 rounded-full" />
-            </Card>
+            {targetProfile.verified && (
+              <Card className="border-none shadow-sm bg-primary text-white overflow-hidden p-6">
+                <h3 className="font-bold mb-2 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" /> Verified Status
+                </h3>
+                <p className="text-[10px] opacity-80 leading-relaxed mb-4">
+                  This profile has been verified by CapFinder to ensure transparency and trust within our ecosystem.
+                </p>
+                <div className="h-1 w-full bg-white/20 rounded-full" />
+              </Card>
+            )}
           </div>
 
           {/* Main Profile Content */}
@@ -144,9 +149,11 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ uid:
                     <CardTitle className="text-2xl font-bold">About {targetProfile.name || 'User'}</CardTitle>
                     <CardDescription className="mt-1">Professional background and objectives</CardDescription>
                   </div>
-                  <Badge className="bg-primary/10 text-primary border-none capitalize px-4 py-1">
-                    {targetProfile.role}
-                  </Badge>
+                  {targetProfile.verified && (
+                    <Badge className="bg-primary/10 text-primary border-none capitalize px-4 py-1">
+                      Verified
+                    </Badge>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="p-8 space-y-8">

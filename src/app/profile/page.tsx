@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -38,6 +39,7 @@ export default function ProfilePage() {
     investmentInterest: '',
     role: '',
     photoURL: '',
+    verified: false,
   });
 
   useEffect(() => {
@@ -56,6 +58,7 @@ export default function ProfilePage() {
         investmentInterest: profile.investmentInterest || '',
         role: profile.role || 'startup',
         photoURL: profile.photoURL || '',
+        verified: !!profile.verified,
       });
     }
   }, [profile]);
@@ -174,9 +177,16 @@ export default function ProfilePage() {
             </Link>
             <h1 className="text-4xl font-black tracking-tighter">Account Governance</h1>
           </div>
-          <Badge className="bg-primary/10 text-primary border-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">
-            {formData.role} verified
-          </Badge>
+          <div className="flex items-center gap-3">
+            <Badge className="bg-primary/10 text-primary border-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">
+              {formData.role}
+            </Badge>
+            {formData.verified && (
+              <Badge className="bg-emerald-500 text-white border-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                <ShieldCheck className="w-3 h-3" /> Verified
+              </Badge>
+            )}
+          </div>
         </div>
 
         <div className="grid md:grid-cols-12 gap-12">
@@ -200,9 +210,11 @@ export default function ProfilePage() {
                     <Camera className="text-white w-8 h-8" />
                   </div>
                 </div>
-                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2 rounded-2xl border-4 border-white shadow-lg">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
+                {formData.verified && (
+                  <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2 rounded-2xl border-4 border-white shadow-lg">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                )}
                 <input 
                   type="file" 
                   ref={fileInputRef} 

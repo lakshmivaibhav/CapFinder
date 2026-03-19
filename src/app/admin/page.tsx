@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -151,6 +152,14 @@ function AdminDashboardContent() {
     }
   };
 
+  const toggleVerificationStatus = (userId: string, email: string, currentVerifiedStatus: boolean) => {
+    const action = currentVerifiedStatus ? 'unverify' : 'verify';
+    if (confirm(`Confirm ${action} for ${email}?`)) {
+      updateDocumentNonBlocking(doc(db, 'users', userId), { verified: !currentVerifiedStatus });
+      toast({ title: currentVerifiedStatus ? "User Unverified" : "User Verified" });
+    }
+  };
+
   const stats = [
     { label: 'Total Members', value: allUsers?.length || 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Live Ventures', value: allPitches?.length || 0, icon: Megaphone, color: 'text-amber-600', bg: 'bg-amber-50' },
@@ -212,12 +221,13 @@ function AdminDashboardContent() {
                       <TableHead className="px-8 font-black uppercase tracking-widest text-[10px]">Professional Identity</TableHead>
                       <TableHead className="font-black uppercase tracking-widest text-[10px]">Classification</TableHead>
                       <TableHead className="font-black uppercase tracking-widest text-[10px]">Status</TableHead>
+                      <TableHead className="font-black uppercase tracking-widest text-[10px]">Verification</TableHead>
                       <TableHead className="text-right px-8 font-black uppercase tracking-widest text-[10px]">Governance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingUsers ? (
-                      <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="animate-spin mx-auto opacity-20" /></TableCell></TableRow>
                     ) : allUsers?.map((u) => (
                       <TableRow key={u.id} className="hover:bg-muted/10 transition-colors">
                         <TableCell className="px-8">
@@ -230,7 +240,13 @@ function AdminDashboardContent() {
                         <TableCell>
                           {u.disabled ? <Badge variant="destructive" className="rounded-lg px-3 font-bold">Suspended</Badge> : <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 rounded-lg px-3 font-bold">Compliant</Badge>}
                         </TableCell>
+                        <TableCell>
+                          {u.verified ? <Badge className="bg-emerald-500 text-white rounded-lg px-3 font-bold">Verified</Badge> : <Badge variant="outline" className="rounded-lg px-3 font-bold">Unverified</Badge>}
+                        </TableCell>
                         <TableCell className="text-right px-8 space-x-1">
+                          <Button variant="ghost" size="icon" title={u.verified ? "Unverify User" : "Verify User"} className="rounded-xl" onClick={() => toggleVerificationStatus(u.id, u.email, !!u.verified)}>
+                            <ShieldCheck className={u.verified ? "w-5 h-5 text-emerald-600" : "w-5 h-5 text-muted-foreground"} />
+                          </Button>
                           <Button variant="ghost" size="icon" className="rounded-xl" onClick={() => toggleUserStatus(u.id, u.email, !!u.disabled)}>
                             {u.disabled ? <UserCheck className="w-5 h-5 text-emerald-600" /> : <UserX className="w-5 h-5 text-amber-600" />}
                           </Button>

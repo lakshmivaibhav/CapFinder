@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -332,7 +333,7 @@ export default function PitchesFeedPage() {
                       </CardContent>
                       <CardFooter className="p-8 pt-6 border-t border-muted/50 bg-muted/5 flex justify-between items-center">
                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4 text-emerald-500" /> Identity Verified
+                          {investor.verified && <ShieldCheck className="w-4 h-4 text-emerald-500" />} {investor.verified ? "Identity Verified" : "Identity Unverified"}
                         </span>
                         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:translate-x-1 transition-transform">
                           <ArrowRight className="w-5 h-5 text-primary" />

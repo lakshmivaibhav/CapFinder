@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "UserProfile": {
@@ -51,6 +52,10 @@
         "disabled": {
           "type": "boolean",
           "description": "Whether the user account is disabled by an admin."
+        },
+        "verified": {
+          "type": "boolean",
+          "description": "Whether the user's identity has been verified by platform administrators."
         }
       },
       "required": [

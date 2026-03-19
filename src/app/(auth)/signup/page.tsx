@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -33,6 +34,7 @@ export default function SignupPage() {
         lastActive: serverTimestamp(),
         createdAt: serverTimestamp(),
         disabled: false,
+        verified: false,
       }, { merge: true });
 
       toast({ title: "Account Initialized", description: "Establish your professional identity." });
