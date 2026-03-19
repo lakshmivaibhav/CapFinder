@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useEffect, useState } from 'react';
@@ -9,7 +8,7 @@ import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, User, Briefcase, Mail, Globe, ShieldCheck, TrendingUp, Sparkles, Clock, Circle } from 'lucide-react';
+import { Loader2, ArrowLeft, User, Briefcase, Mail, Globe, ShieldCheck, TrendingUp, Sparkles, Clock, Circle, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
@@ -43,7 +42,7 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="animate-spin w-10 h-10 text-primary" />
+          <Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" />
         </div>
       </div>
     );
@@ -55,12 +54,14 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
-        <div className="flex-1 flex flex-col items-center justify-center space-y-4">
-          <User className="w-16 h-16 text-muted-foreground opacity-20" />
-          <h2 className="text-2xl font-bold">Profile Not Found</h2>
-          <p className="text-muted-foreground">The user you are looking for does not exist or is private.</p>
+        <div className="flex-1 flex flex-col items-center justify-center space-y-8">
+          <div className="p-6 bg-muted rounded-full">
+            <User className="w-16 h-16 text-muted-foreground opacity-20" />
+          </div>
+          <h2 className="text-3xl font-black tracking-tight">Profile Encrypted or Private</h2>
+          <p className="text-muted-foreground text-center max-w-sm">The target credentials are currently unavailable within the verified network.</p>
           <Link href="/dashboard">
-            <Button variant="outline">Return to Dashboard</Button>
+            <Button variant="outline" className="rounded-xl border-2 px-8 font-bold">Return to Dashboard</Button>
           </Link>
         </div>
       </div>
@@ -76,127 +77,134 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="flex-1 max-w-4xl mx-auto py-10 px-6 w-full space-y-8">
-        <Link href="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors w-fit font-medium">
-          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+      <main className="flex-1 max-w-7xl mx-auto py-16 px-6 w-full space-y-12">
+        <Link href="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-all w-fit font-black text-xs uppercase tracking-widest group">
+          <div className="p-2 bg-muted rounded-lg group-hover:bg-primary/10 transition-all">
+            <ArrowLeft className="w-4 h-4" />
+          </div>
+          Back to Marketplace
         </Link>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="md:col-span-1 space-y-6">
-            <Card className="border-none shadow-sm text-center p-8 bg-white overflow-hidden">
-              <div className="relative inline-block mx-auto mb-6">
-                <div className="w-32 h-32 bg-primary/5 rounded-3xl flex items-center justify-center border-2 border-primary/10 shadow-inner">
-                  <User className="text-primary w-16 h-16" />
+        <div className="grid md:grid-cols-3 gap-12">
+          <div className="md:col-span-1 space-y-8">
+            <Card className="border-none shadow-2xl text-center p-12 bg-white rounded-[2.5rem] overflow-hidden relative">
+              <div className="absolute top-0 left-0 w-full h-2 bg-primary" />
+              <div className="relative inline-block mx-auto mb-8">
+                <div className="w-36 h-36 bg-muted rounded-[2rem] flex items-center justify-center border-4 border-white shadow-inner">
+                  <User className="text-muted-foreground opacity-30 w-16 h-16" />
                 </div>
-                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1.5 rounded-full border-4 border-white shadow-sm">
-                  <ShieldCheck className="w-4 h-4" />
+                <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2.5 rounded-2xl border-4 border-white shadow-lg">
+                  <ShieldCheck className="w-5 h-5" />
                 </div>
               </div>
               
-              <div className="space-y-2 mb-4">
-                <h1 className="text-2xl font-bold leading-tight mb-1">{targetProfile.name || 'Anonymous'}</h1>
-                <div className="flex items-center justify-center gap-2">
+              <div className="space-y-3 mb-8">
+                <h1 className="text-3xl font-black leading-tight tracking-tight">{targetProfile.name || 'Anonymous Member'}</h1>
+                <div className="flex items-center justify-center gap-3">
                   {isOnline ? (
-                    <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100 border-none px-3 py-0.5 gap-1.5">
-                      <Circle className="w-2 h-2 fill-current animate-pulse" /> Online
+                    <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-none px-4 py-1 gap-2 rounded-lg font-black text-[10px] uppercase tracking-widest">
+                      <Circle className="w-2 h-2 fill-current animate-pulse" /> Active Now
                     </Badge>
                   ) : lastActiveDate ? (
-                    <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1 justify-center">
-                      <Clock className="w-3 h-3" /> Active {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
+                    <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest flex items-center gap-2 justify-center">
+                      <Clock className="w-3.5 h-3.5 text-primary" /> Last Seen {formatDistanceToNow(lastActiveDate, { addSuffix: true })}
                     </span>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground font-medium italic">Status unknown</span>
+                    <span className="text-[10px] text-muted-foreground font-black italic uppercase tracking-widest">Session Inactive</span>
                   )}
                 </div>
               </div>
 
-              <p className="text-sm font-bold text-primary uppercase tracking-widest mb-4">
+              <Badge className="bg-primary/10 text-primary border-none rounded-xl px-6 py-2 text-[10px] font-black uppercase tracking-widest mb-10">
                 {targetProfile.role}
-              </p>
+              </Badge>
               
-              <div className="flex flex-col gap-3 py-6 border-t border-dashed">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium justify-center">
-                  <Briefcase className="w-3.5 h-3.5" />
+              <div className="flex flex-col gap-4 py-8 border-t border-dashed">
+                <div className="flex items-center gap-3 text-sm font-bold text-foreground justify-center">
+                  <Briefcase className="w-4 h-4 text-primary" />
                   <span>{targetProfile.company || 'Private Entity'}</span>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium justify-center">
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>{targetProfile.email}</span>
+                <div className="flex items-center gap-3 text-sm font-bold text-muted-foreground justify-center">
+                  <Mail className="w-4 h-4 text-primary" />
+                  <span className="truncate max-w-[200px]">{targetProfile.email}</span>
                 </div>
               </div>
 
               {currentUser?.uid === id && (
                 <Link href="/profile" className="w-full">
-                  <Button variant="outline" size="sm" className="w-full mt-2">Edit My Profile</Button>
+                  <Button variant="outline" size="lg" className="w-full mt-4 rounded-xl border-2 font-black uppercase tracking-widest text-[10px]">Adjust My Credentials</Button>
                 </Link>
               )}
             </Card>
 
-            <Card className="border-none shadow-sm bg-primary text-white overflow-hidden p-6">
-              <h3 className="font-bold mb-2 flex items-center gap-2">
-                <Sparkles className="w-4 h-4" /> Verified Status
+            <Card className="border-none shadow-xl bg-primary text-white overflow-hidden rounded-[2rem] p-10 relative">
+              <Sparkles className="absolute -right-6 -bottom-6 w-32 h-32 text-white/5 -rotate-12" />
+              <h3 className="text-xl font-black mb-4 flex items-center gap-3">
+                <ShieldCheck className="w-6 h-6" /> Platform Certified
               </h3>
-              <p className="text-[10px] opacity-80 leading-relaxed mb-4">
-                This profile has been verified by CapFinder to ensure transparency and trust within our ecosystem.
+              <p className="text-sm opacity-90 leading-relaxed font-medium italic">
+                &quot;This identity has satisfied the preliminary verification protocols required for verified platform interactions.&quot;
               </p>
-              <div className="h-1 w-full bg-white/20 rounded-full" />
+              <div className="h-1.5 w-full bg-white/20 rounded-full mt-6" />
             </Card>
           </div>
 
-          <div className="md:col-span-2 space-y-6">
-            <Card className="border-none shadow-sm bg-white overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b p-8">
+          <div className="md:col-span-2 space-y-8">
+            <Card className="border-none shadow-2xl bg-white overflow-hidden rounded-[2.5rem]">
+              <CardHeader className="bg-muted/30 border-b p-10">
                 <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-2xl font-bold">About {targetProfile.name || 'User'}</CardTitle>
-                    <CardDescription className="mt-1">Professional background and objectives</CardDescription>
+                  <div className="space-y-1">
+                    <CardTitle className="text-3xl font-black tracking-tight">Professional Summary</CardTitle>
+                    <CardDescription className="text-sm font-medium uppercase tracking-widest text-muted-foreground">Expert Portfolio & Objectives</CardDescription>
                   </div>
-                  <Badge className="bg-primary/10 text-primary border-none capitalize px-4 py-1">
-                    {targetProfile.role}
+                  <Badge className="bg-primary text-white border-none rounded-lg px-4 py-1 text-[10px] font-black uppercase tracking-widest">
+                    Verified
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent className="p-8 space-y-8">
-                <div className="space-y-4">
-                  <h4 className="text-xs uppercase font-bold text-muted-foreground tracking-widest">Biography</h4>
-                  <div className="p-6 bg-muted/20 rounded-2xl italic text-lg leading-relaxed text-foreground/80 border-l-4 border-primary/20">
-                    &quot;{targetProfile.bio || "This professional has chosen to keep their biography private but is actively looking for strategic partnerships within the CapFinder network."}&quot;
+              <CardContent className="p-10 space-y-12">
+                <div className="space-y-6">
+                  <h4 className="text-[10px] uppercase font-black text-primary tracking-[0.3em] flex items-center gap-3">
+                    <div className="w-2 h-2 bg-primary rounded-full" /> Narrative
+                  </h4>
+                  <div className="p-10 bg-muted/20 rounded-[2rem] italic text-2xl leading-relaxed text-foreground/80 border-l-8 border-primary/20 shadow-inner">
+                    &quot;{targetProfile.bio || "The professional has restricted their public narrative to verified connections only. Authenticate your intent by initiating a contact request."}&quot;
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-                  <div className="p-6 bg-muted/10 rounded-2xl border">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-2 flex items-center gap-2">
-                      <Globe className="w-3.5 h-3.5" /> Organization
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 pt-6">
+                  <div className="p-8 bg-white border-2 border-muted shadow-sm rounded-3xl group hover:border-primary transition-all">
+                    <p className="text-[10px] uppercase font-black text-muted-foreground tracking-widest mb-4 flex items-center gap-3">
+                      <Globe className="w-4 h-4 text-primary" /> Affiliation
                     </p>
-                    <p className="font-bold text-lg">{targetProfile.company || 'Not Specified'}</p>
+                    <p className="font-black text-xl group-hover:text-primary transition-colors">{targetProfile.company || 'Proprietary Entity'}</p>
                   </div>
 
                   {isStartup && (
-                    <div className="p-6 bg-emerald-50 rounded-2xl border border-emerald-100">
-                      <p className="text-[10px] uppercase font-bold text-emerald-600 tracking-widest mb-2 flex items-center gap-2">
-                        <TrendingUp className="w-3.5 h-3.5" /> Funding Needed
+                    <div className="p-8 bg-emerald-50 rounded-3xl border-2 border-emerald-100 group hover:border-emerald-200 transition-all">
+                      <p className="text-[10px] uppercase font-black text-emerald-600 tracking-widest mb-4 flex items-center gap-3">
+                        <TrendingUp className="w-4 h-4" /> Capital Required
                       </p>
-                      <p className="font-bold text-lg text-emerald-700">
+                      <p className="font-black text-2xl text-emerald-700">
                         ${targetProfile.fundingNeeded?.toLocaleString() || '0'}
                       </p>
                     </div>
                   )}
 
                   {isInvestor && (
-                    <div className="p-6 bg-accent/5 rounded-2xl border border-accent/10 col-span-1 sm:col-span-2">
-                      <p className="text-[10px] uppercase font-bold text-accent tracking-widest mb-2 flex items-center gap-2">
-                        <Sparkles className="w-3.5 h-3.5" /> Investment Interests
+                    <div className="p-8 bg-accent/5 rounded-3xl border-2 border-accent/10 col-span-1 sm:col-span-2 group hover:border-accent/30 transition-all">
+                      <p className="text-[10px] uppercase font-black text-accent tracking-widest mb-4 flex items-center gap-3">
+                        <Sparkles className="w-4 h-4" /> Strategic Focus
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {targetProfile.investmentInterest ? (
                           targetProfile.investmentInterest.split(',').map((interest: string, i: number) => (
-                            <Badge key={i} variant="secondary" className="bg-accent/10 text-accent border-none font-medium">
+                            <Badge key={i} variant="secondary" className="bg-accent/10 text-accent border-none font-black text-[10px] uppercase px-4 py-1.5 rounded-lg">
                               {interest.trim()}
                             </Badge>
                           ))
                         ) : (
-                          <span className="text-sm text-muted-foreground italic">No specific interests listed.</span>
+                          <span className="text-sm text-muted-foreground font-medium italic">General Venture Interests</span>
                         )}
                       </div>
                     </div>
@@ -204,6 +212,21 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
                 </div>
               </CardContent>
             </Card>
+
+            {isStartup && (
+              <Card className="border-none shadow-2xl bg-white overflow-hidden rounded-[2.5rem]">
+                <CardHeader className="p-10 pb-4">
+                  <CardTitle className="text-2xl font-black flex items-center gap-3">
+                    <LayoutGrid className="w-6 h-6 text-primary" /> Active Opportunities
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-10 pt-4">
+                  <p className="text-md text-muted-foreground leading-relaxed italic border-l-4 border-muted pl-6">
+                    All currently active venture pitches from {targetProfile.name || 'this founder'} are cataloged in the <Link href="/pitches" className="text-primary hover:underline font-black">Market Hub</Link>. Connect with the founder to receive detailed investment memorandums.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
