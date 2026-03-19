@@ -10,7 +10,6 @@ import {
   ShieldCheck, 
   ArrowRight, 
   Zap, 
-  Globe, 
   CheckCircle2, 
   Star,
   Search,
@@ -34,37 +33,44 @@ export default function HomePage() {
 
   useEffect(() => {
     async function fetchStats() {
-      // Attempt to fetch stats. If guest or restricted, they will gracefully default to 0.
-      try {
-        const pitchesPromise = getDocs(collection(db, 'pitches')).catch(() => ({ size: 0 }));
-        const usersPromise = getDocs(collection(db, 'users')).catch(() => ({ size: 0 }));
-        const verifiedPromise = getDocs(query(collection(db, 'users'), where('role', '==', 'investor'), where('verified', '==', true))).catch(() => ({ size: 0 }));
-        const interestsPromise = getDocs(collection(db, 'interests')).catch(() => ({ size: 0 }));
-        const requestsPromise = getDocs(collection(db, 'contactRequests')).catch(() => ({ size: 0 }));
+      // If no user is authenticated, we cannot fetch statistics due to security rules.
+      // In this case, we gracefully default to 0.
+      if (!user) {
+        setCounts({ pitches: 0, users: 0, verifiedInvestors: 0, connections: 0 });
+        return;
+      }
 
-        const [
-          pitchesSnap,
-          usersSnap,
-          verifiedInvestorsSnap,
-          interestsSnap,
-          contactRequestsSnap
-        ] = await Promise.all([
-          pitchesPromise,
-          usersPromise,
-          verifiedPromise,
-          interestsPromise,
-          requestsPromise
-        ]);
+      try {
+        // Use individual getDocs calls with specific error handling.
+        // This ensures that if certain collections are restricted (e.g., non-admins 
+        // listing all interests), the remaining stats still populate.
+        
+        // 1. Active Startups (pitches)
+        const pitchesSnap = await getDocs(collection(db, 'pitches')).catch(() => ({ size: 0 }));
+        
+        // 2. Total Members (users)
+        const usersSnap = await getDocs(collection(db, 'users')).catch(() => ({ size: 0 }));
+        
+        // 3. Verified Investors (users where verified == true AND role == investor)
+        const verifiedQuery = query(
+          collection(db, 'users'), 
+          where('verified', '==', true),
+          where('role', '==', 'investor')
+        );
+        const verifiedSnap = await getDocs(verifiedQuery).catch(() => ({ size: 0 }));
+        
+        // 4. Connections (Sum of all expressed interests and contact requests)
+        const interestsSnap = await getDocs(collection(db, 'interests')).catch(() => ({ size: 0 }));
+        const requestsSnap = await getDocs(collection(db, 'contactRequests')).catch(() => ({ size: 0 }));
 
         setCounts({
           pitches: pitchesSnap.size || 0,
           users: usersSnap.size || 0,
-          verifiedInvestors: verifiedInvestorsSnap.size || 0,
-          connections: (interestsSnap.size || 0) + (contactRequestsSnap.size || 0)
+          verifiedInvestors: verifiedSnap.size || 0,
+          connections: (interestsSnap.size || 0) + (requestsSnap.size || 0)
         });
       } catch (error) {
-        // Silently fail and keep defaults as 0
-        console.error("Error fetching landing stats:", error);
+        // Silently handle general fetching errors.
       }
     }
 
