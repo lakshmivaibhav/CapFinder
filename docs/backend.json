@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserProfile": {
@@ -19,6 +18,10 @@
           "type": "string",
           "description": "The primary contact email for the user. Used for communication.",
           "format": "email"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "URL to the user's profile photo stored in Firebase Storage."
         },
         "bio": {
           "type": "string",

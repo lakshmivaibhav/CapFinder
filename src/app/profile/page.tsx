@@ -1,30 +1,35 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, updateDoc, getDocs, collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useStorage, addDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Save, User, ArrowLeft, Trash2, ShieldCheck, Mail, Building, Sparkles } from 'lucide-react';
+import { Loader2, Save, User, ArrowLeft, Trash2, ShieldCheck, Mail, Building, Sparkles, Camera, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Navbar } from '@/components/navbar';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function ProfilePage() {
   const { user, profile, loading: authLoading, refreshProfile } = useAuth();
   const db = useFirestore();
+  const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
 
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [checking, setChecking] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -32,6 +37,7 @@ export default function ProfilePage() {
     fundingNeeded: '',
     investmentInterest: '',
     role: '',
+    photoURL: '',
   });
 
   useEffect(() => {
@@ -49,9 +55,41 @@ export default function ProfilePage() {
         fundingNeeded: profile.fundingNeeded?.toString() || '',
         investmentInterest: profile.investmentInterest || '',
         role: profile.role || 'startup',
+        photoURL: profile.photoURL || '',
       });
     }
   }, [profile]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ variant: "destructive", title: "Invalid file", description: "Please select an image file." });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const storageRef = ref(storage, `profiles/${user.uid}/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+
+      await updateDoc(doc(db, 'users', user.uid), {
+        photoURL: downloadURL,
+        updatedAt: serverTimestamp(),
+      });
+      
+      setFormData(prev => ({ ...prev, photoURL: downloadURL }));
+      await refreshProfile();
+      toast({ title: "Photo Updated", description: "Your profile picture has been successfully synchronized." });
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload profile picture. Check your connection." });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,16 +181,37 @@ export default function ProfilePage() {
 
         <div className="grid md:grid-cols-12 gap-12">
           <div className="md:col-span-4 space-y-8">
-            <Card className="border-none shadow-2xl text-center p-10 bg-white rounded-[2.5rem] overflow-hidden relative">
+            <Card className="border-none shadow-2xl text-center p-10 bg-white rounded-[2.5rem] overflow-hidden relative group">
               <div className="absolute top-0 left-0 w-full h-2 bg-primary" />
-              <div className="relative inline-block mx-auto mb-8 mt-4">
-                <div className="w-32 h-32 bg-muted rounded-[2rem] flex items-center justify-center border-4 border-white shadow-inner">
-                  <User className="text-muted-foreground opacity-30 w-16 h-16" />
+              
+              <div className="relative inline-block mx-auto mb-8 mt-4 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                <div className="w-40 h-40 bg-muted rounded-[2rem] flex items-center justify-center border-4 border-white shadow-inner relative overflow-hidden">
+                  {formData.photoURL ? (
+                    <Image src={formData.photoURL} alt="Profile" fill className="object-cover" />
+                  ) : (
+                    <User className="text-muted-foreground opacity-30 w-16 h-16" />
+                  )}
+                  {uploading && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <Loader2 className="animate-spin text-white w-8 h-8" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                    <Camera className="text-white w-8 h-8" />
+                  </div>
                 </div>
                 <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2 rounded-2xl border-4 border-white shadow-lg">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  accept="image/*" 
+                  onChange={handlePhotoUpload} 
+                />
               </div>
+
               <h2 className="text-2xl font-black truncate mb-1">{formData.name || 'Anonymous User'}</h2>
               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-10">{user.email}</p>
               
@@ -176,7 +235,7 @@ export default function ProfilePage() {
                  <ShieldCheck className="w-6 h-6" /> Data Protection
                </h3>
                <p className="text-sm opacity-90 leading-relaxed font-medium italic">
-                 &quot;All account information is encrypted and managed according to global financial transparency standards.&quot;
+                 "All account information is encrypted and managed according to global financial transparency standards."
                </p>
             </Card>
           </div>

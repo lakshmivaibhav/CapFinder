@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useEffect, useState } from 'react';
@@ -11,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, User, Briefcase, Mail, Globe, ShieldCheck, TrendingUp, Sparkles, Clock, Circle } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function UserProfileViewPage({ params }: { params: Promise<{ uid: string }> }) {
@@ -73,8 +73,12 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ uid:
           <div className="md:col-span-1 space-y-6">
             <Card className="border-none shadow-sm text-center p-8 bg-white overflow-hidden">
               <div className="relative inline-block mx-auto mb-6">
-                <div className="w-32 h-32 bg-primary/5 rounded-3xl flex items-center justify-center border-2 border-primary/10 shadow-inner">
-                  <User className="text-primary w-16 h-16" />
+                <div className="w-32 h-32 bg-primary/5 rounded-3xl flex items-center justify-center border-2 border-primary/10 shadow-inner relative overflow-hidden">
+                  {targetProfile.photoURL ? (
+                    <Image src={targetProfile.photoURL} alt={targetProfile.name || 'Profile'} fill className="object-cover" />
+                  ) : (
+                    <User className="text-primary w-16 h-16" />
+                  )}
                 </div>
                 <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-1.5 rounded-full border-4 border-white shadow-sm">
                   <ShieldCheck className="w-4 h-4" />
@@ -149,7 +153,7 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ uid:
                 <div className="space-y-4">
                   <h4 className="text-xs uppercase font-bold text-muted-foreground tracking-widest">Biography</h4>
                   <div className="p-6 bg-muted/20 rounded-2xl italic text-lg leading-relaxed text-foreground/80 border-l-4 border-primary/20">
-                    &quot;{targetProfile.bio || "This professional has chosen to keep their biography private but is actively looking for strategic partnerships within the CapFinder network."}&quot;
+                    "{targetProfile.bio || "This professional has chosen to keep their biography private but is actively looking for strategic partnerships within the CapFinder network."}"
                   </div>
                 </div>
 

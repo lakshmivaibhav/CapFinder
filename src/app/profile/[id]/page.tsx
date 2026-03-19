@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, User, Briefcase, Mail, Globe, ShieldCheck, TrendingUp, Sparkles, Clock, Circle, LayoutGrid } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
@@ -90,8 +91,12 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
             <Card className="border-none shadow-2xl text-center p-12 bg-white rounded-[2.5rem] overflow-hidden relative">
               <div className="absolute top-0 left-0 w-full h-2 bg-primary" />
               <div className="relative inline-block mx-auto mb-8">
-                <div className="w-36 h-36 bg-muted rounded-[2rem] flex items-center justify-center border-4 border-white shadow-inner">
-                  <User className="text-muted-foreground opacity-30 w-16 h-16" />
+                <div className="w-36 h-36 bg-muted rounded-[2rem] flex items-center justify-center border-4 border-white shadow-inner relative overflow-hidden">
+                  {targetProfile.photoURL ? (
+                    <Image src={targetProfile.photoURL} alt={targetProfile.name || 'Profile'} fill className="object-cover" />
+                  ) : (
+                    <User className="text-muted-foreground opacity-30 w-16 h-16" />
+                  )}
                 </div>
                 <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2.5 rounded-2xl border-4 border-white shadow-lg">
                   <ShieldCheck className="w-5 h-5" />
@@ -143,7 +148,7 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
                 <ShieldCheck className="w-6 h-6" /> Platform Certified
               </h3>
               <p className="text-sm opacity-90 leading-relaxed font-medium italic">
-                &quot;This identity has satisfied the preliminary verification protocols required for verified platform interactions.&quot;
+                "This identity has satisfied the preliminary verification protocols required for verified platform interactions."
               </p>
               <div className="h-1.5 w-full bg-white/20 rounded-full mt-6" />
             </Card>
@@ -168,7 +173,7 @@ export default function UserProfileViewPage({ params }: { params: Promise<{ id: 
                     <div className="w-2 h-2 bg-primary rounded-full" /> Narrative
                   </h4>
                   <div className="p-10 bg-muted/20 rounded-[2rem] italic text-2xl leading-relaxed text-foreground/80 border-l-8 border-primary/20 shadow-inner">
-                    &quot;{targetProfile.bio || "The professional has restricted their public narrative to verified connections only. Authenticate your intent by initiating a contact request."}&quot;
+                    "{targetProfile.bio || "The professional has restricted their public narrative to verified connections only. Authenticate your intent by initiating a contact request."}"
                   </div>
                 </div>
 

@@ -10,6 +10,7 @@ interface Profile {
   role?: 'investor' | 'startup' | 'admin';
   name?: string;
   email?: string;
+  photoURL?: string;
   company?: string;
   bio?: string;
   investmentInterest?: string;
