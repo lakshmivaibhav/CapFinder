@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { 
@@ -16,51 +17,62 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 export default function HomePage() {
   const { user } = useAuth();
   const db = useFirestore();
   const browseLink = user ? '/pitches' : '/login';
 
-  // Live Stats Queries
-  const pitchesQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return collection(db, 'pitches');
-  }, [db, user]);
+  const [counts, setCounts] = useState({
+    pitches: 0,
+    users: 0,
+    verifiedInvestors: 0,
+    connections: 0
+  });
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return collection(db, 'users');
-  }, [db, user]);
+  useEffect(() => {
+    async function fetchStats() {
+      if (!user) {
+        setCounts({ pitches: 0, users: 0, verifiedInvestors: 0, connections: 0 });
+        return;
+      }
 
-  const verifiedInvestorsQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return query(collection(db, 'users'), where('role', '==', 'investor'), where('verified', '==', true));
-  }, [db, user]);
+      try {
+        const [
+          pitchesSnap,
+          usersSnap,
+          verifiedInvestorsSnap,
+          interestsSnap,
+          contactRequestsSnap
+        ] = await Promise.all([
+          getDocs(collection(db, 'pitches')),
+          getDocs(collection(db, 'users')),
+          getDocs(query(collection(db, 'users'), where('role', '==', 'investor'), where('verified', '==', true))),
+          getDocs(collection(db, 'interests')),
+          getDocs(collection(db, 'contactRequests'))
+        ]);
 
-  const interestsQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return collection(db, 'interests');
-  }, [db, user]);
+        setCounts({
+          pitches: pitchesSnap.size,
+          users: usersSnap.size,
+          verifiedInvestors: verifiedInvestorsSnap.size,
+          connections: interestsSnap.size + contactRequestsSnap.size
+        });
+      } catch (error) {
+        console.error("Error fetching landing stats:", error);
+      }
+    }
 
-  const contactRequestsQuery = useMemoFirebase(() => {
-    if (!user) return null;
-    return collection(db, 'contactRequests');
+    fetchStats();
   }, [db, user]);
-
-  const { data: pitchesData } = useCollection(pitchesQuery);
-  const { data: usersData } = useCollection(usersQuery);
-  const { data: verifiedInvestorsData } = useCollection(verifiedInvestorsQuery);
-  const { data: interestsData } = useCollection(interestsQuery);
-  const { data: contactRequestsData } = useCollection(contactRequestsQuery);
 
   const stats = [
-    { label: 'Active Startups', value: pitchesData?.length || 0, icon: Briefcase },
-    { label: 'Total Members', value: usersData?.length || 0, icon: Users },
-    { label: 'Verified Investors', value: verifiedInvestorsData?.length || 0, icon: ShieldCheck },
-    { label: 'Connections', value: (interestsData?.length || 0) + (contactRequestsData?.length || 0), icon: Zap },
+    { label: 'Active Startups', value: counts.pitches, icon: Briefcase },
+    { label: 'Total Members', value: counts.users, icon: Users },
+    { label: 'Verified Investors', value: counts.verifiedInvestors, icon: ShieldCheck },
+    { label: 'Connections', value: counts.connections, icon: Zap },
   ];
 
   const features = [
@@ -171,11 +183,7 @@ export default function HomePage() {
                   <stat.icon className="w-6 h-6" />
                 </div>
                 <div className="text-4xl font-black tracking-tight">
-                  {!user ? (
-                    <span className="text-muted-foreground opacity-20">—</span>
-                  ) : (
-                    stat.value.toLocaleString()
-                  )}
+                  {stat.value.toLocaleString()}
                 </div>
                 <div className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{stat.label}</div>
               </div>
