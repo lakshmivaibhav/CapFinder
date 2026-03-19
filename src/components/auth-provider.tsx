@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User, signOut } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, sendEmailVerification } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 
@@ -16,20 +16,27 @@ interface Profile {
   investmentInterest?: string;
   fundingNeeded?: number;
   disabled?: boolean;
+  verified?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  emailVerified: boolean;
   refreshProfile: () => Promise<void>;
+  reloadUser: () => Promise<void>;
+  resendVerification: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
+  emailVerified: false,
   refreshProfile: async () => {},
+  reloadUser: async () => {},
+  resendVerification: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -47,7 +54,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        // If account is disabled, sign out immediately
         if (data.disabled) {
           await signOut(auth);
           setProfile(null);
@@ -64,15 +70,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const reloadUser = async () => {
+    if (auth.currentUser) {
+      await auth.currentUser.reload();
+      setUser({ ...auth.currentUser });
+    }
+  };
+
+  const resendVerification = async () => {
+    if (auth.currentUser) {
+      await sendEmailVerification(auth.currentUser);
+    }
+  };
+
   const refreshProfile = async () => {
     if (user) await fetchProfile(user.uid);
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        await fetchProfile(user.uid);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        await fetchProfile(firebaseUser.uid);
       } else {
         setProfile(null);
       }
@@ -83,7 +102,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [auth]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, refreshProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      loading, 
+      emailVerified: user?.emailVerified || false,
+      refreshProfile, 
+      reloadUser,
+      resendVerification
+    }}>
       {children}
     </AuthContext.Provider>
   );

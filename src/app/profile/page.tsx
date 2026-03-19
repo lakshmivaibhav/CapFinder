@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -20,7 +19,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 export default function ProfilePage() {
-  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
+  const { user, profile, loading: authLoading, refreshProfile, emailVerified } = useAuth();
   const db = useFirestore();
   const storage = useStorage();
   const router = useRouter();
@@ -43,10 +42,14 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
+    if (!authLoading) {
+      if (!user) {
+        router.push('/login');
+      } else if (!emailVerified) {
+        router.push('/verify-email');
+      }
     }
-  }, [user, authLoading, router]);
+  }, [user, emailVerified, authLoading, router]);
 
   useEffect(() => {
     if (profile) {
@@ -160,7 +163,7 @@ export default function ProfilePage() {
     }
   };
 
-  if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-12 h-12 text-primary opacity-20" /></div>;
+  if (authLoading || (user && !emailVerified)) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-12 h-12 text-primary opacity-20" /></div>;
   if (!user) return null;
 
   return (

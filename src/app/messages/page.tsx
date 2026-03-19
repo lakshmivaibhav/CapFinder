@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
 export default function MessagesPage() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, emailVerified } = useAuth();
   const db = useFirestore();
   const router = useRouter();
   const [selectedConnection, setSelectedConnection] = useState<any>(null);
@@ -23,18 +23,22 @@ export default function MessagesPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
+    if (!authLoading) {
+      if (!user) {
+        router.push('/login');
+      } else if (!emailVerified) {
+        router.push('/verify-email');
+      }
     }
-  }, [user, authLoading, router]);
+  }, [user, emailVerified, authLoading, router]);
 
   const connectionsQuery = useMemoFirebase(() => {
-    if (!user || !profile) return null;
+    if (!user || !profile || !emailVerified) return null;
     return query(
       collection(db, 'contactRequests'),
       where(profile.role === 'investor' ? 'senderId' : 'receiverId', '==', user.uid)
     );
-  }, [db, user, profile]);
+  }, [db, user, profile, emailVerified]);
 
   const { data: allConnections, isLoading: loadingConnections } = useCollection(connectionsQuery);
   const connections = allConnections?.filter(c => c.status === 'accepted') || [];
@@ -87,7 +91,7 @@ export default function MessagesPage() {
     setMessageText('');
   };
 
-  if (authLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" /></div>;
+  if (authLoading || (user && !emailVerified)) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" /></div>;
   if (!user) return null;
 
   return (

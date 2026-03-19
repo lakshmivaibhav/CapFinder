@@ -1,17 +1,16 @@
-
 "use client";
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, Loader2, Zap, ArrowRight, ShieldCheck, UserPlus } from 'lucide-react';
+import { TrendingUp, Loader2, Zap, ArrowRight, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function SignupPage() {
@@ -28,6 +27,10 @@ export default function SignupPage() {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Send verification email immediately
+      await sendEmailVerification(userCredential.user);
+
       setDocumentNonBlocking(doc(db, 'users', userCredential.user.uid), {
         id: userCredential.user.uid,
         email: userCredential.user.email,
@@ -37,8 +40,12 @@ export default function SignupPage() {
         verified: false,
       }, { merge: true });
 
-      toast({ title: "Account Initialized", description: "Establish your professional identity." });
-      router.push('/onboarding');
+      toast({ 
+        title: "Account Initialized", 
+        description: "A verification email has been sent. Please verify your email to continue." 
+      });
+      
+      router.push('/verify-email');
     } catch (error: any) {
       toast({ 
         variant: "destructive", 

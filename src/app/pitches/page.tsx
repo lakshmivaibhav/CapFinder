@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { collection, query, serverTimestamp, where, doc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
@@ -11,19 +10,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, TrendingUp, Mail, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, ArrowRight, Users, LayoutGrid, FilterX, CheckCircle2, Sparkles } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function PitchesFeedPage() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, emailVerified } = useAuth();
   const db = useFirestore();
+  const router = useRouter();
   const { toast } = useToast();
   
   const [search, setSearch] = useState('');
   const [industryFilter, setIndustryFilter] = useState('all');
   const [fundingFilter, setFundingFilter] = useState('all');
+
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        router.push('/login');
+      } else if (!emailVerified) {
+        router.push('/verify-email');
+      }
+    }
+  }, [user, authLoading, emailVerified, router]);
 
   const isInvestor = profile?.role === 'investor';
   const isStartup = profile?.role === 'startup';
@@ -148,7 +159,7 @@ export default function PitchesFeedPage() {
     return null;
   };
 
-  if (authLoading) return <div className="p-20 text-center"><Loader2 className="animate-spin mx-auto w-12 h-12 text-primary opacity-20" /></div>;
+  if (authLoading || (user && !emailVerified)) return null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

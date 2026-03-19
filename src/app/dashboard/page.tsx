@@ -15,19 +15,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, emailVerified } = useAuth();
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
   const [resolving, setResolving] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    } else if (!authLoading && user && !profile) {
-      router.push('/onboarding');
+    if (!authLoading) {
+      if (!user) {
+        router.push('/login');
+      } else if (!emailVerified) {
+        router.push('/verify-email');
+      } else if (!profile) {
+        router.push('/onboarding');
+      }
     }
-  }, [user, profile, authLoading, router]);
+  }, [user, profile, authLoading, emailVerified, router]);
 
   const isStartup = profile?.role === 'startup';
   const isInvestor = profile?.role === 'investor';
@@ -144,7 +148,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user || !profile) return null;
+  if (!user || !profile || !emailVerified) return null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

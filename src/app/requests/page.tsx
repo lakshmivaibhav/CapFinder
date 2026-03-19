@@ -15,7 +15,7 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 
 export default function RequestsPage() {
-  const { user, profile, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading, emailVerified } = useAuth();
   const db = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
@@ -24,6 +24,8 @@ export default function RequestsPage() {
     if (!authLoading) {
       if (!user) {
         router.push('/login');
+      } else if (!emailVerified) {
+        router.push('/verify-email');
       } else if (profile && profile.role !== 'startup') {
         toast({
           variant: "destructive",
@@ -33,15 +35,15 @@ export default function RequestsPage() {
         router.push('/dashboard');
       }
     }
-  }, [user, profile, authLoading, router, toast]);
+  }, [user, profile, authLoading, emailVerified, router, toast]);
 
   const requestsQuery = useMemoFirebase(() => {
-    if (!user || profile?.role !== 'startup') return null;
+    if (!user || profile?.role !== 'startup' || !emailVerified) return null;
     return query(
       collection(db, 'contactRequests'),
       where('receiverId', '==', user.uid)
     );
-  }, [db, user, profile]);
+  }, [db, user, profile, emailVerified]);
 
   const { data: requests, isLoading: loadingRequests } = useCollection(requestsQuery);
 
@@ -53,7 +55,7 @@ export default function RequestsPage() {
     });
   };
 
-  if (authLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" /></div>;
+  if (authLoading || (user && !emailVerified)) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" /></div>;
   if (!user || profile?.role !== 'startup') return null;
 
   return (
