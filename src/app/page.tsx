@@ -33,44 +33,30 @@ export default function HomePage() {
 
   useEffect(() => {
     async function fetchStats() {
-      // If no user is authenticated, we cannot fetch statistics due to security rules.
-      // In this case, we gracefully default to 0.
+      // Statistics require authentication to read from Firestore collections
       if (!user) {
         setCounts({ pitches: 0, users: 0, verifiedInvestors: 0, connections: 0 });
         return;
       }
 
       try {
-        // Use individual getDocs calls with specific error handling.
-        // This ensures that if certain collections are restricted (e.g., non-admins 
-        // listing all interests), the remaining stats still populate.
-        
-        // 1. Active Startups (pitches)
-        const pitchesSnap = await getDocs(collection(db, 'pitches')).catch(() => ({ size: 0 }));
-        
-        // 2. Total Members (users)
-        const usersSnap = await getDocs(collection(db, 'users')).catch(() => ({ size: 0 }));
-        
-        // 3. Verified Investors (users where verified == true AND role == investor)
-        const verifiedQuery = query(
-          collection(db, 'users'), 
-          where('verified', '==', true),
-          where('role', '==', 'investor')
-        );
-        const verifiedSnap = await getDocs(verifiedQuery).catch(() => ({ size: 0 }));
-        
-        // 4. Connections (Sum of all expressed interests and contact requests)
-        const interestsSnap = await getDocs(collection(db, 'interests')).catch(() => ({ size: 0 }));
-        const requestsSnap = await getDocs(collection(db, 'contactRequests')).catch(() => ({ size: 0 }));
+        // Fetch all stats concurrently but handle errors individually to maximize data visibility
+        const [pitchesSnap, usersSnap, verifiedSnap, interestsSnap, requestsSnap] = await Promise.all([
+          getDocs(collection(db, 'pitches')).catch(() => null),
+          getDocs(collection(db, 'users')).catch(() => null),
+          getDocs(query(collection(db, 'users'), where('verified', '==', true), where('role', '==', 'investor'))).catch(() => null),
+          getDocs(collection(db, 'interests')).catch(() => null),
+          getDocs(collection(db, 'contactRequests')).catch(() => null)
+        ]);
 
         setCounts({
-          pitches: pitchesSnap.size || 0,
-          users: usersSnap.size || 0,
-          verifiedInvestors: verifiedSnap.size || 0,
-          connections: (interestsSnap.size || 0) + (requestsSnap.size || 0)
+          pitches: pitchesSnap?.size || 0,
+          users: usersSnap?.size || 0,
+          verifiedInvestors: verifiedSnap?.size || 0,
+          connections: (interestsSnap?.size || 0) + (requestsSnap?.size || 0)
         });
       } catch (error) {
-        // Silently handle general fetching errors.
+        // Global error handled silently as individual counts handle their own fallbacks to 0
       }
     }
 
