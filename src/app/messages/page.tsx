@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { Loader2, Send, MessageSquare, Clock, CheckCheck, Inbox, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
