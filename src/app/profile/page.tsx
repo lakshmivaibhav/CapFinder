@@ -3,9 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDocs, collection, query, where, serverTimestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useStorage, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,7 +20,6 @@ import Image from 'next/image';
 export default function ProfilePage() {
   const { user, profile, loading: authLoading, refreshProfile, emailVerified } = useAuth();
   const db = useFirestore();
-  const storage = useStorage();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -78,27 +76,41 @@ export default function ProfilePage() {
 
     setUploading(true);
     try {
-      // Storage path: profilePhotos/{uid}
-      const storageRef = ref(storage, `profilePhotos/${user.uid}`);
-      const snapshot = await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(snapshot.ref);
+      const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dfp3ydcli/image/upload";
+      const UPLOAD_PRESET = "profile_upload";
 
-      // Non-blocking write to Firestore: users/{uid} -> photoURL
+      const formDataCloudinary = new FormData();
+      formDataCloudinary.append('file', file);
+      formDataCloudinary.append('upload_preset', UPLOAD_PRESET);
+
+      const response = await fetch(CLOUDINARY_URL, {
+        method: 'POST',
+        body: formDataCloudinary,
+      });
+
+      if (!response.ok) {
+        throw new Error('Cloudinary upload failed');
+      }
+
+      const data = await response.json();
+      const secureURL = data.secure_url;
+
+      // Update Firestore user document: users/{uid} -> photoURL
       updateDocumentNonBlocking(doc(db, 'users', user.uid), {
-        photoURL: downloadURL,
+        photoURL: secureURL,
         updatedAt: serverTimestamp(),
       });
       
       // Update local state immediately for visual feedback
-      setFormData(prev => ({ ...prev, photoURL: downloadURL }));
+      setFormData(prev => ({ ...prev, photoURL: secureURL }));
       
       // Refresh profile context
       await refreshProfile();
       
-      toast({ title: "Photo Updated", description: "Your profile picture has been successfully synchronized." });
+      toast({ title: "Photo Updated", description: "Your profile picture has been successfully synchronized via Cloudinary." });
     } catch (error: any) {
-      console.error("Upload error:", error);
-      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload profile picture. Check your connection." });
+      console.error("Cloudinary upload error:", error);
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload profile picture to Cloudinary." });
     } finally {
       setUploading(false);
     }
