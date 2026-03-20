@@ -171,9 +171,9 @@ export default function MessagesPage() {
                   <Avatar className="h-14 w-14 border-2 shadow-sm"><AvatarFallback className="bg-primary text-white font-black text-xl">{selectedConnection.startupName[0]}</AvatarFallback></Avatar>
                   <div className="space-y-0.5">
                     <h3 className="text-2xl font-black tracking-tight">{selectedConnection.startupName}</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-2">
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-2">
                       <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /> Encrypted Session
-                    </p>
+                    </div>
                   </div>
                 </div>
                 <Badge variant="outline" className="h-10 px-6 rounded-xl font-bold border-2 hidden md:flex">Strategic Inquiry</Badge>
