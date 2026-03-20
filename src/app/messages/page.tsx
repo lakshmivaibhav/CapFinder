@@ -11,9 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Send, MessageSquare, Clock, CheckCheck, Inbox, Zap } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Loader2, Send, MessageSquare, Clock, CheckCheck, Inbox, Zap, Smile } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import dynamic from 'next/dynamic';
+
+// Dynamically import emoji picker to avoid SSR issues
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 export default function MessagesPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
@@ -90,6 +95,10 @@ export default function MessagesPage() {
     });
 
     setMessageText('');
+  };
+
+  const onEmojiClick = (emojiData: any) => {
+    setMessageText(prev => prev + emojiData.emoji);
   };
 
   if (authLoading || (user && !emailVerified)) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" /></div>;
@@ -197,12 +206,31 @@ export default function MessagesPage() {
 
               <div className="p-8 border-t bg-white/60 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
                 <form onSubmit={handleSendMessage} className="flex gap-4 items-center">
-                  <Input 
-                    placeholder="Compose message..." 
-                    value={messageText} 
-                    onChange={(e) => setMessageText(e.target.value)} 
-                    className="flex-1 h-14 rounded-2xl bg-white border-none shadow-inner text-lg font-medium px-6 focus:ring-2 focus:ring-primary/20 transition-all" 
-                  />
+                  <div className="flex-1 relative flex items-center">
+                    <Input 
+                      placeholder="Compose message..." 
+                      value={messageText} 
+                      onChange={(e) => setMessageText(e.target.value)} 
+                      className="flex-1 h-14 rounded-2xl bg-white border-none shadow-inner text-lg font-medium px-6 pr-14 focus:ring-2 focus:ring-primary/20 transition-all" 
+                    />
+                    <div className="absolute right-4">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-muted text-muted-foreground transition-all">
+                            <Smile className="w-6 h-6" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent side="top" align="end" className="p-0 border-none shadow-2xl rounded-2xl w-auto">
+                          <EmojiPicker 
+                            onEmojiClick={onEmojiClick}
+                            lazyLoadEmojis={true}
+                            skinTonesDisabled={true}
+                            previewConfig={{ showPreview: false }}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
                   <Button type="submit" size="icon" className="h-14 w-14 shrink-0 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95" disabled={!messageText.trim()}>
                     <Send className="w-6 h-6" />
                   </Button>
