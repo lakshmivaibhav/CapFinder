@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, updateDoc, getDocs, collection, query, where, serverTimestamp } from 'firebase/firestore';
+import { doc, getDocs, collection, query, where, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useStorage, addDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useStorage, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,16 +53,17 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (profile) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         name: profile.name || '',
         company: profile.company || '',
         bio: profile.bio || '',
         fundingNeeded: profile.fundingNeeded?.toString() || '',
         investmentInterest: profile.investmentInterest || '',
         role: profile.role || 'startup',
-        photoURL: profile.photoURL || '',
+        photoURL: profile.photoURL || prev.photoURL || '',
         verified: !!profile.verified,
-      });
+      }));
     }
   }, [profile]);
 
@@ -81,13 +82,18 @@ export default function ProfilePage() {
       const snapshot = await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(snapshot.ref);
 
-      await updateDoc(doc(db, 'users', user.uid), {
+      // Non-blocking write to Firestore
+      updateDocumentNonBlocking(doc(db, 'users', user.uid), {
         photoURL: downloadURL,
         updatedAt: serverTimestamp(),
       });
       
+      // Update local state immediately for visual feedback
       setFormData(prev => ({ ...prev, photoURL: downloadURL }));
-      await refreshProfile();
+      
+      // Refresh profile background
+      refreshProfile();
+      
       toast({ title: "Photo Updated", description: "Your profile picture has been successfully synchronized." });
     } catch (error: any) {
       console.error("Upload error:", error);
@@ -103,7 +109,7 @@ export default function ProfilePage() {
     setSaving(true);
     try {
       const numericFunding = formData.fundingNeeded ? parseFloat(formData.fundingNeeded) : 0;
-      await updateDoc(doc(db, 'users', user.uid), {
+      updateDocumentNonBlocking(doc(db, 'users', user.uid), {
         name: formData.name,
         company: formData.company,
         bio: formData.bio,
@@ -200,12 +206,18 @@ export default function ProfilePage() {
               <div className="relative inline-block mx-auto mb-8 mt-4 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                 <div className="w-40 h-40 bg-muted rounded-[2rem] flex items-center justify-center border-4 border-white shadow-inner relative overflow-hidden">
                   {formData.photoURL ? (
-                    <Image src={formData.photoURL} alt="Profile" fill className="object-cover" />
+                    <Image 
+                      src={formData.photoURL} 
+                      alt="Profile" 
+                      fill 
+                      className="object-cover" 
+                      priority
+                    />
                   ) : (
                     <User className="text-muted-foreground opacity-30 w-16 h-16" />
                   )}
                   {uploading && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
                       <Loader2 className="animate-spin text-white w-8 h-8" />
                     </div>
                   )}
@@ -214,7 +226,7 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 {formData.verified && (
-                  <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2 rounded-2xl border-4 border-white shadow-lg">
+                  <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2 rounded-2xl border-4 border-white shadow-lg z-20">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                 )}
