@@ -236,9 +236,12 @@
         "pitchId": { "type": "string" },
         "text": { "type": "string" },
         "read": { "type": "boolean", "description": "Whether the message has been read by the receiver." },
-        "timestamp": { "type": "string", "format": "date-time" }
+        "timestamp": { "type": "string", "format": "date-time" },
+        "fileURL": { "type": "string" },
+        "fileType": { "type": "string" },
+        "fileName": { "type": "string" }
       },
-      "required": ["senderId", "receiverId", "pitchId", "text", "timestamp", "read"]
+      "required": ["senderId", "receiverId", "pitchId", "timestamp", "read"]
     },
     "DeleteRequest": {
       "$schema": "http://json-schema.org/draft-07/schema#",

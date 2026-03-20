@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
@@ -12,10 +13,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Loader2, Send, MessageSquare, Clock, CheckCheck, Inbox, Zap, Smile } from 'lucide-react';
+import { Loader2, Send, MessageSquare, Clock, CheckCheck, Inbox, Zap, Smile, Paperclip, FileText, Download, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
+import { useToast } from '@/hooks/use-toast';
 
 // Dynamically import emoji picker to avoid SSR issues
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
@@ -24,9 +27,12 @@ export default function MessagesPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
   const db = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
   const [selectedConnection, setSelectedConnection] = useState<any>(null);
   const [messageText, setMessageText] = useState('');
+  const [uploadingFile, setUploadingFile] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -77,8 +83,8 @@ export default function MessagesPage() {
     if (scrollRef.current) scrollRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendMessage = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!user || !selectedConnection || !messageText.trim()) return;
 
     const receiverId = user.uid === selectedConnection.senderId 
@@ -95,6 +101,56 @@ export default function MessagesPage() {
     });
 
     setMessageText('');
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user || !selectedConnection) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({ variant: "destructive", title: "Format Error", description: "Supported formats: JPG, PNG, PDF, DOC, DOCX." });
+      return;
+    }
+
+    setUploadingFile(true);
+    try {
+      const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dfp3ydcli/auto/upload";
+      const UPLOAD_PRESET = "profile_upload";
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', UPLOAD_PRESET);
+
+      const response = await fetch(CLOUDINARY_URL, { method: 'POST', body: formData });
+      if (!response.ok) throw new Error('Cloudinary upload failed');
+
+      const data = await response.json();
+      const secureURL = data.secure_url;
+
+      const receiverId = user.uid === selectedConnection.senderId 
+        ? selectedConnection.receiverId 
+        : selectedConnection.senderId;
+
+      addDocumentNonBlocking(collection(db, 'messages'), {
+        senderId: user.uid,
+        receiverId,
+        pitchId: selectedConnection.pitchId,
+        text: `Shared a file: ${file.name}`,
+        fileURL: secureURL,
+        fileType: file.type,
+        fileName: file.name,
+        timestamp: serverTimestamp(),
+        read: false,
+      });
+
+      toast({ title: "File Sent", description: "Your document has been successfully attached to the session." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not send the attachment." });
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const onEmojiClick = (emojiData: any) => {
@@ -184,10 +240,36 @@ export default function MessagesPage() {
                   {messages.map((msg) => (
                     <div key={msg.id} className={cn("flex flex-col max-w-[75%] space-y-2", msg.senderId === user.uid ? "ml-auto items-end" : "items-start")}>
                       <div className={cn(
-                        "px-6 py-4 rounded-3xl text-sm font-medium shadow-md leading-relaxed", 
+                        "px-6 py-4 rounded-3xl text-sm font-medium shadow-md leading-relaxed flex flex-col gap-3", 
                         msg.senderId === user.uid ? "bg-primary text-white rounded-br-none shadow-primary/20" : "bg-white text-foreground rounded-bl-none shadow-black/5 ring-1 ring-black/5"
                       )}>
-                        {msg.text}
+                        {msg.fileURL && (
+                          <div className="mb-2">
+                            {msg.fileType.startsWith('image/') ? (
+                              <div className="relative w-full aspect-video rounded-xl overflow-hidden border-2 border-white/20 shadow-inner group">
+                                <Image src={msg.fileURL} alt="Attachment" fill className="object-cover" unoptimized />
+                                <a href={msg.fileURL} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+                                  <Download className="w-6 h-6 text-white" />
+                                </a>
+                              </div>
+                            ) : (
+                              <a href={msg.fileURL} target="_blank" rel="noopener noreferrer" className={cn(
+                                "flex items-center gap-3 p-4 rounded-xl border-2 transition-all hover:scale-[1.02]",
+                                msg.senderId === user.uid ? "bg-white/10 border-white/20 hover:bg-white/20" : "bg-muted/30 border-muted/50 hover:bg-muted/50"
+                              )}>
+                                <div className={cn("p-2 rounded-lg", msg.senderId === user.uid ? "bg-white/20" : "bg-primary/10")}>
+                                  <FileText className={cn("w-5 h-5", msg.senderId === user.uid ? "text-white" : "text-primary")} />
+                                </div>
+                                <div className="flex-1 overflow-hidden">
+                                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-0.5">Shared Document</p>
+                                  <p className="font-bold truncate text-xs">{msg.fileName || 'document.pdf'}</p>
+                                </div>
+                                <Download className="w-4 h-4 opacity-40" />
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        <p>{msg.text}</p>
                       </div>
                       <div className="flex items-center gap-2 px-2">
                         <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
@@ -206,6 +288,18 @@ export default function MessagesPage() {
 
               <div className="p-8 border-t bg-white/60 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
                 <form onSubmit={handleSendMessage} className="flex gap-4 items-center">
+                  <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".jpg,.png,.jpeg,.pdf,.doc,.docx" />
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-14 w-14 rounded-2xl bg-white border-none shadow-inner text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all active:scale-95 disabled:opacity-50"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                  >
+                    {uploadingFile ? <Loader2 className="w-6 h-6 animate-spin" /> : <Paperclip className="w-6 h-6" />}
+                  </Button>
+                  
                   <div className="flex-1 relative flex items-center">
                     <Input 
                       placeholder="Compose message..." 
@@ -231,7 +325,7 @@ export default function MessagesPage() {
                       </Popover>
                     </div>
                   </div>
-                  <Button type="submit" size="icon" className="h-14 w-14 shrink-0 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95" disabled={!messageText.trim()}>
+                  <Button type="submit" size="icon" className="h-14 w-14 shrink-0 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 bg-primary hover:bg-primary/90" disabled={!messageText.trim() || uploadingFile}>
                     <Send className="w-6 h-6" />
                   </Button>
                 </form>
