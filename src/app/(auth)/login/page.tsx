@@ -3,15 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, Loader2, Zap, ArrowRight, ShieldCheck } from 'lucide-react';
+import { TrendingUp, Loader2, Zap, ArrowRight, ShieldCheck, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -19,6 +20,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -57,6 +61,29 @@ export default function LoginPage() {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) return;
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, resetEmail);
+      toast({ 
+        title: "Recovery email sent", 
+        description: "Please check your inbox for instructions to reset your security key." 
+      });
+      setIsResetDialogOpen(false);
+      setResetEmail('');
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive", 
+        title: "Request failed", 
+        description: error.message || "Verification of identity failed." 
+      });
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-[#f8fafc]">
       <div className="w-full max-w-md space-y-8">
@@ -88,7 +115,42 @@ export default function LoginPage() {
                 />
               </div>
               <div className="space-y-3">
-                <Label htmlFor="password" id="password-label" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Security Key</Label>
+                <div className="flex justify-between items-center px-1">
+                  <Label htmlFor="password" id="password-label" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Security Key</Label>
+                  <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                    <DialogTrigger asChild>
+                      <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline outline-none">Forgot key?</button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md rounded-[2rem] border-none shadow-2xl p-8">
+                      <DialogHeader className="space-y-4">
+                        <div className="mx-auto w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
+                          <KeyRound className="w-7 h-7 text-primary" />
+                        </div>
+                        <DialogTitle className="text-2xl font-black text-center">Identity Recovery</DialogTitle>
+                        <DialogDescription className="text-center font-medium leading-relaxed">
+                          Provide your registered email address to receive a secure recovery protocol.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <form onSubmit={handleResetPassword} className="space-y-6 mt-4">
+                        <div className="space-y-3">
+                          <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Verified Email</Label>
+                          <Input 
+                            id="reset-email" 
+                            type="email" 
+                            placeholder="name@company.com" 
+                            required 
+                            className="h-14 rounded-2xl bg-muted/10 border-none shadow-inner text-lg font-medium px-6 focus:ring-2 focus:ring-primary/20 transition-all"
+                            value={resetEmail}
+                            onChange={(e) => setResetEmail(e.target.value)}
+                          />
+                        </div>
+                        <Button type="submit" className="w-full h-14 bg-primary shadow-xl shadow-primary/20 rounded-2xl font-black text-lg gap-3 transition-all hover:scale-[1.02]" disabled={resetLoading}>
+                          {resetLoading ? <Loader2 className="animate-spin" /> : "Initiate Recovery"}
+                        </Button>
+                      </form>
+                    </DialogContent>
+                  </Dialog>
+                </div>
                 <Input 
                   id="password" 
                   type="password" 
