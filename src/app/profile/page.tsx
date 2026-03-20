@@ -78,11 +78,12 @@ export default function ProfilePage() {
 
     setUploading(true);
     try {
-      const storageRef = ref(storage, `profiles/${user.uid}/${Date.now()}_${file.name}`);
+      // Storage path: profilePhotos/{uid}
+      const storageRef = ref(storage, `profilePhotos/${user.uid}`);
       const snapshot = await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(snapshot.ref);
 
-      // Non-blocking write to Firestore
+      // Non-blocking write to Firestore: users/{uid} -> photoURL
       updateDocumentNonBlocking(doc(db, 'users', user.uid), {
         photoURL: downloadURL,
         updatedAt: serverTimestamp(),
@@ -91,8 +92,8 @@ export default function ProfilePage() {
       // Update local state immediately for visual feedback
       setFormData(prev => ({ ...prev, photoURL: downloadURL }));
       
-      // Refresh profile background
-      refreshProfile();
+      // Refresh profile context
+      await refreshProfile();
       
       toast({ title: "Photo Updated", description: "Your profile picture has been successfully synchronized." });
     } catch (error: any) {
@@ -212,6 +213,7 @@ export default function ProfilePage() {
                       fill 
                       className="object-cover" 
                       priority
+                      unoptimized
                     />
                   ) : (
                     <User className="text-muted-foreground opacity-30 w-16 h-16" />
