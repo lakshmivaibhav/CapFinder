@@ -1,6 +1,7 @@
+
 "use client";
 
-import Link from 'next/navigation';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
@@ -132,7 +133,6 @@ export function Navbar() {
             )}
             <div className="h-8 w-[1px] bg-muted mx-1 md:mx-2 hidden lg:block" />
             
-            {/* Mobile Nav Trigger (Simple List Toggle) */}
             <div className="flex lg:hidden gap-1">
                {navItems.slice(0, 2).map((item) => (
                  <Link key={item.href} href={item.href}>
