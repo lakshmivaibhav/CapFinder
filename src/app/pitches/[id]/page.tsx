@@ -12,12 +12,14 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 export default function PitchDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user, profile, loading: authLoading } = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
   const [checking, setChecking] = useState(false);
   const [resolving, setResolving] = useState(false);
 
@@ -127,8 +129,8 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
     }
   };
 
-  const handleRequestDeletion = async () => {
-    if (!user || !pitch || !isOwner) return;
+  const handleDeletePitch = async () => {
+    if (!user || !pitch || !isOwner || profile?.role !== 'startup') return;
     
     setChecking(true);
     try {
@@ -138,26 +140,20 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       if (!interestsSnap.empty || !requestsSnap.empty) {
         toast({
           variant: "destructive",
-          title: "Resolve connection required",
+          title: "Resolve connections before deleting",
           description: "Active connections exist. Investors must resolve their interest before you can delete this pitch."
         });
         setChecking(false);
         return;
       }
 
-      if (confirm("Request deletion of this pitch? An administrator will review your request.")) {
-        addDocumentNonBlocking(collection(db, 'deleteRequests'), {
-          userId: user.uid,
-          targetType: 'pitch',
-          targetId: pitch.id,
-          status: 'pending',
-          timestamp: serverTimestamp(),
-          details: `Startup owner requested deletion of pitch: ${pitch.startupName}`
-        });
-        toast({ title: "Deletion Request Sent", description: "Administrators have been notified." });
+      if (confirm("Confirm PERMANENT deletion of this pitch? This action cannot be undone.")) {
+        deleteDocumentNonBlocking(doc(db, 'pitches', pitch.id));
+        toast({ title: "Venture Deleted", description: "Your pitch has been removed from the ecosystem." });
+        router.push('/dashboard');
       }
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: "Could not verify pitch status." });
+      toast({ variant: "destructive", title: "Error", description: "Database authentication failed." });
     } finally {
       setChecking(false);
     }
@@ -186,16 +182,16 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                     {pitch.category || pitch.industry || 'Other'}
                   </Badge>
                   <div className="flex items-center gap-3">
-                    {isOwner && (
+                    {isOwner && profile?.role === 'startup' && (
                       <Button 
                         variant="ghost" 
                         size="sm" 
                         className="text-destructive hover:bg-destructive/10 h-10 px-4 rounded-xl font-bold"
-                        onClick={handleRequestDeletion}
+                        onClick={handleDeletePitch}
                         disabled={checking}
                       >
                         {checking ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                        Delete Request
+                        Delete Pitch
                       </Button>
                     )}
                     {isInvestor && (

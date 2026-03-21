@@ -22,6 +22,7 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
   const router = useRouter();
   const { toast } = useToast();
   const [resolving, setResolving] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   // Fetch Pitch Data
   const pitchRef = useMemoFirebase(() => doc(db, 'pitches', id), [db, id]);
@@ -109,6 +110,36 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
     }
   };
 
+  const handleDeletePitch = async () => {
+    if (!user || !pitch || !isOwner || profile?.role !== 'startup') return;
+    
+    setChecking(true);
+    try {
+      const interestsSnap = await getDocs(query(collection(db, 'interests'), where('pitchId', '==', pitch.id)));
+      const requestsSnap = await getDocs(query(collection(db, 'contactRequests'), where('pitchId', '==', pitch.id)));
+
+      if (!interestsSnap.empty || !requestsSnap.empty) {
+        toast({
+          variant: "destructive",
+          title: "Resolve connections before deleting",
+          description: "Active connections exist. Investors must resolve their interest before you can delete this pitch."
+        });
+        setChecking(false);
+        return;
+      }
+
+      if (confirm("Confirm PERMANENT deletion of this pitch? This action cannot be reversed and all associated venture data will be purged.")) {
+        deleteDocumentNonBlocking(doc(db, 'pitches', pitch.id));
+        toast({ title: "Venture Deleted", description: "Your pitch has been successfully removed from the marketplace." });
+        router.push('/dashboard');
+      }
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Deletion failed", description: "Identity authentication or database verification failed." });
+    } finally {
+      setChecking(false);
+    }
+  };
+
   if (authLoading || loadingPitch || loadingFounder) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" /></div>;
   
   if (!user || !emailVerified) {
@@ -162,18 +193,32 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
                     <span className="flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Active Engagement</span>
                     <span className="flex items-center gap-2"><LayoutGrid className="w-4 h-4 text-accent" /> Verified Venture</span>
                   </div>
-                  {isInvestor && (isInterested || (contactRequest && contactRequest.status === 'accepted')) && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="text-amber-600 border-amber-200 hover:bg-amber-50 h-10 px-4 rounded-xl font-bold border-2"
-                      onClick={handleResolveConnection}
-                      disabled={resolving}
-                    >
-                      {resolving ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
-                      Resolve Connection
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {isOwner && profile?.role === 'startup' && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-destructive hover:bg-destructive/10 h-10 px-4 rounded-xl font-bold"
+                        onClick={handleDeletePitch}
+                        disabled={checking}
+                      >
+                        {checking ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                        Delete Pitch
+                      </Button>
+                    )}
+                    {isInvestor && (isInterested || (contactRequest && contactRequest.status === 'accepted')) && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="text-amber-600 border-amber-200 hover:bg-amber-50 h-10 px-4 rounded-xl font-bold border-2"
+                        onClick={handleResolveConnection}
+                        disabled={resolving}
+                      >
+                        {resolving ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+                        Resolve Connection
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
 
