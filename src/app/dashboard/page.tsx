@@ -69,7 +69,7 @@ export default function DashboardPage() {
     return query(collection(db, 'messages'), where('receiverId', '==', user.uid));
   }, [db, user, profile, isInvestor]);
 
-  // General Market Feed
+  // General Market Feed - Approval system removed, shows all
   const allPitchesQuery = useMemoFirebase(() => {
     if (!user || !profile || (!isInvestor && !isAdmin) || profile.disabled === true) return null;
     return query(collection(db, 'pitches'), limit(50));
@@ -161,7 +161,7 @@ export default function DashboardPage() {
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">System Overview</p>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tighter">Welcome, {profile.name || user.email?.split('@')[0]}</h1>
+            <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">Welcome, {profile.name || user.email?.split('@')[0]}</h1>
             <div className="text-muted-foreground flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs md:text-sm font-medium">
               Console authenticated for <span className="text-foreground capitalize font-black underline decoration-primary decoration-2 md:decoration-4 underline-offset-4 md:underline-offset-8">{profile.role}</span>
               {isAdmin && <Badge className="bg-destructive text-white border-none ml-2 rounded-lg font-black uppercase text-[8px] px-2 md:px-3">Root Admin</Badge>}
@@ -185,7 +185,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Tactical Performance Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8 mb-10 md:mb-16">
           <Card className="border-none shadow-xl bg-primary/5 rounded-[2rem] overflow-hidden relative group">
             <div className="absolute top-0 right-0 w-24 md:w-32 h-24 md:h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700" />
@@ -284,7 +283,7 @@ export default function DashboardPage() {
           </div>
 
           <TabsContent value="primary" className="mt-0 outline-none">
-            {isStartup && loadingStartupPitches ? (
+            {(isStartup ? loadingStartupPitches : loadingAllPitches) ? (
               <div className="flex justify-center p-20 md:p-32"><Loader2 className="animate-spin w-12 h-12 md:w-16 md:h-16 text-primary opacity-20" /></div>
             ) : (isStartup ? startupPitches : allPitches)?.length ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-10">
@@ -309,7 +308,7 @@ export default function DashboardPage() {
                                 e.stopPropagation();
                                 handleResolveConnection(pitch.id, pitch.ownerId, pitch.startupName);
                               }}
-                              disabled={resolving === pitch.id}
+                              disabled={!!resolving && resolving === pitch.id}
                             >
                               {resolving === pitch.id ? <Loader2 className="animate-spin w-3 h-3" /> : <Zap className="w-3 h-3 md:w-3 md:h-3 md:mr-2" />}
                               <span className="hidden sm:inline">Resolve Protocol</span>
@@ -329,7 +328,7 @@ export default function DashboardPage() {
                             <Button variant="ghost" size="sm" className="gap-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/5 hover:text-primary transition-all">Details <ArrowRight className="w-3 h-3 md:w-4 md:h-4" /></Button>
                           </Link>
                         </div>
-                      </CardHeader>
+                      </CardContent>
                     </Card>
                   );
                 })}
