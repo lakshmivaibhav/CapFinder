@@ -38,14 +38,14 @@ function OwnerLogo({ ownerId }: { ownerId: string }) {
   const { data: owner } = useDoc(ownerRef);
 
   if (!owner?.logoURL) return (
-    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground/40 border">
-      <Building className="w-4 h-4" />
+    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-muted-foreground/40 border-2 border-white shadow-sm">
+      <Building className="w-5 h-5" />
     </div>
   );
 
   return (
-    <div className="w-8 h-8 rounded-lg bg-white shadow-sm border overflow-hidden flex items-center justify-center p-1">
-      <Image src={owner.logoURL} alt="Startup Logo" width={24} height={24} className="object-contain" unoptimized />
+    <div className="w-10 h-10 rounded-xl bg-white shadow-md border-2 border-white overflow-hidden flex items-center justify-center p-1.5 transition-transform group-hover:scale-110">
+      <Image src={owner.logoURL} alt="Startup Logo" width={32} height={32} className="object-contain" unoptimized />
     </div>
   );
 }
@@ -115,7 +115,6 @@ export default function PitchesFeedPage() {
   const contactRequests = userContactRequestsData || [];
 
   const filteredPitches = pitches?.filter(p => {
-    // Approval Filter: Show only approved pitches or legacy pitches with no status
     const isApproved = p.status === 'approved' || !p.status;
     if (!isApproved && !isAdmin) return false;
 
@@ -191,12 +190,12 @@ export default function PitchesFeedPage() {
   const getContactButton = (pitch: any) => {
     if (!isInvestor) return null;
     const request = contactRequests.find(r => r.pitchId === pitch.id);
-    if (!request) return <Button variant="outline" className="flex-1 h-11 rounded-xl border-2 font-bold transition-all hover:bg-primary/5 active:scale-95" onClick={() => handleRequestContact(pitch)}><Mail className="mr-2 w-4 h-4" /> Connect</Button>;
-    if (request.status === 'pending') return <Button variant="secondary" className="flex-1 h-11 rounded-xl opacity-70 cursor-default" disabled><Clock className="mr-2 w-4 h-4 animate-pulse" /> Pending</Button>;
+    if (!request) return <Button variant="outline" className="flex-1 h-12 rounded-2xl border-2 font-black uppercase text-[10px] tracking-widest transition-all hover:bg-primary hover:text-white hover:border-primary active:scale-95 shadow-sm" onClick={() => handleRequestContact(pitch)}><Mail className="mr-2 w-4 h-4" /> Connect</Button>;
+    if (request.status === 'pending') return <Button variant="secondary" className="flex-1 h-12 rounded-2xl opacity-70 cursor-default bg-muted font-black uppercase text-[10px] tracking-widest" disabled><Clock className="mr-2 w-4 h-4 animate-pulse" /> Pending</Button>;
     if (request.status === 'accepted') return (
       <div className="flex-1 flex gap-2">
         <Link href={`/messages`} className="flex-1">
-          <Button variant="default" className="w-full h-11 rounded-xl bg-accent hover:bg-accent/90 shadow-md font-bold transition-all active:scale-95">Message</Button>
+          <Button variant="default" className="w-full h-12 rounded-2xl bg-accent hover:bg-accent/90 shadow-lg shadow-accent/20 font-black uppercase text-[10px] tracking-widest transition-all active:scale-95">Message</Button>
         </Link>
       </div>
     );
@@ -209,31 +208,31 @@ export default function PitchesFeedPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
 
-      <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full space-y-10">
-        <div className="flex flex-col gap-10">
-          <div className="space-y-3 max-w-2xl">
-            <h1 className="text-5xl font-black tracking-tighter">
+      <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full space-y-12">
+        <div className="flex flex-col gap-12">
+          <div className="space-y-4 max-w-3xl">
+            <h1 className="text-6xl font-black tracking-tighter leading-none">
               {isStartup ? "Investor Network" : isInvestor ? "Venture Marketplace" : "Market Hub"}
             </h1>
-            <p className="text-muted-foreground text-xl leading-relaxed italic border-l-4 border-primary/20 pl-6">
-              {isStartup ? `Bridge your vision with our ${investors?.length || 0} strategic investment partners.` : `Curated high-potential opportunities. Explore ${pitches?.length || 0} active ventures.`}
+            <p className="text-muted-foreground text-2xl leading-relaxed italic border-l-8 border-primary/20 pl-8">
+              {isStartup ? `Bridge your vision with our ${investors?.length || 0} strategic investment partners.` : `Curated high-potential opportunities. Explore ${pitches?.length || 0} active ventures within our verified protocol.`}
             </p>
           </div>
 
-          <Card className="p-8 bg-white/50 backdrop-blur-sm rounded-[2.5rem] shadow-xl border-none ring-1 ring-black/5 space-y-8 transition-all hover:shadow-2xl">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Landmark className="w-6 h-6 text-primary" />
+          <Card className="p-10 bg-white/60 backdrop-blur-xl rounded-[3rem] shadow-2xl border-none ring-1 ring-black/5 space-y-10 transition-all hover:shadow-primary/5">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-primary rounded-2xl shadow-lg shadow-primary/20">
+                <Landmark className="w-6 h-6 text-white" />
               </div>
-              <h3 className="font-black uppercase tracking-widest text-primary text-xs">Discovery Engine</h3>
+              <h3 className="font-black uppercase tracking-[0.3em] text-primary text-[10px]">Strategic Discovery Engine</h3>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-              <div className="md:col-span-5 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-5 h-5" />
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+              <div className="md:col-span-5 relative group">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-6 h-6 group-focus-within:text-primary transition-colors" />
                 <input 
-                  placeholder={isStartup ? "Filter investors..." : "Search ventures, category, tech..."}
-                  className="pl-12 h-14 w-full bg-white/80 border-none shadow-inner rounded-2xl text-lg font-medium placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 transition-all outline-none"
+                  placeholder={isStartup ? "Filter potential partners..." : "Search ventures, sectors, technology..."}
+                  className="pl-14 h-16 w-full bg-white border-none shadow-inner rounded-2xl text-lg font-medium placeholder:text-muted-foreground/40 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -243,28 +242,28 @@ export default function PitchesFeedPage() {
                 <>
                   <div className="md:col-span-3">
                     <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                      <SelectTrigger className="h-14 bg-white/80 border-none shadow-inner rounded-2xl font-bold px-6 focus:ring-2 focus:ring-primary/20 transition-all">
-                        <SelectValue placeholder="Category" />
+                      <SelectTrigger className="h-16 bg-white border-none shadow-inner rounded-2xl font-black uppercase text-[10px] tracking-widest px-8 focus:ring-4 focus:ring-primary/10 transition-all">
+                        <SelectValue placeholder="All Sectors" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-2xl shadow-2xl">
-                        <SelectItem value="all">All Sectors</SelectItem>
+                      <SelectContent className="rounded-2xl shadow-2xl border-none p-2">
+                        <SelectItem value="all" className="rounded-xl font-bold">All Sectors</SelectItem>
                         {CATEGORIES.map(cat => (
-                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                          <SelectItem key={cat} value={cat} className="rounded-xl font-bold">{cat}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="md:col-span-3">
                     <Select value={fundingFilter} onValueChange={setFundingFilter}>
-                      <SelectTrigger className="h-14 bg-white/80 border-none shadow-inner rounded-2xl font-bold px-6 focus:ring-2 focus:ring-primary/20 transition-all">
-                        <SelectValue placeholder="Capital" />
+                      <SelectTrigger className="h-16 bg-white border-none shadow-inner rounded-2xl font-black uppercase text-[10px] tracking-widest px-8 focus:ring-4 focus:ring-primary/10 transition-all">
+                        <SelectValue placeholder="Target Capital" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-2xl shadow-2xl">
-                        <SelectItem value="all">Any Goal</SelectItem>
-                        <SelectItem value="0-100k">{"< $100K"}</SelectItem>
-                        <SelectItem value="100k-500k">$100K - $500K</SelectItem>
-                        <SelectItem value="500k-1m">$500K - $1M</SelectItem>
-                        <SelectItem value="1m-plus">$1M+</SelectItem>
+                      <SelectContent className="rounded-2xl shadow-2xl border-none p-2">
+                        <SelectItem value="all" className="rounded-xl font-bold">Any Goal</SelectItem>
+                        <SelectItem value="0-100k" className="rounded-xl font-bold">{"< $100K"}</SelectItem>
+                        <SelectItem value="100k-500k" className="rounded-xl font-bold">$100K - $500K</SelectItem>
+                        <SelectItem value="500k-1m" className="rounded-xl font-bold">$500K - $1M</SelectItem>
+                        <SelectItem value="1m-plus" className="rounded-xl font-bold">$1M+</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -274,103 +273,125 @@ export default function PitchesFeedPage() {
               )}
 
               <div className="md:col-span-1">
-                <Button variant="ghost" size="icon" className="h-14 w-full rounded-2xl hover:bg-white transition-all active:scale-95" onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); }}>
-                  <FilterX className="w-6 h-6 text-muted-foreground" />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-16 w-full rounded-2xl hover:bg-white hover:shadow-md transition-all active:scale-95 group" 
+                  onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); }}
+                >
+                  <FilterX className="w-6 h-6 text-muted-foreground group-hover:text-destructive transition-colors" />
                 </Button>
               </div>
             </div>
           </Card>
         </div>
 
-        <Tabs defaultValue={isStartup ? "investors" : "pitches"} className="space-y-10">
+        <Tabs defaultValue={isStartup ? "investors" : "pitches"} className="space-y-12">
           {(isAdmin || (isStartup && isInvestor)) && (
-            <TabsList className="bg-muted/50 p-1.5 rounded-2xl h-14 w-fit">
-              <TabsTrigger value="pitches" className="px-10 h-11 rounded-xl text-md font-bold data-[state=active]:shadow-lg transition-all">Ventures</TabsTrigger>
-              <TabsTrigger value="investors" className="px-10 h-11 rounded-xl text-md font-bold data-[state=active]:shadow-lg transition-all">Investors</TabsTrigger>
-            </TabsList>
+            <div className="flex justify-center">
+              <TabsList className="bg-muted/50 p-1.5 rounded-2xl h-16 w-fit shadow-inner">
+                <TabsTrigger value="pitches" className="px-12 h-13 rounded-xl text-sm font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">Ventures</TabsTrigger>
+                <TabsTrigger value="investors" className="px-12 h-13 rounded-xl text-sm font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">Investors</TabsTrigger>
+              </TabsList>
+            </div>
           )}
 
-          <TabsContent value="pitches" className="mt-0">
+          <TabsContent value="pitches" className="mt-0 outline-none">
             {loadingPitches ? (
-              <div className="flex justify-center p-32"><Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" /></div>
+              <div className="flex justify-center p-48"><Loader2 className="animate-spin w-16 h-16 text-primary opacity-20" /></div>
             ) : filteredPitches.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
                 {filteredPitches.map((pitch) => (
                   <Card key={pitch.id} className={cn(
-                    "flex flex-col group hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white relative hover:-translate-y-1",
-                    pitch.ownerVerified && "ring-2 ring-primary/20 border-primary/10"
+                    "flex flex-col group hover:shadow-3xl transition-all duration-500 border-none shadow-xl overflow-hidden rounded-[2.5rem] bg-white relative hover:-translate-y-2",
+                    pitch.ownerVerified && "ring-4 ring-primary/10"
                   )}>
                     <Link href={`/startup/${pitch.id}`} className="absolute inset-0 z-0" />
                     
-                    <div className="relative aspect-video w-full overflow-hidden bg-muted/30">
+                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted/30">
                       {pitch.imageURL ? (
-                        <Image src={pitch.imageURL} alt={pitch.startupName} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
+                        <Image src={pitch.imageURL} alt={pitch.startupName} fill className="object-cover transition-transform duration-700 ease-out group-hover:scale-110" unoptimized />
                       ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/20">
-                          <ImageIcon className="w-16 h-16" />
+                        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/10">
+                          <ImageIcon className="w-24 h-24" />
                         </div>
                       )}
-                      <div className="absolute top-4 left-4 z-10 flex gap-2">
-                        <Badge variant="outline" className="text-white border-white/20 bg-black/40 backdrop-blur-md px-4 py-1.5 font-black uppercase tracking-widest text-[9px] rounded-lg">
+                      
+                      {/* Premium Badge Overlays */}
+                      <div className="absolute top-6 left-6 z-10 flex flex-col gap-3">
+                        <Badge variant="outline" className="w-fit text-white border-white/30 bg-black/40 backdrop-blur-md px-5 py-2 font-black uppercase tracking-[0.2em] text-[9px] rounded-xl shadow-lg">
                           {pitch.category || pitch.industry || 'Other'}
                         </Badge>
                         {pitch.ownerVerified && (
-                          <Badge className="bg-primary text-white border-none px-3 py-1.5 font-black uppercase tracking-widest text-[9px] rounded-lg shadow-lg">
-                            <ShieldCheck className="w-3 h-3 mr-1" /> Verified
+                          <Badge className="w-fit bg-primary text-white border-none px-4 py-2 font-black uppercase tracking-[0.2em] text-[9px] rounded-xl shadow-xl shadow-primary/20">
+                            <ShieldCheck className="w-3.5 h-3.5 mr-2" /> Verified
                           </Badge>
                         )}
                       </div>
+
                       {isInvestor && (
-                        <div className="absolute top-4 right-4 z-10">
+                        <div className="absolute top-6 right-6 z-10">
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className={`h-10 w-10 rounded-full transition-all pointer-events-auto active:scale-90 shadow-lg ${favoritePitchIds.includes(pitch.id) ? 'bg-accent text-white' : 'bg-white/80 backdrop-blur-md text-muted-foreground hover:bg-white hover:text-accent'}`} 
+                            className={`h-12 w-12 rounded-2xl transition-all pointer-events-auto active:scale-90 shadow-2xl ${favoritePitchIds.includes(pitch.id) ? 'bg-accent text-white' : 'bg-white/90 backdrop-blur-md text-muted-foreground hover:bg-white hover:text-accent'}`} 
                             onClick={(e) => { e.preventDefault(); handleToggleFavorite(pitch); }}
                           >
                             {favoritePitchIds.includes(pitch.id) ? <BookmarkCheck className="w-6 h-6 fill-current" /> : <Bookmark className="w-6 h-6" />}
                           </Button>
                         </div>
                       )}
+                      
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                     </div>
 
-                    <CardHeader className="space-y-4 relative z-10 pointer-events-none p-8">
-                      <div className="flex items-center gap-3">
+                    <CardHeader className="space-y-5 relative z-10 pointer-events-none p-8 pb-0">
+                      <div className="flex items-center gap-4">
                         <OwnerLogo ownerId={pitch.ownerId} />
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors leading-tight">{pitch.startupName}</CardTitle>
-                          {pitch.ownerVerified && <ShieldCheck className="w-5 h-5 text-primary" />}
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <CardTitle className="text-2xl font-black tracking-tight group-hover:text-primary transition-colors leading-none">{pitch.startupName}</CardTitle>
+                            {pitch.ownerVerified && <ShieldCheck className="w-5 h-5 text-primary" />}
+                          </div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Strategic Venture</p>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="flex-1 space-y-8 relative z-10 pointer-events-none p-8 pt-0">
-                      <div className="text-muted-foreground text-sm line-clamp-2 leading-relaxed italic">
+
+                    <CardContent className="flex-1 space-y-8 relative z-10 pointer-events-none p-8">
+                      <div className="text-muted-foreground text-sm line-clamp-3 leading-relaxed italic border-l-2 border-muted-foreground/10 pl-4">
                         &quot;{pitch.description}&quot;
                       </div>
-                      <div className="grid grid-cols-2 gap-6 pt-4 border-t border-muted/50">
-                        <div className="space-y-1">
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-black flex items-center gap-2">
-                            <TrendingUp className="w-3.5 h-3.5 text-primary" /> Goal
+                      
+                      <div className="grid grid-cols-2 gap-8 pt-6 border-t border-muted/50">
+                        <div className="space-y-1.5">
+                          <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground font-black flex items-center gap-2">
+                            <TrendingUp className="w-3 h-3 text-primary" /> Capital Goal
                           </p>
-                          <p className="text-xl font-black text-primary">${typeof pitch.fundingNeeded === 'number' ? pitch.fundingNeeded.toLocaleString() : pitch.fundingNeeded}</p>
+                          <p className="text-2xl font-black text-primary leading-none tracking-tighter">
+                            ${typeof pitch.fundingNeeded === 'number' ? pitch.fundingNeeded.toLocaleString() : pitch.fundingNeeded}
+                          </p>
                         </div>
-                        <div className="space-y-1">
-                          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-black flex items-center gap-2">
-                            <LayoutGrid className="w-3.5 h-3.5 text-accent" /> Insight
+                        <div className="space-y-1.5 flex flex-col justify-end">
+                          <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground font-black flex items-center gap-2">
+                            <LayoutGrid className="w-3 h-3 text-accent" /> Analysis
                           </p>
-                          <p className="text-sm font-black flex items-center gap-1.5 text-accent">Review Details <ArrowRight className="w-3.5 h-3.5" /></p>
+                          <p className="text-[10px] font-black flex items-center gap-1.5 text-accent uppercase tracking-widest group-hover:translate-x-1 transition-transform">
+                            Review Details <ArrowRight className="w-3 h-3" />
+                          </p>
                         </div>
                       </div>
                     </CardContent>
+
                     {isInvestor && (
-                      <CardFooter className="p-8 pt-0 flex gap-3 relative z-10 pointer-events-auto">
+                      <CardFooter className="p-8 pt-0 flex gap-4 relative z-10 pointer-events-auto">
                         <div className="flex-1">{getContactButton(pitch)}</div>
                         <Button 
-                          className={`flex-1 h-11 rounded-xl shadow-lg font-black transition-all active:scale-95 ${userInterests.includes(pitch.id) ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' : 'bg-primary hover:bg-primary/90 shadow-primary/20'}`} 
+                          className={`flex-1 h-12 rounded-2xl shadow-xl font-black uppercase text-[10px] tracking-widest transition-all active:scale-95 ${userInterests.includes(pitch.id) ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' : 'bg-primary hover:bg-primary/90 shadow-primary/20'}`} 
                           onClick={() => handleShowInterest(pitch)} 
                           disabled={userInterests.includes(pitch.id)}
                         >
-                          {userInterests.includes(pitch.id) ? <><CheckCircle2 className="mr-2 w-5 h-5" /> Interested</> : <><Sparkles className="mr-2 w-5 h-5" /> Express Interest</>}
+                          {userInterests.includes(pitch.id) ? <><CheckCircle2 className="mr-2 w-4 h-4" /> Logged</> : <><Sparkles className="mr-2 w-4 h-4" /> Interest</>}
                         </Button>
                       </CardFooter>
                     )}
@@ -378,55 +399,62 @@ export default function PitchesFeedPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-48 bg-white rounded-[3rem] shadow-xl border-4 border-dashed border-muted/50 flex flex-col items-center">
-                <div className="p-8 bg-muted/10 rounded-full mb-8">
-                  <Search className="w-16 h-16 text-muted-foreground opacity-30" />
+              <div className="text-center py-48 bg-white rounded-[4rem] shadow-2xl border-4 border-dashed border-muted/50 flex flex-col items-center">
+                <div className="p-10 bg-muted/10 rounded-full mb-10 scale-125">
+                  <Search className="w-16 h-16 text-muted-foreground opacity-20" />
                 </div>
-                <h3 className="text-3xl font-black mb-4">No matching ventures</h3>
-                <p className="text-muted-foreground text-lg mb-8 max-w-md">Try refining your discovery filters or search terms to see more opportunities.</p>
-                <Button variant="outline" size="lg" className="rounded-2xl px-10 border-2 font-bold transition-all hover:bg-primary/5 active:scale-95" onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); }}>Reset Filters</Button>
+                <h3 className="text-4xl font-black mb-4 tracking-tighter">No Ventures Match Criteria</h3>
+                <p className="text-muted-foreground text-xl mb-10 max-w-md font-medium italic">Adjust your discovery protocols or reset filters to broaden your search.</p>
+                <Button variant="outline" size="lg" className="rounded-2xl px-12 h-16 border-2 font-black uppercase tracking-widest text-[10px] transition-all hover:bg-primary hover:text-white hover:border-primary active:scale-95 shadow-xl" onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); }}>Reset All Protocols</Button>
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="investors" className="mt-0">
+          <TabsContent value="investors" className="mt-0 outline-none">
             {loadingInvestors ? (
-              <div className="flex justify-center p-32"><Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" /></div>
+              <div className="flex justify-center p-48"><Loader2 className="animate-spin w-16 h-16 text-primary opacity-20" /></div>
             ) : filteredInvestors.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
                 {filteredInvestors.map((investor) => (
                   <Link key={investor.id} href={`/investor/${investor.id}`}>
                     <Card className={cn(
-                      "group h-full hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white hover:-translate-y-1",
-                      investor.verified && "ring-2 ring-primary/20 border-primary/10"
+                      "group h-full hover:shadow-3xl transition-all duration-500 border-none shadow-xl overflow-hidden rounded-[2.5rem] bg-white hover:-translate-y-2 relative",
+                      investor.verified && "ring-4 ring-primary/10"
                     )}>
-                      <CardHeader className="p-8 pb-4">
-                        <div className="flex justify-between items-start mb-6">
-                          <Badge className="bg-primary/10 text-primary border-none font-black uppercase tracking-widest text-[9px] px-3 py-1">Capital Partner</Badge>
-                          <div className="p-3 bg-primary/5 rounded-2xl group-hover:bg-primary group-hover:text-white transition-all">
-                            <Users className="w-5 h-5" />
+                      <CardHeader className="p-10 pb-6">
+                        <div className="flex justify-between items-start mb-8">
+                          <Badge className="bg-primary/10 text-primary border-none font-black uppercase tracking-[0.2em] text-[9px] px-5 py-2 rounded-xl">Capital Partner</Badge>
+                          <div className="p-4 bg-primary/5 rounded-[1.25rem] group-hover:bg-primary group-hover:text-white group-hover:shadow-lg shadow-primary/20 transition-all duration-500">
+                            <Users className="w-6 h-6" />
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors">{investor.name || 'Private Member'}</CardTitle>
-                          {investor.verified && <ShieldCheck className="w-5 h-5 text-primary" />}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <CardTitle className="text-3xl font-black tracking-tight group-hover:text-primary transition-colors leading-none">{investor.name || 'Private Member'}</CardTitle>
+                            {investor.verified && <ShieldCheck className="w-6 h-6 text-primary" />}
+                          </div>
+                          <CardDescription className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">{investor.company || 'Institutional Group'}</CardDescription>
                         </div>
-                        <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">{investor.company || 'Venture Group'}</CardDescription>
                       </CardHeader>
-                      <CardContent className="p-8 pt-4 pb-10">
-                        <p className="text-sm text-muted-foreground italic leading-relaxed line-clamp-3 mb-8">&quot;{investor.bio || "Actively identifying the next generation of global market disruptions."}&quot;</p>
-                        <div className="flex flex-wrap gap-2">
+                      <CardContent className="p-10 pt-4 pb-12">
+                        <p className="text-md text-muted-foreground italic leading-relaxed line-clamp-3 mb-10 border-l-2 border-primary/10 pl-6">&quot;{investor.bio || "Actively identifying and fueling the next generation of global market disruptions through strategic capital deployment."}&quot;</p>
+                        <div className="flex flex-wrap gap-2.5">
                           {investor.investmentInterest?.split(',').slice(0, 4).map((tag: string, i: number) => (
-                            <Badge key={i} variant="secondary" className="bg-muted/30 text-muted-foreground font-bold px-3 py-1 rounded-lg border-none">{tag.trim()}</Badge>
+                            <Badge key={i} variant="secondary" className="bg-muted/40 text-muted-foreground font-black uppercase tracking-widest text-[8px] px-4 py-1.5 rounded-lg border-none hover:bg-primary/5 hover:text-primary transition-colors">{tag.trim()}</Badge>
                           ))}
                         </div>
                       </CardContent>
-                      <CardFooter className="p-8 pt-6 border-t border-muted/50 bg-muted/5 flex justify-between items-center">
-                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                          {investor.verified && <ShieldCheck className="w-4 h-4 text-emerald-500" />} {investor.verified ? "Identity Verified" : "Identity Unverified"}
-                        </span>
-                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:translate-x-1 transition-transform">
-                          <ArrowRight className="w-5 h-5 text-primary" />
+                      <CardFooter className="p-10 pt-8 border-t border-muted/50 bg-muted/5 flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <div className={cn("p-2 rounded-full", investor.verified ? "bg-emerald-50 text-emerald-600" : "bg-muted text-muted-foreground")}>
+                            <ShieldCheck className="w-4 h-4" />
+                          </div>
+                          <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">
+                            {investor.verified ? "Verified Identity" : "Member Identity"}
+                          </span>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-md group-hover:translate-x-2 transition-transform duration-500">
+                          <ArrowRight className="w-6 h-6 text-primary" />
                         </div>
                       </CardFooter>
                     </Card>
@@ -434,13 +462,13 @@ export default function PitchesFeedPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-48 bg-white rounded-[3rem] shadow-xl border-4 border-dashed border-muted/50 flex flex-col items-center">
-                <div className="p-8 bg-muted/10 rounded-full mb-8">
-                  <Users className="w-16 h-16 text-muted-foreground opacity-30" />
+              <div className="text-center py-48 bg-white rounded-[4rem] shadow-2xl border-4 border-dashed border-muted/50 flex flex-col items-center">
+                <div className="p-10 bg-muted/10 rounded-full mb-10 scale-125">
+                  <Users className="w-16 h-16 text-muted-foreground opacity-20" />
                 </div>
-                <h3 className="text-3xl font-black mb-4">No matching investors</h3>
-                <p className="text-muted-foreground text-lg mb-8 max-w-md">Broaden your criteria to find more matching strategic partners for your venture.</p>
-                <Button variant="outline" size="lg" className="rounded-2xl px-10 border-2 font-bold transition-all hover:bg-primary/5 active:scale-95" onClick={() => setSearch('')}>Clear Search</Button>
+                <h3 className="text-4xl font-black mb-4 tracking-tighter">No Investors Found</h3>
+                <p className="text-muted-foreground text-xl mb-10 max-w-md font-medium italic">Broaden your sector criteria to identify matching strategic partners within the ecosystem.</p>
+                <Button variant="outline" size="lg" className="rounded-2xl px-12 h-16 border-2 font-black uppercase tracking-widest text-[10px] transition-all hover:bg-primary hover:text-white hover:border-primary active:scale-95 shadow-xl" onClick={() => setSearch('')}>Clear Selection Protocol</Button>
               </div>
             )}
           </TabsContent>
