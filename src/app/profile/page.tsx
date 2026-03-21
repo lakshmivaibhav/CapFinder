@@ -231,35 +231,36 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="max-w-6xl mx-auto py-16 px-6 w-full space-y-12">
-        <div className="flex items-center justify-between border-b pb-10">
-          <div className="space-y-2">
-            <Link href="/dashboard" className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors mb-4 group">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b pb-10">
+          <div className="space-y-4">
+            <Link href="/dashboard" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors mb-2 group">
               <div className="p-2 bg-muted rounded-lg group-hover:bg-primary/10 transition-all">
-                <ArrowLeft className="w-4 h-4" />
+                <ArrowLeft className="w-3.5 h-3.5" />
               </div>
-              Back to Console
+              Return to Console
             </Link>
-            <h1 className="text-4xl font-black tracking-tighter">Account Governance</h1>
+            <h1 className="text-5xl font-black tracking-tighter leading-none">Account Governance</h1>
+            <p className="text-muted-foreground text-lg font-medium italic border-l-4 border-primary/20 pl-6">Establish and maintain your professional identity within the network.</p>
           </div>
-          <div className="flex items-center gap-3">
-            <Badge className="bg-primary/10 text-primary border-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">
-              {formData.role}
+          <div className="flex items-center gap-4">
+            <Badge className="bg-primary/5 text-primary border-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm">
+              {formData.role} Profile
             </Badge>
             {formData.verified && (
-              <Badge className="bg-emerald-500 text-white border-none px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                <ShieldCheck className="w-3 h-3" /> Verified
+              <Badge className="bg-emerald-500 text-white border-none px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20">
+                <ShieldCheck className="w-4 h-4" /> Platform Verified
               </Badge>
             )}
           </div>
         </div>
 
         <div className="grid md:grid-cols-12 gap-12">
-          <div className="md:col-span-4 space-y-8">
-            <Card className="border-none shadow-2xl text-center p-10 bg-white rounded-[2.5rem] overflow-hidden relative group">
+          <div className="md:col-span-4 space-y-10">
+            <Card className="border-none shadow-3xl text-center p-12 bg-white rounded-[3rem] overflow-hidden relative group transition-all hover:shadow-primary/5">
               <div className="absolute top-0 left-0 w-full h-2 bg-primary" />
               
-              <div className="relative inline-block mx-auto mb-8 mt-4 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-                <div className="w-40 h-40 bg-muted rounded-[2rem] flex items-center justify-center border-4 border-white shadow-inner relative overflow-hidden">
+              <div className="relative inline-block mx-auto mb-10 mt-4 cursor-pointer group/avatar" onClick={() => fileInputRef.current?.click()}>
+                <div className="w-44 h-44 bg-muted/30 rounded-[2.5rem] flex items-center justify-center border-4 border-white shadow-2xl relative overflow-hidden transition-transform duration-500 group-hover/avatar:scale-105">
                   {formData.photoURL ? (
                     <Image 
                       src={formData.photoURL} 
@@ -270,20 +271,21 @@ export default function ProfilePage() {
                       unoptimized
                     />
                   ) : (
-                    <User className="text-muted-foreground opacity-30 w-16 h-16" />
+                    <User className="text-muted-foreground opacity-20 w-20 h-20" />
                   )}
                   {uploading && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-                      <Loader2 className="animate-spin text-white w-8 h-8" />
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10 backdrop-blur-sm">
+                      <Loader2 className="animate-spin text-white w-10 h-10" />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <Camera className="text-white w-8 h-8" />
+                  <div className="absolute inset-0 bg-black/0 group-hover/avatar:bg-black/30 transition-all flex flex-col items-center justify-center opacity-0 group-hover/avatar:opacity-100 backdrop-blur-[2px]">
+                    <Camera className="text-white w-10 h-10 mb-2" />
+                    <span className="text-[9px] text-white font-black uppercase tracking-widest">Update Photo</span>
                   </div>
                 </div>
                 {formData.verified && (
-                  <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white p-2 rounded-2xl border-4 border-white shadow-lg z-20">
-                    <ShieldCheck className="w-5 h-5" />
+                  <div className="absolute -bottom-3 -right-3 bg-emerald-500 text-white p-3 rounded-2xl border-4 border-white shadow-xl z-20">
+                    <ShieldCheck className="w-6 h-6" />
                   </div>
                 )}
                 <input 
@@ -295,26 +297,29 @@ export default function ProfilePage() {
                 />
               </div>
 
-              <h2 className="text-2xl font-black truncate mb-1">{formData.name || 'Anonymous User'}</h2>
-              <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-10">{user.email}</p>
+              <div className="space-y-1.5 mb-12">
+                <h2 className="text-3xl font-black truncate tracking-tight">{formData.name || 'Incognito Member'}</h2>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60">{user.email}</p>
+              </div>
               
-              <div className="pt-8 mt-8 border-t border-dashed space-y-6">
+              <div className="pt-10 mt-10 border-t border-dashed space-y-8">
                 {formData.role === 'startup' && (
-                  <div className="space-y-4">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 justify-center">
-                      <Building className="w-4 h-4 text-primary" /> Corporate Logo
+                  <div className="space-y-5">
+                    <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-3 justify-center">
+                      <div className="w-1.5 h-1.5 bg-primary rounded-full" /> Corporate Identity
                     </Label>
                     <div 
-                      className="relative w-24 h-24 mx-auto rounded-2xl border-2 border-dashed border-muted bg-muted/10 flex items-center justify-center cursor-pointer group hover:border-primary/30 transition-all overflow-hidden"
+                      className="relative w-32 h-32 mx-auto rounded-3xl border-4 border-dashed border-muted bg-muted/5 flex items-center justify-center cursor-pointer group/logo hover:border-primary/30 transition-all overflow-hidden"
                       onClick={() => logoInputRef.current?.click()}
                     >
                       {formData.logoURL ? (
-                        <Image src={formData.logoURL} alt="Logo" fill className="object-contain p-2" unoptimized />
+                        <Image src={formData.logoURL} alt="Logo" fill className="object-contain p-4 transition-transform group-hover/logo:scale-110" unoptimized />
                       ) : (
-                        <div className="text-center p-2">
-                          {uploadingLogo ? <Loader2 className="w-6 h-6 animate-spin text-primary" /> : <Upload className="w-6 h-6 text-muted-foreground opacity-20" />}
+                        <div className="text-center p-4">
+                          {uploadingLogo ? <Loader2 className="w-8 h-8 animate-spin text-primary" /> : <Upload className="w-8 h-8 text-muted-foreground opacity-10" />}
                         </div>
                       )}
+                      <div className="absolute inset-0 bg-primary/0 group-hover/logo:bg-primary/5 transition-all" />
                       <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
                     </div>
                   </div>
@@ -323,75 +328,111 @@ export default function ProfilePage() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="w-full text-destructive hover:bg-destructive/5 gap-3 rounded-xl h-12 font-black uppercase tracking-widest text-[9px] border-2 border-transparent hover:border-destructive/20"
+                  className="w-full text-destructive hover:bg-destructive/5 gap-3 rounded-2xl h-14 font-black uppercase tracking-widest text-[10px] border-2 border-transparent hover:border-destructive/10 transition-all active:scale-95"
                   onClick={handleRequestAccountDeletion}
                   disabled={checking}
                 >
                   {checking ? <Loader2 className="animate-spin w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
-                  Request Account Purge
+                  Initiate Account Purge
                 </Button>
               </div>
             </Card>
 
-            <Card className="border-none shadow-xl bg-accent text-white rounded-[2rem] p-10 relative overflow-hidden">
-               <div className="absolute -right-4 -bottom-4 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
-               <h3 className="text-xl font-black mb-4 flex items-center gap-3">
-                 <ShieldCheck className="w-6 h-6" /> Data Protection
+            <Card className="border-none shadow-2xl bg-accent text-white rounded-[2.5rem] p-12 relative overflow-hidden group">
+               <Sparkles className="absolute -right-10 -bottom-10 w-48 h-48 text-white/10 -rotate-12 transition-transform duration-700 group-hover:scale-110" />
+               <h3 className="text-2xl font-black mb-6 flex items-center gap-4">
+                 <ShieldCheck className="w-8 h-8" /> Security Standard
                </h3>
-               <p className="text-sm opacity-90 leading-relaxed font-medium italic">
-                 "All account information is encrypted and managed according to global financial transparency standards."
+               <p className="text-sm opacity-90 leading-relaxed font-medium italic border-l-2 border-white/20 pl-6">
+                 "Platform interactions are fully encrypted. All member data is governed by preliminary verification protocols to ensure network integrity."
                </p>
             </Card>
           </div>
 
-          <div className="md:col-span-8 space-y-8">
-            <Card className="border-none shadow-2xl bg-white rounded-[2.5rem] overflow-hidden">
-              <CardHeader className="bg-muted/30 border-b p-10">
-                <CardTitle className="text-2xl font-black">Professional Presence</CardTitle>
-                <CardDescription className="text-sm font-medium">Update your public credentials and venture interest.</CardDescription>
+          <div className="md:col-span-8 space-y-10">
+            <Card className="border-none shadow-3xl bg-white rounded-[3rem] overflow-hidden transition-all">
+              <CardHeader className="bg-muted/30 border-b p-12">
+                <CardTitle className="text-3xl font-black tracking-tight">Professional Presence</CardTitle>
+                <CardDescription className="text-md font-medium text-muted-foreground mt-2">Manage your institutional credentials and venture objectives.</CardDescription>
               </CardHeader>
-              <CardContent className="p-10">
-                <form onSubmit={handleSave} className="space-y-8">
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-3">
-                      <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <User className="w-4 h-4 text-primary" /> Full Legal Name
+              <CardContent className="p-12">
+                <form onSubmit={handleSave} className="space-y-10">
+                  <div className="grid md:grid-cols-2 gap-10">
+                    <div className="space-y-4">
+                      <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
+                        <User className="w-4 h-4 text-primary" /> Verified Legal Name
                       </Label>
-                      <Input id="name" className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                      <Input 
+                        id="name" 
+                        className="h-16 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-lg font-bold px-8" 
+                        value={formData.name} 
+                        onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                        placeholder="Legal Entity or Representative"
+                      />
                     </div>
-                    <div className="space-y-3">
-                      <Label htmlFor="company" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <Building className="w-4 h-4 text-primary" /> Company / Institution
+                    <div className="space-y-4">
+                      <Label htmlFor="company" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
+                        <Building className="w-4 h-4 text-primary" /> Institution / Affiliation
                       </Label>
-                      <Input id="company" className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium" value={formData.company} onChange={(e) => setFormData({...formData, company: e.target.value})} />
+                      <Input 
+                        id="company" 
+                        className="h-16 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-lg font-bold px-8" 
+                        value={formData.company} 
+                        onChange={(e) => setFormData({...formData, company: e.target.value})} 
+                        placeholder="Venture Capital or Startup Group"
+                      />
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <Label htmlFor="bio" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-primary" /> Professional Biography
+                  
+                  <div className="space-y-4">
+                    <Label htmlFor="bio" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
+                      <Mail className="w-4 h-4 text-primary" /> Professional Narrative
                     </Label>
-                    <Textarea id="bio" className="min-h-[160px] rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium leading-relaxed italic p-6" value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})} />
+                    <Textarea 
+                      id="bio" 
+                      className="min-h-[220px] rounded-[2rem] border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-lg font-medium leading-relaxed italic p-10" 
+                      value={formData.bio} 
+                      onChange={(e) => setFormData({...formData, bio: e.target.value})} 
+                      placeholder="Detail your professional background, track record, and strategic goals..."
+                    />
                   </div>
 
                   {formData.role === 'investor' ? (
-                    <div className="space-y-3">
-                      <Label htmlFor="investmentInterest" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <div className="space-y-4">
+                      <Label htmlFor="investmentInterest" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
                         <Sparkles className="w-4 h-4 text-accent" /> Strategic Focus (Comma Separated)
                       </Label>
-                      <Input id="investmentInterest" className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-accent/20 text-lg font-medium" value={formData.investmentInterest} onChange={(e) => setFormData({...formData, investmentInterest: e.target.value})} placeholder="e.g. AI, Fintech, SaaS" />
+                      <Input 
+                        id="investmentInterest" 
+                        className="h-16 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-accent/10 text-lg font-bold px-8" 
+                        value={formData.investmentInterest} 
+                        onChange={(e) => setFormData({...formData, investmentInterest: e.target.value})} 
+                        placeholder="e.g. Artificial Intelligence, Fintech, BioTech" 
+                      />
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      <Label htmlFor="fundingNeeded" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                        <Save className="w-4 h-4 text-emerald-500" /> Capital Requirements ($)
+                    <div className="space-y-4">
+                      <Label htmlFor="fundingNeeded" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
+                        <Save className="w-4 h-4 text-emerald-500" /> Capital Requirements (Total USD)
                       </Label>
-                      <Input id="fundingNeeded" type="number" className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-emerald-500/20 text-lg font-black" value={formData.fundingNeeded} onChange={(e) => setFormData({...formData, fundingNeeded: e.target.value})} />
+                      <Input 
+                        id="fundingNeeded" 
+                        type="number" 
+                        className="h-16 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-emerald-500/10 text-xl font-black px-8" 
+                        value={formData.fundingNeeded} 
+                        onChange={(e) => setFormData({...formData, fundingNeeded: e.target.value})} 
+                        placeholder="e.g. 2500000"
+                      />
                     </div>
                   )}
 
-                  <Button type="submit" className="w-full h-16 bg-primary shadow-xl shadow-primary/20 rounded-2xl font-black text-xl gap-3 transition-all hover:scale-[1.01]" disabled={saving}>
-                    {saving ? <Loader2 className="animate-spin" /> : <Save className="w-6 h-6" />}
-                    Synchronize Changes
+                  <Button 
+                    type="submit" 
+                    className="w-full h-20 bg-primary shadow-2xl shadow-primary/20 rounded-[1.5rem] font-black text-xl gap-4 transition-all hover:scale-[1.01] active:scale-95" 
+                    disabled={saving}
+                  >
+                    {saving ? <Loader2 className="animate-spin w-7 h-7" /> : <Save className="w-7 h-7" />}
+                    Synchronize Profile Changes
                   </Button>
                 </form>
               </CardContent>
