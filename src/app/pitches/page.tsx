@@ -449,7 +449,7 @@ export default function PitchesFeedPage() {
                       </CardContent>
                       <CardFooter className="p-6 md:p-10 pt-6 md:pt-8 border-t border-muted/50 bg-muted/5 flex justify-between items-center">
                         <div className="flex items-center gap-2 md:gap-3">
-                          <div className={cn("p-1.5 md:p-2 rounded-full", investor.verified ? "bg-emerald-50 text-emerald-600" : "bg-muted text-muted-foreground")}>
+                          <div className={cn("p-1.5 md:p-2 rounded-full", investor.verified ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground")}>
                             <ShieldCheck className="w-3.5 h-3.5 md:w-4 md:h-4" />
                           </div>
                           <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">

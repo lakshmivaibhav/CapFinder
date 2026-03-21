@@ -106,8 +106,9 @@ function AdminDashboardContent() {
     if (!allDeleteRequests) return [];
     const now = new Date();
     return allDeleteRequests.filter(req => {
-      if (!req.timestamp?.toDate) return false;
-      return differenceInHours(now, req.timestamp.toDate()) >= 24;
+      const ts = req.timestamp?.toDate ? req.timestamp.toDate() : null;
+      if (!ts) return false;
+      return differenceInHours(now, ts) >= 24;
     });
   }, [allDeleteRequests]);
 

@@ -47,12 +47,12 @@ export default function MessagesPage() {
     if (!user || !profile || !emailVerified) return null;
     return query(
       collection(db, 'contactRequests'),
-      where(profile.role === 'investor' ? 'senderId' : 'receiverId', '==', user.uid)
+      where(profile.role === 'investor' ? 'senderId' : 'receiverId', '==', user.uid),
+      where('status', '==', 'accepted')
     );
   }, [db, user, profile, emailVerified]);
 
-  const { data: allConnections, isLoading: loadingConnections } = useCollection(connectionsQuery);
-  const connections = allConnections?.filter(c => c.status === 'accepted') || [];
+  const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
   const messagesQuery = useMemoFirebase(() => {
     if (!selectedConnection) return null;
@@ -66,8 +66,8 @@ export default function MessagesPage() {
 
   const messages = (rawMessages || [])
     .filter(msg => 
-      (msg.senderId === selectedConnection.senderId && msg.receiverId === selectedConnection.receiverId) ||
-      (msg.senderId === selectedConnection.receiverId && msg.receiverId === selectedConnection.senderId)
+      (msg.senderId === selectedConnection?.senderId && msg.receiverId === selectedConnection?.receiverId) ||
+      (msg.senderId === selectedConnection?.receiverId && msg.receiverId === selectedConnection?.senderId)
     )
     .sort((a, b) => (a.timestamp?.toMillis?.() || 0) - (b.timestamp?.toMillis?.() || 0));
 
@@ -179,7 +179,7 @@ export default function MessagesPage() {
           <ScrollArea className="flex-1">
             {loadingConnections ? (
               <div className="p-12 text-center"><Loader2 className="animate-spin mx-auto w-8 h-8 text-muted-foreground opacity-20" /></div>
-            ) : connections.length > 0 ? (
+            ) : connections && connections.length > 0 ? (
               <div className="p-4 space-y-2">
                 {connections.map((conn) => {
                   const hasUnread = rawMessages?.some(m => m.pitchId === conn.pitchId && m.receiverId === user.uid && m.read === false);

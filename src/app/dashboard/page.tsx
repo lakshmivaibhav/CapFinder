@@ -72,7 +72,7 @@ export default function DashboardPage() {
   // General Market Feed
   const allPitchesQuery = useMemoFirebase(() => {
     if (!user || !profile || (!isInvestor && !isAdmin) || profile.disabled === true) return null;
-    return query(collection(db, 'pitches'), limit(50));
+    return query(collection(db, 'pitches'), where('status', '==', 'approved'), limit(50));
   }, [db, user, profile, isInvestor, isAdmin]);
 
   const { data: startupPitches, isLoading: loadingStartupPitches } = useCollection(startupPitchesQuery);
@@ -123,7 +123,10 @@ export default function DashboardPage() {
 
   const recommendedPitches = useMemo(() => {
     if (!isInvestor || !allPitches || !profile?.investmentInterest) return [];
-    const interests = profile.investmentInterest.toLowerCase().split(',').map(i => i.trim()).filter(Boolean);
+    const rawInterests = profile.investmentInterest.toLowerCase().split(',');
+    const interests = rawInterests.map(i => i.trim()).filter(Boolean);
+    if (interests.length === 0) return [];
+
     return allPitches
       .map(pitch => {
         let score = 0;

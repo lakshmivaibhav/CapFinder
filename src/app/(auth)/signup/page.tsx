@@ -64,13 +64,13 @@ export default function SignupPage() {
           <div className="mx-auto w-16 h-16 bg-primary rounded-[1.5rem] flex items-center justify-center shadow-2xl shadow-primary/30">
             <Zap className="text-white w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-black tracking-tighter">Join CapFinder</h1>
-          <p className="text-muted-foreground font-medium uppercase tracking-widest text-[10px]">Global Venture Capital Ecosystem</p>
+          <h1 className="text-3xl font-black tracking-tighter text-foreground leading-none">Join CapFinder</h1>
+          <p className="text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px]">Global Venture Capital Ecosystem</p>
         </div>
 
         <Card className="shadow-2xl border-none rounded-[2rem] overflow-hidden bg-white/80 backdrop-blur-sm">
           <CardHeader className="p-8 pb-4 text-center">
-            <CardTitle className="text-xl font-black">Membership Application</CardTitle>
+            <CardTitle className="text-xl font-black text-foreground">Membership Application</CardTitle>
             <CardDescription className="font-medium">Initiate your secure professional profile.</CardDescription>
           </CardHeader>
           <CardContent className="p-8">
@@ -82,7 +82,7 @@ export default function SignupPage() {
                   type="email" 
                   placeholder="name@company.com" 
                   required 
-                  className="h-14 rounded-2xl bg-muted/30 border-none shadow-inner text-lg font-medium px-6 focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="h-14 rounded-2xl bg-muted/30 border-none shadow-inner text-lg font-medium px-6 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -93,12 +93,12 @@ export default function SignupPage() {
                   id="password" 
                   type="password" 
                   required 
-                  className="h-14 rounded-2xl bg-muted/30 border-none shadow-inner text-lg font-medium px-6 focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="h-14 rounded-2xl bg-muted/30 border-none shadow-inner text-lg font-medium px-6 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
-              <Button type="submit" className="w-full h-16 bg-primary shadow-xl shadow-primary/20 rounded-2xl font-black text-xl gap-3 transition-all hover:scale-[1.02]" disabled={loading}>
+              <Button type="submit" className="w-full h-16 bg-primary shadow-xl shadow-primary/20 rounded-2xl font-black text-lg gap-3 transition-all hover:scale-[1.02] active:scale-95 uppercase tracking-widest" disabled={loading}>
                 {loading ? <Loader2 className="animate-spin" /> : <><UserPlus className="w-6 h-6" /> Create Account</>}
               </Button>
             </form>
