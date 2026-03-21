@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, doc, limit, orderBy } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { Navbar } from '@/components/navbar';
@@ -48,28 +48,35 @@ export default function MessagesPage() {
     return query(
       collection(db, 'contactRequests'),
       where(profile.role === 'investor' ? 'senderId' : 'receiverId', '==', user.uid),
-      where('status', '==', 'accepted')
+      where('status', '==', 'accepted'),
+      limit(50)
     );
   }, [db, user, profile, emailVerified]);
 
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
+  // Optimized messages query with limit
   const messagesQuery = useMemoFirebase(() => {
     if (!selectedConnection) return null;
     return query(
       collection(db, 'messages'),
-      where('pitchId', '==', selectedConnection.pitchId)
+      where('pitchId', '==', selectedConnection.pitchId),
+      orderBy('timestamp', 'desc'),
+      limit(100)
     );
   }, [db, selectedConnection]);
 
   const { data: rawMessages } = useCollection(messagesQuery);
 
-  const messages = (rawMessages || [])
-    .filter(msg => 
-      (msg.senderId === selectedConnection?.senderId && msg.receiverId === selectedConnection?.receiverId) ||
-      (msg.senderId === selectedConnection?.receiverId && msg.receiverId === selectedConnection?.senderId)
-    )
-    .sort((a, b) => (a.timestamp?.toMillis?.() || 0) - (b.timestamp?.toMillis?.() || 0));
+  const messages = useMemo(() => {
+    if (!rawMessages || !selectedConnection) return [];
+    return rawMessages
+      .filter(msg => 
+        (msg.senderId === selectedConnection.senderId && msg.receiverId === selectedConnection.receiverId) ||
+        (msg.senderId === selectedConnection.receiverId && msg.receiverId === selectedConnection.senderId)
+      )
+      .sort((a, b) => (a.timestamp?.toMillis?.() || 0) - (b.timestamp?.toMillis?.() || 0));
+  }, [rawMessages, selectedConnection]);
 
   useEffect(() => {
     if (selectedConnection && user && messages.length > 0) {
@@ -169,7 +176,7 @@ export default function MessagesPage() {
           "w-full md:w-[380px] border-r flex flex-col bg-muted/10 absolute md:relative inset-0 z-20 transition-transform duration-300",
           selectedConnection ? "-translate-x-full md:translate-x-0" : "translate-x-0"
         )}>
-          <div className="p-6 md:p-8 border-b bg-white">
+          <div className="p-8 border-b bg-white">
             <h2 className="text-xl font-black flex items-center gap-3 tracking-tight">
               <Inbox className="w-6 h-6 text-primary" />
               Secure Hub
@@ -188,15 +195,15 @@ export default function MessagesPage() {
                     <div
                       key={conn.id}
                       className={cn(
-                        "p-4 md:p-5 cursor-pointer rounded-2xl transition-all flex items-center gap-4 relative group", 
+                        "p-5 cursor-pointer rounded-2xl transition-all flex items-center gap-4 relative group", 
                         isActive 
                           ? "bg-primary text-white shadow-xl shadow-primary/20" 
                           : "hover:bg-white hover:shadow-lg"
                       )}
                       onClick={() => setSelectedConnection(conn)}
                     >
-                      <Avatar className="h-10 w-10 md:h-12 md:w-12 border-2 border-white shadow-sm">
-                        <AvatarFallback className={cn("font-black text-xs md:text-sm", isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary")}>
+                      <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                        <AvatarFallback className={cn("font-black text-sm", isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary")}>
                           {conn.startupName[0]}
                         </AvatarFallback>
                       </Avatar>
@@ -212,9 +219,9 @@ export default function MessagesPage() {
                 })}
               </div>
             ) : (
-              <div className="p-10 md:p-20 text-center space-y-4">
+              <div className="p-20 text-center space-y-4">
                 <div className="p-6 bg-muted rounded-full w-fit mx-auto">
-                   <MessageSquare className="w-8 h-8 md:w-10 md:h-10 text-muted-foreground opacity-20" />
+                   <MessageSquare className="w-10 h-10 text-muted-foreground opacity-20" />
                 </div>
                 <h3 className="font-black text-muted-foreground uppercase text-[10px] tracking-widest">No active channels.</h3>
                 <p className="text-[10px] font-bold text-muted-foreground/50 max-w-[180px] mx-auto leading-relaxed">Strategic inquiries will appear here once authenticated.</p>
@@ -231,32 +238,32 @@ export default function MessagesPage() {
           {selectedConnection ? (
             <>
               {/* Chat Header */}
-              <div className="p-4 md:p-8 border-b flex items-center justify-between bg-white shadow-sm z-10">
-                <div className="flex items-center gap-3 md:gap-5">
+              <div className="p-8 border-b flex items-center justify-between bg-white shadow-sm z-10">
+                <div className="flex items-center gap-5">
                   <Button variant="ghost" size="icon" className="md:hidden rounded-xl h-10 w-10" onClick={() => setSelectedConnection(null)}>
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
-                  <Avatar className="h-10 w-10 md:h-14 md:w-14 border-2 border-white shadow-lg">
-                    <AvatarFallback className="bg-primary text-white font-black text-md md:text-xl">{selectedConnection.startupName[0]}</AvatarFallback>
+                  <Avatar className="h-14 w-14 border-2 border-white shadow-lg">
+                    <AvatarFallback className="bg-primary text-white font-black text-xl">{selectedConnection.startupName[0]}</AvatarFallback>
                   </Avatar>
                   <div className="space-y-0.5">
-                    <h3 className="text-lg md:text-2xl font-black tracking-tight leading-none">{selectedConnection.startupName}</h3>
+                    <h3 className="text-2xl font-black tracking-tight leading-none">{selectedConnection.startupName}</h3>
                     <div className="text-[9px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-2 mt-1">
                       <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                       Encrypted Session Active
                     </div>
                   </div>
                 </div>
-                <Badge variant="outline" className="h-8 md:h-10 px-3 md:px-6 rounded-xl font-black uppercase text-[9px] tracking-widest border-2 hidden sm:flex bg-muted/10">Strategic Inquiry</Badge>
+                <Badge variant="outline" className="h-10 px-6 rounded-xl font-black uppercase text-[9px] tracking-widest border-2 hidden sm:flex bg-muted/10">Strategic Inquiry</Badge>
               </div>
 
               {/* Message List */}
-              <ScrollArea className="flex-1 p-4 md:p-10">
-                <div className="space-y-6 md:space-y-10">
+              <ScrollArea className="flex-1 p-10">
+                <div className="space-y-10">
                   {messages.map((msg) => (
-                    <div key={msg.id} className={cn("flex flex-col max-w-[90%] md:max-w-[80%] space-y-1.5", msg.senderId === user.uid ? "ml-auto items-end" : "items-start")}>
+                    <div key={msg.id} className={cn("flex flex-col max-w-[80%] space-y-1.5", msg.senderId === user.uid ? "ml-auto items-end" : "items-start")}>
                       <div className={cn(
-                        "px-4 py-3 md:px-6 md:py-4 text-sm font-medium shadow-xl leading-relaxed flex flex-col gap-2 transition-all", 
+                        "px-6 py-4 text-sm font-medium shadow-xl leading-relaxed flex flex-col gap-2 transition-all", 
                         msg.senderId === user.uid 
                           ? "bg-primary text-white rounded-[1.5rem] rounded-br-sm shadow-primary/20" 
                           : "bg-white text-foreground rounded-[1.5rem] rounded-bl-sm shadow-black/5 border border-muted"
@@ -287,7 +294,7 @@ export default function MessagesPage() {
                             )}
                           </div>
                         )}
-                        <p className="text-[13px] md:text-[15px] leading-relaxed">{msg.text}</p>
+                        <p className="text-[15px] leading-relaxed">{msg.text}</p>
                       </div>
                       <div className="flex items-center gap-2 px-2">
                         <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1 opacity-60">
@@ -305,15 +312,15 @@ export default function MessagesPage() {
               </ScrollArea>
 
               {/* Chat Input Bar */}
-              <div className="p-4 md:p-8 border-t bg-white shadow-2xl z-10">
-                <form onSubmit={handleSendMessage} className="flex gap-2 md:gap-4 items-center max-w-5xl mx-auto">
+              <div className="p-8 border-t bg-white shadow-2xl z-10">
+                <form onSubmit={handleSendMessage} className="flex gap-4 items-center max-w-5xl mx-auto">
                   <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".jpg,.png,.jpeg,.pdf,.doc,.docx" />
-                  <div className="flex gap-1 md:gap-2">
+                  <div className="flex gap-2">
                     <Button 
                       type="button" 
                       variant="ghost" 
                       size="icon" 
-                      className="h-12 w-12 md:h-14 md:w-14 rounded-xl bg-muted/30 border-none shadow-inner text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all active:scale-95 disabled:opacity-50"
+                      className="h-14 w-14 rounded-xl bg-muted/30 border-none shadow-inner text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all active:scale-95 disabled:opacity-50"
                       onClick={() => fileInputRef.current?.click()}
                       disabled={uploadingFile}
                     >
@@ -322,7 +329,7 @@ export default function MessagesPage() {
                     
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-12 w-12 md:h-14 md:w-14 rounded-xl bg-muted/30 border-none shadow-inner text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all active:scale-95 hidden sm:flex">
+                        <Button variant="ghost" size="icon" className="h-14 w-14 rounded-xl bg-muted/30 border-none shadow-inner text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all active:scale-95 hidden sm:flex">
                           <Smile className="w-5 h-5" />
                         </Button>
                       </PopoverTrigger>
@@ -342,24 +349,24 @@ export default function MessagesPage() {
                       placeholder="Compose message..." 
                       value={messageText} 
                       onChange={(e) => setMessageText(e.target.value)} 
-                      className="flex-1 h-12 md:h-14 rounded-xl bg-muted/30 border-none shadow-inner text-md md:text-lg font-medium px-4 md:px-8 focus:ring-4 focus:ring-primary/10 transition-all outline-none" 
+                      className="flex-1 h-14 rounded-xl bg-muted/30 border-none shadow-inner text-lg font-medium px-8 focus:ring-4 focus:ring-primary/10 transition-all outline-none" 
                     />
                   </div>
 
-                  <Button type="submit" size="icon" className="h-12 w-12 md:h-14 md:w-14 shrink-0 rounded-xl shadow-xl shadow-primary/20 transition-all active:scale-90 bg-primary hover:bg-primary/90" disabled={!messageText.trim() || uploadingFile}>
+                  <Button type="submit" size="icon" className="h-14 w-14 shrink-0 rounded-xl shadow-xl shadow-primary/20 transition-all active:scale-90 bg-primary hover:bg-primary/90" disabled={!messageText.trim() || uploadingFile}>
                     <Send className="w-5 h-5" />
                   </Button>
                 </form>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-6 md:p-12 bg-muted/5 relative overflow-hidden text-center">
-               <Zap className="absolute -right-20 -bottom-20 w-64 h-64 md:w-96 md:h-96 text-primary/5 -rotate-12" />
-               <div className="p-8 md:p-12 bg-white rounded-full shadow-2xl mb-6 md:mb-10 scale-110 md:scale-125 ring-8 ring-primary/5">
-                  <MessageSquare className="w-12 h-12 md:w-16 md:h-16 text-primary opacity-20" />
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-12 bg-muted/5 relative overflow-hidden text-center">
+               <Zap className="absolute -right-20 -bottom-20 w-96 h-96 text-primary/5 -rotate-12" />
+               <div className="p-12 bg-white rounded-full shadow-2xl mb-10 scale-125 ring-8 ring-primary/5">
+                  <MessageSquare className="w-16 h-16 text-primary opacity-20" />
                </div>
-               <h3 className="text-2xl md:text-4xl font-black text-foreground mb-3 md:mb-4 tracking-tighter">Initiate Conversation</h3>
-               <p className="text-sm md:text-lg font-medium max-w-sm italic border-l-4 md:border-l-8 border-primary/20 pl-4 md:pl-8 leading-relaxed">
+               <h3 className="text-4xl font-black text-foreground mb-4 tracking-tighter">Initiate Conversation</h3>
+               <p className="text-lg font-medium max-w-sm italic border-l-8 border-primary/20 pl-8 leading-relaxed">
                  Select a verified partner from your connection list to begin a secure strategic inquiry.
                </p>
             </div>
