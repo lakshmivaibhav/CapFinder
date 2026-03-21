@@ -72,7 +72,7 @@ export default function DashboardPage() {
   // General Market Feed
   const allPitchesQuery = useMemoFirebase(() => {
     if (!user || !profile || (!isInvestor && !isAdmin) || profile.disabled === true) return null;
-    return query(collection(db, 'pitches'), where('status', '==', 'approved'), limit(50));
+    return query(collection(db, 'pitches'), limit(50));
   }, [db, user, profile, isInvestor, isAdmin]);
 
   const { data: startupPitches, isLoading: loadingStartupPitches } = useCollection(startupPitchesQuery);
@@ -329,7 +329,7 @@ export default function DashboardPage() {
                             <Button variant="ghost" size="sm" className="gap-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/5 hover:text-primary transition-all">Details <ArrowRight className="w-3 h-3 md:w-4 md:h-4" /></Button>
                           </Link>
                         </div>
-                      </CardContent>
+                      </CardHeader>
                     </Card>
                   );
                 })}

@@ -128,11 +128,6 @@ function AdminDashboardContent() {
     }
   };
 
-  const handleUpdatePitchStatus = (pitchId: string, status: 'approved' | 'rejected') => {
-    updateDocumentNonBlocking(doc(db, 'pitches', pitchId), { status });
-    toast({ title: `Venture ${status === 'approved' ? 'Approved' : 'Rejected'}` });
-  };
-
   const handleProcessStaleRequests = async () => {
     if (staleRequests.length === 0) return;
     if (!confirm(`Process ${staleRequests.length} stale requests?`)) return;
@@ -281,53 +276,17 @@ function AdminDashboardContent() {
                     <TableRow>
                       <TableHead className="px-6 md:px-8 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Venture Name</TableHead>
                       <TableHead className="font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Capital Goal</TableHead>
-                      <TableHead className="font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Current Status</TableHead>
                       <TableHead className="text-right px-6 md:px-8 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Governance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {loadingPitches ? (
-                      <TableRow><TableCell colSpan={4} className="text-center py-20"><Loader2 className="animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+                      <TableRow><TableCell colSpan={3} className="text-center py-20"><Loader2 className="animate-spin mx-auto opacity-20" /></TableCell></TableRow>
                     ) : allPitches?.map((p) => (
                       <TableRow key={p.id} className="hover:bg-muted/10 transition-colors">
                         <TableCell className="px-6 md:px-8 font-black text-primary text-xs md:text-sm whitespace-nowrap">{(p.startupName as string)}</TableCell>
                         <TableCell className="font-black text-emerald-600 text-xs md:text-sm whitespace-nowrap">${(p.fundingNeeded as number)?.toLocaleString()}</TableCell>
-                        <TableCell>
-                          {(!p.status || p.status === 'approved') ? (
-                            <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 font-black gap-1.5 rounded-lg px-2 md:px-3 text-[9px] uppercase tracking-widest">
-                              <CheckCircle2 className="w-3 h-3" /> Approved
-                            </Badge>
-                          ) : p.status === 'pending' ? (
-                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 font-black gap-1.5 rounded-lg px-2 md:px-3 text-[9px] uppercase tracking-widest">
-                              <Clock className="w-3 h-3 animate-pulse" /> Pending
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive" className="font-black gap-1.5 rounded-lg px-2 md:px-3 text-[9px] uppercase tracking-widest">
-                              <XCircle className="w-3 h-3" /> Rejected
-                            </Badge>
-                          )}
-                        </TableCell>
                         <TableCell className="text-right px-6 md:px-8 space-x-1 whitespace-nowrap">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="rounded-xl h-10 w-10 text-emerald-600 hover:bg-emerald-50" 
-                            title="Approve Venture"
-                            onClick={() => handleUpdatePitchStatus(p.id, 'approved')}
-                            disabled={p.status === 'approved'}
-                          >
-                            <CheckCircle2 className="w-5 h-5" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="rounded-xl h-10 w-10 text-amber-600 hover:bg-amber-50" 
-                            title="Reject Venture"
-                            onClick={() => handleUpdatePitchStatus(p.id, 'rejected')}
-                            disabled={p.status === 'rejected'}
-                          >
-                            <XCircle className="w-5 h-5" />
-                          </Button>
                           <Button 
                             variant="ghost" 
                             size="icon" 
