@@ -9,10 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, TrendingUp, Mail, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, ArrowRight, Users, LayoutGrid, FilterX, CheckCircle2, Sparkles } from 'lucide-react';
+import { Loader2, Search, TrendingUp, Mail, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, ArrowRight, Users, LayoutGrid, FilterX, CheckCircle2, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -274,29 +275,43 @@ export default function PitchesFeedPage() {
                 {filteredPitches.map((pitch) => (
                   <Card key={pitch.id} className="flex flex-col group hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white relative hover:-translate-y-1">
                     <Link href={`/startup/${pitch.id}`} className="absolute inset-0 z-0" />
-                    <CardHeader className="space-y-5 relative z-10 pointer-events-none p-8">
-                      <div className="flex justify-between items-start pointer-events-auto">
-                        <Badge variant="outline" className="text-primary border-primary/20 bg-primary/5 px-4 py-1.5 font-black uppercase tracking-widest text-[9px] rounded-lg">
+                    
+                    {/* Pitch Hero Visual */}
+                    <div className="relative aspect-video w-full overflow-hidden bg-muted/30">
+                      {pitch.imageURL ? (
+                        <Image src={pitch.imageURL} alt={pitch.startupName} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/20">
+                          <ImageIcon className="w-16 h-16" />
+                        </div>
+                      )}
+                      <div className="absolute top-4 left-4 z-10">
+                        <Badge variant="outline" className="text-white border-white/20 bg-black/40 backdrop-blur-md px-4 py-1.5 font-black uppercase tracking-widest text-[9px] rounded-lg">
                           {pitch.category || pitch.industry || 'Other'}
                         </Badge>
-                        {isInvestor && (
+                      </div>
+                      {isInvestor && (
+                        <div className="absolute top-4 right-4 z-10">
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className={`h-10 w-10 rounded-full transition-all pointer-events-auto active:scale-90 ${favoritePitchIds.includes(pitch.id) ? 'bg-accent/10 text-accent' : 'text-muted-foreground hover:bg-accent/5 hover:text-accent'}`} 
+                            className={`h-10 w-10 rounded-full transition-all pointer-events-auto active:scale-90 shadow-lg ${favoritePitchIds.includes(pitch.id) ? 'bg-accent text-white' : 'bg-white/80 backdrop-blur-md text-muted-foreground hover:bg-white hover:text-accent'}`} 
                             onClick={(e) => { e.preventDefault(); handleToggleFavorite(pitch); }}
                           >
                             {favoritePitchIds.includes(pitch.id) ? <BookmarkCheck className="w-6 h-6 fill-current" /> : <Bookmark className="w-6 h-6" />}
                           </Button>
-                        )}
-                      </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <CardHeader className="space-y-2 relative z-10 pointer-events-none p-8">
                       <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors leading-tight">{pitch.startupName}</CardTitle>
                     </CardHeader>
                     <CardContent className="flex-1 space-y-8 relative z-10 pointer-events-none p-8 pt-0">
-                      <div className="text-muted-foreground text-sm line-clamp-3 leading-relaxed bg-muted/20 p-6 rounded-2xl italic border-l-4 border-primary/30">
+                      <div className="text-muted-foreground text-sm line-clamp-2 leading-relaxed italic">
                         &quot;{pitch.description}&quot;
                       </div>
-                      <div className="grid grid-cols-2 gap-6">
+                      <div className="grid grid-cols-2 gap-6 pt-4 border-t border-muted/50">
                         <div className="space-y-1">
                           <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-black flex items-center gap-2">
                             <TrendingUp className="w-3.5 h-3.5 text-primary" /> Goal

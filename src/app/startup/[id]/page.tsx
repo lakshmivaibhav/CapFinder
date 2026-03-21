@@ -9,7 +9,7 @@ import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info, ShieldCheck } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info, ShieldCheck, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -133,11 +133,30 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
           {/* Main Content: Startup Details */}
           <div className="lg:col-span-8 space-y-8">
             <Card className="border-none shadow-2xl overflow-hidden bg-white rounded-[2.5rem] relative">
-              <CardHeader className="p-10 pb-6 space-y-8">
-                <div className="flex items-center justify-between">
-                  <Badge className="bg-primary/10 text-primary border-none px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl">
+              {/* Pitch Visual Hero */}
+              <div className="relative aspect-[21/9] w-full overflow-hidden bg-muted">
+                {pitch.imageURL ? (
+                  <Image src={pitch.imageURL} alt={pitch.startupName} fill className="object-cover" unoptimized />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/20">
+                    <ImageIcon className="w-20 h-20" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                <div className="absolute bottom-8 left-10 right-10">
+                   <Badge className="bg-primary text-white border-none px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl mb-4">
                     {pitch.category || pitch.industry || 'Other'}
                   </Badge>
+                  <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-[1.1] text-white">{pitch.startupName}</h1>
+                </div>
+              </div>
+
+              <CardHeader className="p-10 pb-6 space-y-8">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-6 text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">
+                    <span className="flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Active Engagement</span>
+                    <span className="flex items-center gap-2"><LayoutGrid className="w-4 h-4 text-accent" /> Verified Venture</span>
+                  </div>
                   {isInvestor && (isInterested || (contactRequest && contactRequest.status === 'accepted')) && (
                     <Button 
                       variant="outline" 
@@ -151,17 +170,9 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
                     </Button>
                   )}
                 </div>
-
-                <div className="space-y-4">
-                  <h1 className="text-5xl md:text-6xl font-black tracking-tighter leading-[1.1]">{pitch.startupName}</h1>
-                  <div className="flex items-center gap-6 text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">
-                    <span className="flex items-center gap-2"><Clock className="w-4 h-4 text-primary" /> Active Engagement</span>
-                    <span className="flex items-center gap-2"><LayoutGrid className="w-4 h-4 text-accent" /> Verified Venture</span>
-                  </div>
-                </div>
               </CardHeader>
 
-              <CardContent className="p-10 pt-6 space-y-12">
+              <CardContent className="p-10 pt-0 space-y-12">
                 <div className="p-8 bg-muted/20 rounded-[2rem] border-l-8 border-primary relative overflow-hidden">
                   <Sparkles className="absolute -right-4 -top-4 w-24 h-24 text-primary/5 -rotate-12" />
                   <p className="text-2xl md:text-3xl leading-relaxed text-foreground font-medium italic relative z-10">

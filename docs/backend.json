@@ -104,6 +104,10 @@
           "description": "An email address for potential investors to contact the startup directly regarding this pitch.",
           "format": "email"
         },
+        "imageURL": {
+          "type": "string",
+          "description": "URL to the venture's primary pitch image hosted on Cloudinary."
+        },
         "postedDate": {
           "type": "string",
           "description": "The date and time when the pitch was posted.",
