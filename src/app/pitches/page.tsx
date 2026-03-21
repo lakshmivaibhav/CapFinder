@@ -4,12 +4,12 @@
 import { useState, useEffect } from 'react';
 import { collection, query, serverTimestamp, where, doc } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useDoc, useMemoFirebase, addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, TrendingUp, Mail, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, ArrowRight, Users, LayoutGrid, FilterX, CheckCircle2, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Search, TrendingUp, Mail, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, ArrowRight, Users, LayoutGrid, FilterX, CheckCircle2, Sparkles, Image as ImageIcon, Building } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -30,6 +30,24 @@ const CATEGORIES = [
   "Gaming",
   "Other"
 ];
+
+function OwnerLogo({ ownerId }: { ownerId: string }) {
+  const db = useFirestore();
+  const ownerRef = useMemoFirebase(() => doc(db, 'users', ownerId), [db, ownerId]);
+  const { data: owner } = useDoc(ownerRef);
+
+  if (!owner?.logoURL) return (
+    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground/40 border">
+      <Building className="w-4 h-4" />
+    </div>
+  );
+
+  return (
+    <div className="w-8 h-8 rounded-lg bg-white shadow-sm border overflow-hidden flex items-center justify-center p-1">
+      <Image src={owner.logoURL} alt="Startup Logo" width={24} height={24} className="object-contain" unoptimized />
+    </div>
+  );
+}
 
 export default function PitchesFeedPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
@@ -276,7 +294,6 @@ export default function PitchesFeedPage() {
                   <Card key={pitch.id} className="flex flex-col group hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white relative hover:-translate-y-1">
                     <Link href={`/startup/${pitch.id}`} className="absolute inset-0 z-0" />
                     
-                    {/* Pitch Hero Visual */}
                     <div className="relative aspect-video w-full overflow-hidden bg-muted/30">
                       {pitch.imageURL ? (
                         <Image src={pitch.imageURL} alt={pitch.startupName} fill className="object-cover group-hover:scale-105 transition-transform duration-500" unoptimized />
@@ -304,8 +321,11 @@ export default function PitchesFeedPage() {
                       )}
                     </div>
 
-                    <CardHeader className="space-y-2 relative z-10 pointer-events-none p-8">
-                      <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors leading-tight">{pitch.startupName}</CardTitle>
+                    <CardHeader className="space-y-4 relative z-10 pointer-events-none p-8">
+                      <div className="flex items-center gap-3">
+                        <OwnerLogo ownerId={pitch.ownerId} />
+                        <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors leading-tight">{pitch.startupName}</CardTitle>
+                      </div>
                     </CardHeader>
                     <CardContent className="flex-1 space-y-8 relative z-10 pointer-events-none p-8 pt-0">
                       <div className="text-muted-foreground text-sm line-clamp-2 leading-relaxed italic">

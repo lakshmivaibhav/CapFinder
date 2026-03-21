@@ -9,7 +9,7 @@ import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info, ShieldCheck, Image as ImageIcon } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info, ShieldCheck, Image as ImageIcon, Building } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -130,10 +130,8 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
         </Link>
 
         <div className="grid lg:grid-cols-12 gap-12 items-start">
-          {/* Main Content: Startup Details */}
           <div className="lg:col-span-8 space-y-8">
             <Card className="border-none shadow-2xl overflow-hidden bg-white rounded-[2.5rem] relative">
-              {/* Pitch Visual Hero */}
               <div className="relative aspect-[21/9] w-full overflow-hidden bg-muted">
                 {pitch.imageURL ? (
                   <Image src={pitch.imageURL} alt={pitch.startupName} fill className="object-cover" unoptimized />
@@ -143,11 +141,18 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                <div className="absolute bottom-8 left-10 right-10">
-                   <Badge className="bg-primary text-white border-none px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl mb-4">
-                    {pitch.category || pitch.industry || 'Other'}
-                  </Badge>
-                  <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-[1.1] text-white">{pitch.startupName}</h1>
+                <div className="absolute bottom-8 left-10 right-10 flex items-end justify-between gap-6">
+                   <div className="space-y-4">
+                    <Badge className="bg-primary text-white border-none px-6 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl">
+                      {pitch.category || pitch.industry || 'Other'}
+                    </Badge>
+                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter leading-[1.1] text-white">{pitch.startupName}</h1>
+                   </div>
+                   {founder.logoURL && (
+                     <div className="w-24 h-24 bg-white/90 backdrop-blur-md p-3 rounded-2xl shadow-xl shrink-0 hidden sm:flex items-center justify-center">
+                        <Image src={founder.logoURL} alt="Startup Logo" width={80} height={80} className="object-contain max-h-full" unoptimized />
+                     </div>
+                   )}
                 </div>
               </div>
 
@@ -242,7 +247,6 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
             </Card>
           </div>
 
-          {/* Sidebar: Founder Identity */}
           <div className="lg:col-span-4 space-y-8">
             <Card className="border-none shadow-xl bg-white overflow-hidden rounded-[2rem]">
               <CardHeader className="bg-primary/5 border-b py-8 px-10">

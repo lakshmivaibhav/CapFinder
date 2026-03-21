@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -25,8 +26,10 @@ export default function ProfilePage() {
 
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [checking, setChecking] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -36,6 +39,7 @@ export default function ProfilePage() {
     investmentInterest: '',
     role: '',
     photoURL: '',
+    logoURL: '',
     verified: false,
   });
 
@@ -60,6 +64,7 @@ export default function ProfilePage() {
         investmentInterest: profile.investmentInterest || '',
         role: profile.role || 'startup',
         photoURL: profile.photoURL || prev.photoURL || '',
+        logoURL: profile.logoURL || '',
         verified: !!profile.verified,
       }));
     }
@@ -95,24 +100,61 @@ export default function ProfilePage() {
       const data = await response.json();
       const secureURL = data.secure_url;
 
-      // Update Firestore user document: users/{uid} -> photoURL
       updateDocumentNonBlocking(doc(db, 'users', user.uid), {
         photoURL: secureURL,
         updatedAt: serverTimestamp(),
       });
       
-      // Update local state immediately for visual feedback
       setFormData(prev => ({ ...prev, photoURL: secureURL }));
-      
-      // Refresh profile context
       await refreshProfile();
-      
-      toast({ title: "Photo Updated", description: "Your profile picture has been successfully synchronized via Cloudinary." });
+      toast({ title: "Photo Updated", description: "Your profile picture has been synchronized." });
     } catch (error: any) {
-      console.error("Cloudinary upload error:", error);
-      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload profile picture to Cloudinary." });
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload profile picture." });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ variant: "destructive", title: "Invalid file", description: "Please select an image file." });
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/dfp3ydcli/image/upload";
+      const UPLOAD_PRESET = "profile_upload";
+
+      const formDataCloudinary = new FormData();
+      formDataCloudinary.append('file', file);
+      formDataCloudinary.append('upload_preset', UPLOAD_PRESET);
+
+      const response = await fetch(CLOUDINARY_URL, {
+        method: 'POST',
+        body: formDataCloudinary,
+      });
+
+      if (!response.ok) throw new Error('Logo upload failed');
+
+      const data = await response.json();
+      const secureURL = data.secure_url;
+
+      updateDocumentNonBlocking(doc(db, 'users', user.uid), {
+        logoURL: secureURL,
+        updatedAt: serverTimestamp(),
+      });
+      
+      setFormData(prev => ({ ...prev, logoURL: secureURL }));
+      await refreshProfile();
+      toast({ title: "Corporate Logo Updated", description: "Venture identity assets have been synchronized." });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload startup logo." });
+    } finally {
+      setUploadingLogo(false);
     }
   };
 
@@ -131,7 +173,7 @@ export default function ProfilePage() {
         updatedAt: serverTimestamp(),
       });
       await refreshProfile();
-      toast({ title: "Profile synchronization complete", description: "All changes are now live across the marketplace." });
+      toast({ title: "Profile synchronization complete", description: "All changes are now live." });
     } catch (error) {
       toast({ variant: "destructive", title: "Persistence Error", description: "Unable to save profile changes." });
     } finally {
@@ -256,7 +298,28 @@ export default function ProfilePage() {
               <h2 className="text-2xl font-black truncate mb-1">{formData.name || 'Anonymous User'}</h2>
               <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-10">{user.email}</p>
               
-              <div className="pt-8 mt-8 border-t border-dashed">
+              <div className="pt-8 mt-8 border-t border-dashed space-y-6">
+                {formData.role === 'startup' && (
+                  <div className="space-y-4">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 justify-center">
+                      <Building className="w-4 h-4 text-primary" /> Corporate Logo
+                    </Label>
+                    <div 
+                      className="relative w-24 h-24 mx-auto rounded-2xl border-2 border-dashed border-muted bg-muted/10 flex items-center justify-center cursor-pointer group hover:border-primary/30 transition-all overflow-hidden"
+                      onClick={() => logoInputRef.current?.click()}
+                    >
+                      {formData.logoURL ? (
+                        <Image src={formData.logoURL} alt="Logo" fill className="object-contain p-2" unoptimized />
+                      ) : (
+                        <div className="text-center p-2">
+                          {uploadingLogo ? <Loader2 className="w-6 h-6 animate-spin text-primary" /> : <Upload className="w-6 h-6 text-muted-foreground opacity-20" />}
+                        </div>
+                      )}
+                      <input type="file" ref={logoInputRef} className="hidden" accept="image/*" onChange={handleLogoUpload} />
+                    </div>
+                  </div>
+                )}
+
                 <Button 
                   variant="ghost" 
                   size="sm" 

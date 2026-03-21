@@ -24,6 +24,10 @@
           "type": "string",
           "description": "URL to the user's profile photo stored in Firebase Storage."
         },
+        "logoURL": {
+          "type": "string",
+          "description": "URL to the startup's corporate logo hosted on Cloudinary."
+        },
         "bio": {
           "type": "string",
           "description": "A short biography or a brief description of the user's company or background."
@@ -34,7 +38,7 @@
         },
         "role": {
           "type": "string",
-          "description": "The role of the user, indicating whether they are an 'Investor', 'Startup', or 'Admin'."
+          "description": "The role of the user, indicating whether they are 'Investor', 'Startup', or 'Admin'."
         },
         "investmentInterest": {
           "type": "string",
