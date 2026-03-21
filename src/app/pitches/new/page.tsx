@@ -141,10 +141,14 @@ export default function NewPitchPage() {
         ownerVerified: !!profile?.verified,
         industry: formData.category, 
         ownerId: user.uid,
+        status: 'pending',
         createdAt: serverTimestamp(),
       });
 
-      toast({ title: "Venture Published", description: "Your pitch is now live in the global marketplace." });
+      toast({ 
+        title: "Venture Submitted", 
+        description: "Your pitch has been queued for administrative approval." 
+      });
       router.push('/dashboard');
     } catch (error: any) {
       toast({ variant: "destructive", title: "Deployment failed", description: error.message });
@@ -186,7 +190,7 @@ export default function NewPitchPage() {
       <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
         <CardHeader className="bg-muted/30 border-b p-10">
           <CardTitle className="text-3xl font-black tracking-tight">Venture Establishment</CardTitle>
-          <CardDescription className="text-sm font-medium">Define your strategic objectives to attract capital partners.</CardDescription>
+          <CardDescription className="text-sm font-medium">Define your strategic objectives to attract capital partners. Submissions require approval.</CardDescription>
         </CardHeader>
         <CardContent className="p-10">
           <form onSubmit={handleSubmit} className="space-y-10">
@@ -302,7 +306,7 @@ export default function NewPitchPage() {
 
             <Button type="submit" className="w-full h-16 bg-primary shadow-xl shadow-primary/20 rounded-2xl font-black text-xl gap-3 transition-all hover:scale-[1.01]" disabled={loading || uploadingImage}>
               {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <Send className="w-6 h-6" />}
-              Publish Strategic Pitch
+              Submit Pitch for Approval
             </Button>
           </form>
         </CardContent>

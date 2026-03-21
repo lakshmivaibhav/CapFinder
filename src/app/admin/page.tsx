@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, Users, MessageSquare, AlertTriangle, Zap, LayoutGrid, Building } from 'lucide-react';
+import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, Users, MessageSquare, AlertTriangle, Zap, LayoutGrid, Building, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours } from 'date-fns';
 
@@ -124,6 +124,11 @@ function AdminDashboardContent() {
       if (requestId) updateDocumentNonBlocking(doc(db, 'deleteRequests', requestId), { status: 'resolved' });
       if (!isAuto) toast({ title: "Profile Deleted" });
     }
+  };
+
+  const handleUpdatePitchStatus = (pitchId: string, status: 'approved' | 'rejected') => {
+    updateDocumentNonBlocking(doc(db, 'pitches', pitchId), { status });
+    toast({ title: `Venture ${status === 'approved' ? 'Approved' : 'Rejected'}` });
   };
 
   const handleProcessStaleRequests = async () => {
@@ -269,9 +274,9 @@ function AdminDashboardContent() {
                   <TableHeader className="bg-muted/40">
                     <TableRow>
                       <TableHead className="px-8 font-black uppercase tracking-widest text-[10px]">Venture Name</TableHead>
-                      <TableHead className="font-black uppercase tracking-widest text-[10px]">Industry Focus</TableHead>
                       <TableHead className="font-black uppercase tracking-widest text-[10px]">Capital Goal</TableHead>
-                      <TableHead className="text-right px-8 font-black uppercase tracking-widest text-[10px]">Control</TableHead>
+                      <TableHead className="font-black uppercase tracking-widest text-[10px]">Current Status</TableHead>
+                      <TableHead className="text-right px-8 font-black uppercase tracking-widest text-[10px]">Governance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -280,10 +285,50 @@ function AdminDashboardContent() {
                     ) : allPitches?.map((p) => (
                       <TableRow key={p.id} className="hover:bg-muted/10 transition-colors">
                         <TableCell className="px-8 font-black text-primary">{p.startupName}</TableCell>
-                        <TableCell><Badge variant="secondary" className="bg-muted/50 rounded-lg px-3 font-bold">{p.industry}</Badge></TableCell>
                         <TableCell className="font-black text-emerald-600">${p.fundingNeeded?.toLocaleString()}</TableCell>
-                        <TableCell className="text-right px-8">
-                          <Button variant="ghost" size="icon" className="rounded-xl text-destructive hover:bg-destructive/10" onClick={() => handleDeletePitch(p.id, p.startupName)}>
+                        <TableCell>
+                          {(!p.status || p.status === 'approved') ? (
+                            <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 font-bold gap-1.5 rounded-lg px-3">
+                              <CheckCircle2 className="w-3 h-3" /> Approved
+                            </Badge>
+                          ) : p.status === 'pending' ? (
+                            <Badge variant="outline" className="text-amber-600 border-amber-200 bg-amber-50 font-bold gap-1.5 rounded-lg px-3">
+                              <Clock className="w-3 h-3 animate-pulse" /> Pending Review
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive" className="font-bold gap-1.5 rounded-lg px-3">
+                              <XCircle className="w-3 h-3" /> Rejected
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right px-8 space-x-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="rounded-xl text-emerald-600 hover:bg-emerald-50" 
+                            title="Approve Venture"
+                            onClick={() => handleUpdatePitchStatus(p.id, 'approved')}
+                            disabled={p.status === 'approved'}
+                          >
+                            <CheckCircle2 className="w-5 h-5" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="rounded-xl text-amber-600 hover:bg-amber-50" 
+                            title="Reject Venture"
+                            onClick={() => handleUpdatePitchStatus(p.id, 'rejected')}
+                            disabled={p.status === 'rejected'}
+                          >
+                            <XCircle className="w-5 h-5" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="rounded-xl text-destructive hover:bg-destructive/10" 
+                            title="Delete Venture"
+                            onClick={() => handleDeletePitch(p.id, p.startupName)}
+                          >
                             <Trash2 className="w-5 h-5" />
                           </Button>
                         </TableCell>

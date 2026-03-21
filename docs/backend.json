@@ -116,6 +116,15 @@
           "type": "string",
           "description": "The date and time when the pitch was posted.",
           "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ],
+          "description": "The approval status of the pitch."
         }
       },
       "required": [
@@ -221,16 +230,47 @@
       "type": "object",
       "description": "Represents a request for contact info/messaging between investor and startup.",
       "properties": {
-        "id": { "type": "string" },
-        "senderId": { "type": "string", "description": "UID of the investor sending the request." },
-        "receiverId": { "type": "string", "description": "UID of the startup owner receiving the request." },
-        "pitchId": { "type": "string" },
-        "startupName": { "type": "string" },
-        "investorEmail": { "type": "string", "format": "email" },
-        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
-        "timestamp": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string"
+        },
+        "senderId": {
+          "type": "string",
+          "description": "UID of the investor sending the request."
+        },
+        "receiverId": {
+          "type": "string",
+          "description": "UID of the startup owner receiving the request."
+        },
+        "pitchId": {
+          "type": "string"
+        },
+        "startupName": {
+          "type": "string"
+        },
+        "investorEmail": {
+          "type": "string",
+          "format": "email"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "accepted",
+            "rejected"
+          ]
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
       },
-      "required": ["senderId", "receiverId", "pitchId", "status", "timestamp"]
+      "required": [
+        "senderId",
+        "receiverId",
+        "pitchId",
+        "status",
+        "timestamp"
+      ]
     },
     "Message": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -238,18 +278,46 @@
       "type": "object",
       "description": "A private message between an investor and a startup for a specific pitch.",
       "properties": {
-        "id": { "type": "string" },
-        "senderId": { "type": "string" },
-        "receiverId": { "type": "string" },
-        "pitchId": { "type": "string" },
-        "text": { "type": "string" },
-        "read": { "type": "boolean", "description": "Whether the message has been read by the receiver." },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "fileURL": { "type": "string" },
-        "fileType": { "type": "string" },
-        "fileName": { "type": "string" }
+        "id": {
+          "type": "string"
+        },
+        "senderId": {
+          "type": "string"
+        },
+        "receiverId": {
+          "type": "string"
+        },
+        "pitchId": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Whether the message has been read by the receiver."
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "fileURL": {
+          "type": "string"
+        },
+        "fileType": {
+          "type": "string"
+        },
+        "fileName": {
+          "type": "string"
+        }
       },
-      "required": ["senderId", "receiverId", "pitchId", "timestamp", "read"]
+      "required": [
+        "senderId",
+        "receiverId",
+        "pitchId",
+        "timestamp",
+        "read"
+      ]
     },
     "DeleteRequest": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -257,15 +325,45 @@
       "type": "object",
       "description": "Represents a user's request to delete their account or a specific pitch.",
       "properties": {
-        "id": { "type": "string" },
-        "userId": { "type": "string" },
-        "targetType": { "type": "string", "enum": ["account", "pitch"] },
-        "targetId": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "resolved", "rejected"] },
-        "timestamp": { "type": "string", "format": "date-time" },
-        "details": { "type": "string" }
+        "id": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "targetType": {
+          "type": "string",
+          "enum": [
+            "account",
+            "pitch"
+          ]
+        },
+        "targetId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "resolved",
+            "rejected"
+          ]
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "details": {
+          "type": "string"
+        }
       },
-      "required": ["userId", "targetType", "targetId", "status", "timestamp"]
+      "required": [
+        "userId",
+        "targetType",
+        "targetId",
+        "status",
+        "timestamp"
+      ]
     }
   },
   "auth": {

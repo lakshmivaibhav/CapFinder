@@ -115,6 +115,10 @@ export default function PitchesFeedPage() {
   const contactRequests = userContactRequestsData || [];
 
   const filteredPitches = pitches?.filter(p => {
+    // Approval Filter: Show only approved pitches or legacy pitches with no status
+    const isApproved = p.status === 'approved' || !p.status;
+    if (!isApproved && !isAdmin) return false;
+
     const searchLower = search.toLowerCase();
     const pCategory = p.category || p.industry || 'Other';
     const matchesSearch = (p.startupName?.toLowerCase() || "").includes(searchLower) || (p.description?.toLowerCase() || "").includes(searchLower) || (pCategory.toLowerCase()).includes(searchLower);
