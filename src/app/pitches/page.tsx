@@ -17,6 +17,7 @@ import Image from 'next/image';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 const CATEGORIES = [
   "AI",
@@ -291,7 +292,10 @@ export default function PitchesFeedPage() {
             ) : filteredPitches.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredPitches.map((pitch) => (
-                  <Card key={pitch.id} className="flex flex-col group hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white relative hover:-translate-y-1">
+                  <Card key={pitch.id} className={cn(
+                    "flex flex-col group hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white relative hover:-translate-y-1",
+                    pitch.ownerVerified && "ring-2 ring-primary/20 border-primary/10"
+                  )}>
                     <Link href={`/startup/${pitch.id}`} className="absolute inset-0 z-0" />
                     
                     <div className="relative aspect-video w-full overflow-hidden bg-muted/30">
@@ -302,10 +306,15 @@ export default function PitchesFeedPage() {
                           <ImageIcon className="w-16 h-16" />
                         </div>
                       )}
-                      <div className="absolute top-4 left-4 z-10">
+                      <div className="absolute top-4 left-4 z-10 flex gap-2">
                         <Badge variant="outline" className="text-white border-white/20 bg-black/40 backdrop-blur-md px-4 py-1.5 font-black uppercase tracking-widest text-[9px] rounded-lg">
                           {pitch.category || pitch.industry || 'Other'}
                         </Badge>
+                        {pitch.ownerVerified && (
+                          <Badge className="bg-primary text-white border-none px-3 py-1.5 font-black uppercase tracking-widest text-[9px] rounded-lg shadow-lg">
+                            <ShieldCheck className="w-3 h-3 mr-1" /> Verified
+                          </Badge>
+                        )}
                       </div>
                       {isInvestor && (
                         <div className="absolute top-4 right-4 z-10">
@@ -324,7 +333,10 @@ export default function PitchesFeedPage() {
                     <CardHeader className="space-y-4 relative z-10 pointer-events-none p-8">
                       <div className="flex items-center gap-3">
                         <OwnerLogo ownerId={pitch.ownerId} />
-                        <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors leading-tight">{pitch.startupName}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors leading-tight">{pitch.startupName}</CardTitle>
+                          {pitch.ownerVerified && <ShieldCheck className="w-5 h-5 text-primary" />}
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="flex-1 space-y-8 relative z-10 pointer-events-none p-8 pt-0">
@@ -380,7 +392,10 @@ export default function PitchesFeedPage() {
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredInvestors.map((investor) => (
                   <Link key={investor.id} href={`/investor/${investor.id}`}>
-                    <Card className="group h-full hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white hover:-translate-y-1">
+                    <Card className={cn(
+                      "group h-full hover:shadow-2xl transition-all border-none shadow-md overflow-hidden rounded-[2rem] bg-white hover:-translate-y-1",
+                      investor.verified && "ring-2 ring-primary/20 border-primary/10"
+                    )}>
                       <CardHeader className="p-8 pb-4">
                         <div className="flex justify-between items-start mb-6">
                           <Badge className="bg-primary/10 text-primary border-none font-black uppercase tracking-widest text-[9px] px-3 py-1">Capital Partner</Badge>
@@ -388,7 +403,10 @@ export default function PitchesFeedPage() {
                             <Users className="w-5 h-5" />
                           </div>
                         </div>
-                        <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors">{investor.name || 'Private Member'}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors">{investor.name || 'Private Member'}</CardTitle>
+                          {investor.verified && <ShieldCheck className="w-5 h-5 text-primary" />}
+                        </div>
                         <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">{investor.company || 'Venture Group'}</CardDescription>
                       </CardHeader>
                       <CardContent className="p-8 pt-4 pb-10">
