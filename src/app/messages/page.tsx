@@ -165,9 +165,10 @@ export default function MessagesPage() {
       <Navbar />
 
       <main className="flex-1 flex overflow-hidden max-w-[1600px] mx-auto w-full border-x bg-white/50 backdrop-blur-md">
+        {/* Connection List Sidebar */}
         <aside className="w-[380px] border-r flex flex-col bg-muted/20">
           <div className="p-8 border-b bg-white/40">
-            <h2 className="text-xl font-black flex items-center gap-3">
+            <h2 className="text-xl font-black flex items-center gap-3 tracking-tight">
               <Inbox className="w-6 h-6 text-primary" />
               Secure Hub
             </h2>
@@ -186,12 +187,14 @@ export default function MessagesPage() {
                       key={conn.id}
                       className={cn(
                         "p-5 cursor-pointer rounded-2xl transition-all flex items-center gap-4 relative group", 
-                        isActive ? "bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02]" : "hover:bg-white hover:shadow-lg hover:shadow-black/5"
+                        isActive 
+                          ? "bg-primary text-white shadow-2xl shadow-primary/20 scale-[1.02]" 
+                          : "hover:bg-white hover:shadow-xl hover:shadow-black/5"
                       )}
                       onClick={() => setSelectedConnection(conn)}
                     >
                       <Avatar className="h-12 w-12 border-2 border-white shadow-sm ring-1 ring-black/5">
-                        <AvatarFallback className={cn("font-black", isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary")}>
+                        <AvatarFallback className={cn("font-black text-sm", isActive ? "bg-white/20 text-white" : "bg-primary/10 text-primary")}>
                           {conn.startupName[0]}
                         </AvatarFallback>
                       </Avatar>
@@ -200,7 +203,7 @@ export default function MessagesPage() {
                           <p className={cn("text-sm font-black truncate", isActive ? "text-white" : "text-foreground")}>{conn.startupName}</p>
                           {hasUnread && <div className="w-2.5 h-2.5 bg-accent rounded-full animate-pulse border-2 border-white" />}
                         </div>
-                        <p className={cn("text-[10px] font-bold uppercase tracking-widest", isActive ? "text-white/70" : "text-muted-foreground")}>Connected Partner</p>
+                        <p className={cn("text-[9px] font-black uppercase tracking-widest", isActive ? "text-white/70" : "text-muted-foreground")}>Connected Partner</p>
                       </div>
                       {isActive && <Zap className="w-4 h-4 text-white/50 absolute right-4 top-4" />}
                     </div>
@@ -212,72 +215,80 @@ export default function MessagesPage() {
                 <div className="p-6 bg-muted rounded-full w-fit mx-auto">
                    <MessageSquare className="w-10 h-10 text-muted-foreground opacity-20" />
                 </div>
-                <h3 className="font-bold text-muted-foreground">No active channels.</h3>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Market interests will appear here.</p>
+                <h3 className="font-black text-muted-foreground uppercase text-xs tracking-widest">No active channels.</h3>
+                <p className="text-[10px] font-bold text-muted-foreground/50 max-w-[180px] mx-auto leading-relaxed">Strategic inquiries will appear here once authenticated.</p>
               </div>
             )}
           </ScrollArea>
         </aside>
 
+        {/* Chat Area */}
         <section className="flex-1 flex flex-col bg-white/40">
           {selectedConnection ? (
             <>
-              <div className="p-8 border-b flex items-center justify-between bg-white shadow-sm z-10">
+              {/* Chat Header */}
+              <div className="p-8 border-b flex items-center justify-between bg-white/80 backdrop-blur-md shadow-sm z-10">
                 <div className="flex items-center gap-5">
-                  <Avatar className="h-14 w-14 border-2 shadow-sm"><AvatarFallback className="bg-primary text-white font-black text-xl">{selectedConnection.startupName[0]}</AvatarFallback></Avatar>
+                  <Avatar className="h-14 w-14 border-4 border-white shadow-xl">
+                    <AvatarFallback className="bg-primary text-white font-black text-xl">{selectedConnection.startupName[0]}</AvatarFallback>
+                  </Avatar>
                   <div className="space-y-0.5">
-                    <h3 className="text-2xl font-black tracking-tight">{selectedConnection.startupName}</h3>
-                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-2">
-                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" /> Encrypted Session
+                    <h3 className="text-2xl font-black tracking-tight leading-none">{selectedConnection.startupName}</h3>
+                    <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-black flex items-center gap-2 mt-1">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                      Encrypted Session Active
                     </div>
                   </div>
                 </div>
-                <Badge variant="outline" className="h-10 px-6 rounded-xl font-bold border-2 hidden md:flex">Strategic Inquiry</Badge>
+                <Badge variant="outline" className="h-10 px-6 rounded-xl font-black uppercase text-[9px] tracking-widest border-2 hidden md:flex bg-muted/10 shadow-inner">Strategic Inquiry</Badge>
               </div>
 
-              <ScrollArea className="flex-1 p-10">
-                <div className="space-y-8">
+              {/* Message List */}
+              <ScrollArea className="flex-1 p-10 bg-muted/5">
+                <div className="space-y-10">
                   {messages.map((msg) => (
-                    <div key={msg.id} className={cn("flex flex-col max-w-[75%] space-y-2", msg.senderId === user.uid ? "ml-auto items-end" : "items-start")}>
+                    <div key={msg.id} className={cn("flex flex-col max-w-[80%] space-y-2", msg.senderId === user.uid ? "ml-auto items-end" : "items-start")}>
                       <div className={cn(
-                        "px-6 py-4 rounded-3xl text-sm font-medium shadow-md leading-relaxed flex flex-col gap-3", 
-                        msg.senderId === user.uid ? "bg-primary text-white rounded-br-none shadow-primary/20" : "bg-white text-foreground rounded-bl-none shadow-black/5 ring-1 ring-black/5"
+                        "px-6 py-4 text-sm font-medium shadow-xl leading-relaxed flex flex-col gap-3 transition-all", 
+                        msg.senderId === user.uid 
+                          ? "bg-primary text-white rounded-[2rem] rounded-br-sm shadow-primary/20" 
+                          : "bg-white text-foreground rounded-[2rem] rounded-bl-sm shadow-black/5 ring-1 ring-black/5"
                       )}>
                         {msg.fileURL && (
                           <div className="mb-2">
                             {msg.fileType.startsWith('image/') ? (
-                              <div className="relative w-full aspect-video rounded-xl overflow-hidden border-2 border-white/20 shadow-inner group">
-                                <Image src={msg.fileURL} alt="Attachment" fill className="object-cover" unoptimized />
-                                <a href={msg.fileURL} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+                              <div className="relative w-full aspect-video rounded-2xl overflow-hidden border-2 border-white/20 shadow-inner group cursor-pointer">
+                                <Image src={msg.fileURL} alt="Attachment" fill className="object-cover transition-transform duration-500 group-hover:scale-105" unoptimized />
+                                <a href={msg.fileURL} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center backdrop-blur-[2px]">
                                   <Download className="w-6 h-6 text-white" />
                                 </a>
                               </div>
                             ) : (
                               <a href={msg.fileURL} target="_blank" rel="noopener noreferrer" className={cn(
-                                "flex items-center gap-3 p-4 rounded-xl border-2 transition-all hover:scale-[1.02]",
+                                "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all hover:scale-[1.02] shadow-sm",
                                 msg.senderId === user.uid ? "bg-white/10 border-white/20 hover:bg-white/20" : "bg-muted/30 border-muted/50 hover:bg-muted/50"
                               )}>
-                                <div className={cn("p-2 rounded-lg", msg.senderId === user.uid ? "bg-white/20" : "bg-primary/10")}>
-                                  <FileText className={cn("w-5 h-5", msg.senderId === user.uid ? "text-white" : "text-primary")} />
+                                <div className={cn("p-3 rounded-xl shadow-inner", msg.senderId === user.uid ? "bg-white/20" : "bg-primary/10")}>
+                                  <FileText className={cn("w-6 h-6", msg.senderId === user.uid ? "text-white" : "text-primary")} />
                                 </div>
                                 <div className="flex-1 overflow-hidden">
-                                  <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-0.5">Shared Document</p>
-                                  <p className="font-bold truncate text-xs">{msg.fileName || 'document.pdf'}</p>
+                                  <p className="text-[9px] font-black uppercase tracking-widest opacity-60 mb-0.5">Shared Protocol Document</p>
+                                  <p className="font-black truncate text-xs">{msg.fileName || 'document.pdf'}</p>
                                 </div>
                                 <Download className="w-4 h-4 opacity-40" />
                               </a>
                             )}
                           </div>
                         )}
-                        <p>{msg.text}</p>
+                        <p className="text-[15px] leading-relaxed tracking-tight">{msg.text}</p>
                       </div>
-                      <div className="flex items-center gap-2 px-2">
-                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                      <div className="flex items-center gap-2 px-3">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5 opacity-60">
                           <Clock className="w-3 h-3" />
                           {msg.timestamp?.toDate ? format(msg.timestamp.toDate(), 'HH:mm') : 'Syncing...'}
                         </span>
                         {msg.senderId === user.uid && (
-                          <CheckCheck className={cn("w-3.5 h-3.5", msg.read ? "text-accent" : "text-muted-foreground opacity-30")} />
+                          <CheckCheck className={cn("w-3.5 h-3.5", msg.read ? "text-emerald-500" : "text-muted-foreground opacity-30")} />
                         )}
                       </div>
                     </div>
@@ -286,59 +297,63 @@ export default function MessagesPage() {
                 </div>
               </ScrollArea>
 
-              <div className="p-8 border-t bg-white/60 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
-                <form onSubmit={handleSendMessage} className="flex gap-4 items-center">
+              {/* Chat Input Bar */}
+              <div className="p-8 border-t bg-white shadow-[0_-8px_30px_rgba(0,0,0,0.04)] z-10">
+                <form onSubmit={handleSendMessage} className="flex gap-4 items-center max-w-5xl mx-auto">
                   <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".jpg,.png,.jpeg,.pdf,.doc,.docx" />
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-14 w-14 rounded-2xl bg-white border-none shadow-inner text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all active:scale-95 disabled:opacity-50"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingFile}
-                  >
-                    {uploadingFile ? <Loader2 className="w-6 h-6 animate-spin" /> : <Paperclip className="w-6 h-6" />}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-14 w-14 rounded-2xl bg-muted/30 border-none shadow-inner text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all active:scale-95 disabled:opacity-50"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingFile}
+                    >
+                      {uploadingFile ? <Loader2 className="w-6 h-6 animate-spin" /> : <Paperclip className="w-6 h-6" />}
+                    </Button>
+                    
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-14 w-14 rounded-2xl bg-muted/30 border-none shadow-inner text-muted-foreground hover:bg-primary/10 hover:text-primary transition-all active:scale-95">
+                          <Smile className="w-6 h-6" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent side="top" align="start" className="p-0 border-none shadow-3xl rounded-3xl w-auto mb-4 overflow-hidden">
+                        <EmojiPicker 
+                          onEmojiClick={onEmojiClick}
+                          lazyLoadEmojis={true}
+                          skinTonesDisabled={true}
+                          previewConfig={{ showPreview: false }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                   
-                  <div className="flex-1 relative flex items-center">
+                  <div className="flex-1 relative">
                     <Input 
-                      placeholder="Compose message..." 
+                      placeholder="Compose secure message..." 
                       value={messageText} 
                       onChange={(e) => setMessageText(e.target.value)} 
-                      className="flex-1 h-14 rounded-2xl bg-white border-none shadow-inner text-lg font-medium px-6 pr-14 focus:ring-2 focus:ring-primary/20 transition-all" 
+                      className="flex-1 h-14 rounded-2xl bg-muted/30 border-none shadow-inner text-lg font-medium px-8 focus:ring-4 focus:ring-primary/10 transition-all outline-none" 
                     />
-                    <div className="absolute right-4">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-muted text-muted-foreground transition-all">
-                            <Smile className="w-6 h-6" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent side="top" align="end" className="p-0 border-none shadow-2xl rounded-2xl w-auto">
-                          <EmojiPicker 
-                            onEmojiClick={onEmojiClick}
-                            lazyLoadEmojis={true}
-                            skinTonesDisabled={true}
-                            previewConfig={{ showPreview: false }}
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
                   </div>
-                  <Button type="submit" size="icon" className="h-14 w-14 shrink-0 rounded-2xl shadow-xl shadow-primary/20 transition-all active:scale-95 bg-primary hover:bg-primary/90" disabled={!messageText.trim() || uploadingFile}>
+
+                  <Button type="submit" size="icon" className="h-14 w-14 shrink-0 rounded-2xl shadow-2xl shadow-primary/30 transition-all active:scale-90 bg-primary hover:bg-primary/90" disabled={!messageText.trim() || uploadingFile}>
                     <Send className="w-6 h-6" />
                   </Button>
                 </form>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-12 bg-muted/5">
-               <div className="p-10 bg-white rounded-full shadow-xl mb-10 scale-125">
+            <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-12 bg-muted/5 relative overflow-hidden">
+               <Zap className="absolute -right-20 -bottom-20 w-96 h-96 text-primary/5 -rotate-12" />
+               <div className="p-12 bg-white rounded-full shadow-2xl mb-10 scale-125 ring-8 ring-primary/5">
                   <MessageSquare className="w-16 h-16 text-primary opacity-20" />
                </div>
-               <h3 className="text-3xl font-black text-foreground mb-4">Start a Conversation</h3>
-               <p className="text-lg font-medium max-w-sm text-center italic border-l-4 border-primary/20 pl-6">
-                 Select a verified partner from your connection list to initiate a secure inquiry.
+               <h3 className="text-4xl font-black text-foreground mb-4 tracking-tighter">Initiate Conversation</h3>
+               <p className="text-lg font-medium max-w-sm text-center italic border-l-8 border-primary/20 pl-8 leading-relaxed">
+                 Select a verified partner from your connection list to begin a secure strategic inquiry.
                </p>
             </div>
           )}
