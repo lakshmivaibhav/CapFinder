@@ -232,9 +232,9 @@ export default function ProfilePage() {
       <main className="max-w-6xl mx-auto py-8 md:py-16 px-4 md:px-6 w-full space-y-8 md:space-y-12">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 md:gap-8 border-b pb-8 md:pb-10 text-center md:text-left">
           <div className="space-y-3 md:space-y-4">
-            <Link href="/dashboard" className="flex items-center justify-center md:justify-start gap-2 text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors mb-2 group">
+            <Link href="/dashboard" className="flex items-center justify-center md:justify-start gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:text-primary transition-colors mb-2 group">
               <div className="p-1.5 md:p-2 bg-muted rounded-lg group-hover:bg-primary/10 transition-all">
-                <ArrowLeft className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                <ArrowLeft className="w-4 h-4" />
               </div>
               Return to Console
             </Link>
@@ -242,12 +242,12 @@ export default function ProfilePage() {
             <p className="text-muted-foreground text-md md:text-lg font-medium italic border-l-4 border-primary/20 pl-4 md:pl-6">Establish and maintain your professional identity.</p>
           </div>
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4">
-            <Badge className="bg-primary/5 text-primary border-none px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest shadow-sm">
+            <Badge className="bg-primary/5 text-primary border-none px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm">
               {(formData.role as string)} Profile
             </Badge>
             {formData.verified && (
-              <Badge className="bg-emerald-500 text-white border-none px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20">
-                <ShieldCheck className="w-3.5 h-3.5 md:w-4 md:h-4" /> Platform Verified
+              <Badge className="bg-emerald-500 text-white border-none px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20">
+                <ShieldCheck className="w-4 h-4" /> Platform Verified
               </Badge>
             )}
           </div>
@@ -255,11 +255,11 @@ export default function ProfilePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12">
           <div className="md:col-span-4 space-y-8 md:space-y-10">
-            <Card className="border-none shadow-xl md:shadow-3xl text-center p-8 md:p-12 bg-white rounded-[2rem] md:rounded-[3rem] overflow-hidden relative group transition-all hover:shadow-primary/5">
+            <Card className="border-none shadow-xl text-center p-8 md:p-12 bg-white rounded-[2rem] overflow-hidden relative group transition-all">
               <div className="absolute top-0 left-0 w-full h-2 bg-primary" />
               
               <div className="relative inline-block mx-auto mb-8 md:mb-10 mt-2 md:mt-4 cursor-pointer group/avatar" onClick={() => fileInputRef.current?.click()}>
-                <div className="w-36 h-36 md:w-44 md:h-44 bg-muted/30 rounded-[2rem] md:rounded-[2.5rem] flex items-center justify-center border-4 border-white shadow-xl md:shadow-2xl relative overflow-hidden transition-transform duration-500 group-hover/avatar:scale-105">
+                <div className="w-36 h-36 md:w-44 md:h-44 bg-muted/30 rounded-[2.5rem] flex items-center justify-center border-4 border-white shadow-xl md:shadow-2xl relative overflow-hidden transition-transform duration-500 group-hover/avatar:scale-105">
                   {formData.photoURL ? (
                     <Image 
                       src={formData.photoURL} 
@@ -279,12 +279,12 @@ export default function ProfilePage() {
                   )}
                   <div className="absolute inset-0 bg-black/0 group-hover/avatar:bg-black/30 transition-all flex flex-col items-center justify-center opacity-0 group-hover/avatar:opacity-100 backdrop-blur-[2px]">
                     <Camera className="text-white w-8 h-8 md:w-10 md:h-10 mb-1 md:mb-2" />
-                    <span className="text-[7px] md:text-[9px] text-white font-black uppercase tracking-widest">Update Photo</span>
+                    <span className="text-[9px] text-white font-black uppercase tracking-widest">Update Photo</span>
                   </div>
                 </div>
                 {formData.verified && (
-                  <div className="absolute -bottom-2 -right-2 md:-bottom-3 md:-right-3 bg-emerald-500 text-white p-2 md:p-3 rounded-xl md:rounded-2xl border-4 border-white shadow-xl z-20">
-                    <ShieldCheck className="w-4 h-4 md:w-6 md:h-6" />
+                  <div className="absolute -bottom-2 -right-2 md:-bottom-3 md:-right-3 bg-emerald-500 text-white p-2 md:p-3 rounded-2xl border-4 border-white shadow-xl z-20">
+                    <ShieldCheck className="w-5 h-5" />
                   </div>
                 )}
                 <input 
@@ -298,17 +298,17 @@ export default function ProfilePage() {
 
               <div className="space-y-1.5 mb-8 md:mb-12 overflow-hidden">
                 <h2 className="text-2xl md:text-3xl font-black truncate tracking-tight">{formData.name || 'Incognito Member'}</h2>
-                <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60 truncate">{user.email}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground opacity-60 truncate">{user.email}</p>
               </div>
               
               <div className="pt-8 md:pt-10 mt-8 md:mt-10 border-t border-dashed space-y-6 md:space-y-8">
                 {formData.role === 'startup' && (
                   <div className="space-y-4 md:space-y-5">
-                    <Label className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-2 md:gap-3 justify-center">
+                    <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-2 md:gap-3 justify-center">
                       <div className="w-1 md:w-1.5 h-1 md:h-1.5 bg-primary rounded-full" /> Corporate Identity
                     </Label>
                     <div 
-                      className="relative w-24 h-24 md:w-32 md:h-32 mx-auto rounded-[1.5rem] md:rounded-3xl border-4 border-dashed border-muted bg-muted/5 flex items-center justify-center cursor-pointer group/logo hover:border-primary/30 transition-all overflow-hidden"
+                      className="relative w-24 h-24 md:w-32 md:h-32 mx-auto rounded-3xl border-4 border-dashed border-muted bg-muted/5 flex items-center justify-center cursor-pointer group/logo hover:border-primary/30 transition-all overflow-hidden"
                       onClick={() => logoInputRef.current?.click()}
                     >
                       {formData.logoURL ? (
@@ -327,17 +327,17 @@ export default function ProfilePage() {
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  className="w-full text-destructive hover:bg-destructive/5 gap-2 md:gap-3 rounded-xl md:rounded-2xl h-12 md:h-14 font-black uppercase tracking-widest text-[8px] md:text-[10px] border-2 border-transparent hover:border-destructive/10 transition-all active:scale-95"
+                  className="w-full text-destructive hover:bg-destructive/5 gap-2 md:gap-3 rounded-xl h-12 md:h-14 font-black uppercase tracking-widest text-[10px] border-2 border-transparent hover:border-destructive/10 transition-all active:scale-95"
                   onClick={handleRequestAccountDeletion}
                   disabled={checking}
                 >
-                  {checking ? <Loader2 className="animate-spin w-3.5 h-3.5 md:w-4 md:h-4" /> : <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />}
+                  {checking ? <Loader2 className="animate-spin w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
                   Initiate Account Purge
                 </Button>
               </div>
             </Card>
 
-            <Card className="border-none shadow-xl md:shadow-2xl bg-accent text-white rounded-[2rem] md:rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden group">
+            <Card className="border-none shadow-xl bg-accent text-white rounded-[2rem] p-8 md:p-12 relative overflow-hidden group">
                <Sparkles className="absolute -right-8 -bottom-8 md:-right-10 md:-bottom-10 w-32 h-32 md:w-48 md:h-48 text-white/10 -rotate-12 transition-transform duration-700 group-hover:scale-110" />
                <h3 className="text-xl md:text-2xl font-black mb-4 md:mb-6 flex items-center gap-3 md:gap-4">
                  <ShieldCheck className="w-6 h-6 md:w-8 md:h-8" /> Security Standard
@@ -349,7 +349,7 @@ export default function ProfilePage() {
           </div>
 
           <div className="md:col-span-8 space-y-8 md:space-y-10">
-            <Card className="border-none shadow-lg md:shadow-3xl bg-white rounded-[2rem] md:rounded-[3rem] overflow-hidden transition-all">
+            <Card className="border-none shadow-xl bg-white rounded-[2rem] overflow-hidden transition-all">
               <CardHeader className="bg-muted/30 border-b p-8 md:p-12">
                 <CardTitle className="text-2xl md:text-3xl font-black tracking-tight">Professional Presence</CardTitle>
                 <CardDescription className="text-sm md:text-md font-medium text-muted-foreground mt-1 md:mt-2">Manage your institutional credentials and venture objectives.</CardDescription>
@@ -358,24 +358,24 @@ export default function ProfilePage() {
                 <form onSubmit={handleSave} className="space-y-8 md:space-y-10">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
                     <div className="space-y-3 md:space-y-4">
-                      <Label htmlFor="name" className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
-                        <User className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" /> Verified Legal Name
+                      <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
+                        <User className="w-4 h-4 text-primary" /> Verified Legal Name
                       </Label>
                       <Input 
                         id="name" 
-                        className="h-12 md:h-16 rounded-xl md:rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-md md:text-lg font-bold px-6 md:px-8" 
+                        className="h-12 md:h-14 rounded-xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-md md:text-lg font-bold px-6 md:px-8" 
                         value={formData.name} 
                         onChange={(e) => setFormData({...formData, name: e.target.value})} 
                         placeholder="Legal Entity or Representative"
                       />
                     </div>
                     <div className="space-y-3 md:space-y-4">
-                      <Label htmlFor="company" className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
-                        <Building className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" /> Institution / Affiliation
+                      <Label htmlFor="company" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
+                        <Building className="w-4 h-4 text-primary" /> Institution / Affiliation
                       </Label>
                       <Input 
                         id="company" 
-                        className="h-12 md:h-16 rounded-xl md:rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-md md:text-lg font-bold px-6 md:px-8" 
+                        className="h-12 md:h-14 rounded-xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-md md:text-lg font-bold px-6 md:px-8" 
                         value={formData.company} 
                         onChange={(e) => setFormData({...formData, company: e.target.value})} 
                         placeholder="Venture Capital or Startup Group"
@@ -384,12 +384,12 @@ export default function ProfilePage() {
                   </div>
                   
                   <div className="space-y-3 md:space-y-4">
-                    <Label htmlFor="bio" className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
-                      <Mail className="w-3.5 h-3.5 md:w-4 md:h-4 text-primary" /> Professional Narrative
+                    <Label htmlFor="bio" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
+                      <Mail className="w-4 h-4 text-primary" /> Professional Narrative
                     </Label>
                     <Textarea 
                       id="bio" 
-                      className="min-h-[180px] md:min-h-[220px] rounded-[1.5rem] md:rounded-[2rem] border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-md md:text-lg font-medium leading-relaxed italic p-6 md:p-10" 
+                      className="min-h-[180px] md:min-h-[220px] rounded-[1.5rem] border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-md md:text-lg font-medium leading-relaxed italic p-6 md:p-10" 
                       value={formData.bio} 
                       onChange={(e) => setFormData({...formData, bio: e.target.value})} 
                       placeholder="Detail your track record and strategic goals..."
@@ -398,12 +398,12 @@ export default function ProfilePage() {
 
                   {formData.role === 'investor' ? (
                     <div className="space-y-3 md:space-y-4">
-                      <Label htmlFor="investmentInterest" className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
-                        <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 text-accent" /> Strategic Focus (Comma Separated)
+                      <Label htmlFor="investmentInterest" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
+                        <Sparkles className="w-4 h-4 text-accent" /> Strategic Focus (Comma Separated)
                       </Label>
                       <Input 
                         id="investmentInterest" 
-                        className="h-12 md:h-16 rounded-xl md:rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-accent/10 text-md md:text-lg font-bold px-6 md:px-8" 
+                        className="h-12 md:h-14 rounded-xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-accent/10 text-md md:text-lg font-bold px-6 md:px-8" 
                         value={formData.investmentInterest} 
                         onChange={(e) => setFormData({...formData, investmentInterest: e.target.value})} 
                         placeholder="e.g. AI, Fintech, BioTech" 
@@ -411,13 +411,13 @@ export default function ProfilePage() {
                     </div>
                   ) : (
                     <div className="space-y-3 md:space-y-4">
-                      <Label htmlFor="fundingNeeded" className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
-                        <Save className="w-3.5 h-3.5 md:w-4 md:h-4 text-emerald-500" /> Capital Required (USD)
+                      <Label htmlFor="fundingNeeded" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
+                        <Save className="w-4 h-4 text-emerald-500" /> Capital Required (USD)
                       </Label>
                       <Input 
                         id="fundingNeeded" 
                         type="number" 
-                        className="h-12 md:h-16 rounded-xl md:rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-emerald-500/10 text-lg md:text-xl font-black px-6 md:px-8" 
+                        className="h-12 md:h-14 rounded-xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-emerald-500/10 text-lg md:text-xl font-black px-6 md:px-8" 
                         value={formData.fundingNeeded} 
                         onChange={(e) => setFormData({...formData, fundingNeeded: e.target.value})} 
                         placeholder="e.g. 2500000"
@@ -427,10 +427,10 @@ export default function ProfilePage() {
 
                   <Button 
                     type="submit" 
-                    className="w-full h-16 md:h-20 bg-primary shadow-xl md:shadow-2xl shadow-primary/20 rounded-xl md:rounded-[1.5rem] font-black text-lg md:text-xl gap-3 md:gap-4 transition-all hover:scale-[1.01] active:scale-95" 
+                    className="w-full h-16 md:h-20 bg-primary shadow-xl shadow-primary/20 rounded-2xl font-black text-lg md:text-xl gap-3 md:gap-4 transition-all hover:scale-[1.01] active:scale-95 uppercase tracking-widest" 
                     disabled={saving}
                   >
-                    {saving ? <Loader2 className="animate-spin w-6 h-6 md:w-7 md:h-7" /> : <Save className="w-6 h-6 md:w-7 md:h-7" />}
+                    {saving ? <Loader2 className="animate-spin w-6 h-6" /> : <Save className="w-6 h-6" />}
                     Synchronize Changes
                   </Button>
                 </form>

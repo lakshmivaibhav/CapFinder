@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -6,9 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, useAuth as useFirebaseAuth } from '@/firebase';
-import { signOut } from 'firebase/auth';
 import { collection, query, where } from 'firebase/firestore';
-import { TrendingUp, LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, MessageSquare, Inbox, ShieldAlert, Zap } from 'lucide-react';
+import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, MessageSquare, Inbox, ShieldAlert, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
