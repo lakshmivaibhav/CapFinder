@@ -144,7 +144,7 @@ export default function DashboardPage() {
   if (authLoading || (user && !profile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="animate-spin w-12 h-12 text-primary" />
+        <Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" />
       </div>
     );
   }
@@ -158,67 +158,70 @@ export default function DashboardPage() {
       <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full">
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">Overview</p>
-            <h1 className="text-4xl font-black tracking-tight">Welcome, {profile.name || user.email}</h1>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">System Overview</p>
+            <h1 className="text-5xl font-black tracking-tighter">Welcome, {profile.name || user.email}</h1>
             <div className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
-              Dashboard for <span className="text-foreground capitalize font-bold underline decoration-primary decoration-2 underline-offset-4">{profile.role}</span>
-              {isAdmin && <Badge className="bg-destructive text-white border-none ml-2">Admin Access</Badge>}
+              Console authenticated for <span className="text-foreground capitalize font-black underline decoration-primary decoration-4 underline-offset-8">{profile.role}</span>
+              {isAdmin && <Badge className="bg-destructive text-white border-none ml-2 rounded-lg font-black uppercase text-[9px] px-3">Root Admin</Badge>}
             </div>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             {isStartup && (
               <Link href="/pitches/new">
-                <Button className="gap-2 h-12 px-6 rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
-                  <Plus className="w-5 h-5" /> New Pitch
+                <Button className="gap-3 h-14 px-8 rounded-2xl bg-primary shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all font-black uppercase tracking-widest text-[10px]">
+                  <Plus className="w-5 h-5" /> New Venture Pitch
                 </Button>
               </Link>
             )}
             {(isInvestor || isAdmin) && (
               <Link href="/pitches">
-                <Button variant="outline" className="gap-2 h-12 px-6 rounded-xl border-2 hover:bg-primary/5 transition-all">
-                  <Search className="w-5 h-5" /> Market Marketplace
+                <Button variant="outline" className="gap-3 h-14 px-8 rounded-2xl border-2 hover:bg-primary/5 transition-all font-black uppercase tracking-widest text-[10px]">
+                  <Search className="w-5 h-5" /> Browse Marketplace
                 </Button>
               </Link>
             )}
           </div>
         </div>
 
-        {/* Dynamic Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <Card className="border-none shadow-sm hover:shadow-md transition-shadow bg-primary/5 rounded-2xl overflow-hidden">
-            <CardContent className="p-8 flex items-center gap-6">
-              <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
-                <Megaphone className="w-7 h-7" />
+        {/* Tactical Performance Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          <Card className="border-none shadow-3xl bg-primary/5 rounded-[2rem] overflow-hidden relative group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            <CardContent className="p-10 flex items-center gap-8">
+              <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-primary/30">
+                <Megaphone className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{isStartup ? 'Total Pitches' : 'Total Interests'}</p>
-                <p className="text-3xl font-black">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{isStartup ? 'Total Portfolio' : 'Strategic Interests'}</p>
+                <p className="text-4xl font-black tracking-tighter">
                   {isStartup ? (startupPitches?.length || 0) : (investorInterests?.length || 0)}
                 </p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-none shadow-sm hover:shadow-md transition-shadow bg-accent/5 rounded-2xl overflow-hidden">
-            <CardContent className="p-8 flex items-center gap-6">
-              <div className="w-14 h-14 bg-accent rounded-2xl flex items-center justify-center text-white shadow-lg shadow-accent/20">
-                <Users className="w-7 h-7" />
+          <Card className="border-none shadow-3xl bg-accent/5 rounded-[2rem] overflow-hidden relative group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            <CardContent className="p-10 flex items-center gap-8">
+              <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-accent/30">
+                <Users className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{isStartup ? 'Engagements' : 'Contact Requests'}</p>
-                <p className="text-3xl font-black">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{isStartup ? 'Engagements' : 'Access Requests'}</p>
+                <p className="text-4xl font-black tracking-tighter">
                   {isStartup ? (startupInterests?.length || 0) : (investorContactRequests?.length || 0)}
                 </p>
               </div>
             </CardContent>
           </Card>
-          <Card className="border-none shadow-sm hover:shadow-md transition-shadow bg-emerald-50 rounded-2xl overflow-hidden">
-            <CardContent className="p-8 flex items-center gap-6">
-              <div className="w-14 h-14 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
-                {isStartup ? <Inbox className="w-7 h-7" /> : <MessageSquare className="w-7 h-7" />}
+          <Card className="border-none shadow-3xl bg-emerald-50 rounded-[2rem] overflow-hidden relative group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700" />
+            <CardContent className="p-10 flex items-center gap-8">
+              <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-emerald-500/30">
+                {isStartup ? <Inbox className="w-8 h-8" /> : <MessageSquare className="w-8 h-8" />}
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{isStartup ? 'Connections' : 'Inbox Messages'}</p>
-                <p className="text-3xl font-black">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{isStartup ? 'Connections' : 'Inbox Volume'}</p>
+                <p className="text-4xl font-black tracking-tighter">
                   {isStartup ? (startupContactRequests?.length || 0) : (investorMessages?.length || 0)}
                 </p>
               </div>
@@ -227,28 +230,36 @@ export default function DashboardPage() {
         </div>
 
         {isInvestor && recommendedPitches.length > 0 && (
-          <section className="mb-14">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-accent/10 rounded-lg">
+          <section className="mb-16">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="p-3 bg-accent/10 rounded-2xl">
                 <Sparkles className="w-6 h-6 text-accent" />
               </div>
-              <h2 className="text-2xl font-black tracking-tight">Personalized Matches</h2>
+              <div className="space-y-0.5">
+                <h2 className="text-3xl font-black tracking-tight">Strategic Matches</h2>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">AI-Driven Venture Alignment</p>
+              </div>
             </div>
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-3 gap-10">
               {recommendedPitches.map((pitch) => (
                 <Link key={pitch.id} href={`/startup/${pitch.id}`}>
-                  <Card className="group hover:border-accent border-2 border-transparent transition-all h-full shadow-md hover:shadow-xl rounded-2xl flex flex-col">
-                    <CardHeader className="pb-4">
-                      <Badge className="w-fit bg-accent/10 text-accent border-none font-black text-[9px] uppercase tracking-wider mb-2">{pitch.category || pitch.industry || 'Other'}</Badge>
-                      <CardTitle className="text-xl font-black group-hover:text-accent transition-colors line-clamp-1">{pitch.startupName}</CardTitle>
+                  <Card className="group hover:border-accent/30 border-2 border-transparent transition-all h-full shadow-xl hover:shadow-3xl rounded-[2.5rem] flex flex-col bg-white overflow-hidden">
+                    <CardHeader className="p-8 pb-4">
+                      <Badge className="w-fit bg-accent/10 text-accent border-none font-black text-[9px] uppercase tracking-[0.2em] mb-4 px-4 py-1.5 rounded-xl">
+                        {pitch.category || pitch.industry || 'Other'}
+                      </Badge>
+                      <CardTitle className="text-2xl font-black group-hover:text-accent transition-colors line-clamp-1 leading-none">{pitch.startupName}</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex-1">
-                      <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed italic">&quot;{pitch.description}&quot;</p>
+                    <CardContent className="flex-1 p-8 pt-0">
+                      <p className="text-md text-muted-foreground line-clamp-3 leading-relaxed italic border-l-2 border-accent/10 pl-4">&quot;{pitch.description}&quot;</p>
                     </CardContent>
-                    <CardFooter className="pt-0 flex justify-between items-center border-t border-muted/50 mt-4 p-6">
-                       <span className="text-lg font-black text-accent">${pitch.fundingNeeded?.toLocaleString()}</span>
-                       <div className="w-10 h-10 rounded-full bg-accent/5 flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-all">
-                        <ArrowRight className="w-5 h-5" />
+                    <CardFooter className="p-8 pt-0 flex justify-between items-center border-t border-muted/50 mt-4 bg-muted/5">
+                       <div className="space-y-1">
+                         <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Goal</p>
+                         <span className="text-xl font-black text-accent">${pitch.fundingNeeded?.toLocaleString()}</span>
+                       </div>
+                       <div className="w-12 h-12 rounded-2xl bg-white shadow-md flex items-center justify-center group-hover:bg-accent group-hover:text-white transition-all duration-500 group-hover:translate-x-2">
+                        <ArrowRight className="w-6 h-6" />
                        </div>
                     </CardFooter>
                   </Card>
@@ -258,21 +269,23 @@ export default function DashboardPage() {
           </section>
         )}
 
-        <Tabs defaultValue="primary" className="space-y-8">
-          <TabsList className="bg-muted/50 p-1 rounded-xl h-12">
-            <TabsTrigger value="primary" className="gap-2 h-10 px-6 rounded-lg data-[state=active]:shadow-sm">
-              {isStartup ? <><Megaphone className="w-4 h-4" /> My Active Pitches</> : <><LayoutGrid className="w-4 h-4" /> Venture Feed</>}
-            </TabsTrigger>
-            <TabsTrigger value="secondary" className="gap-2 h-10 px-6 rounded-lg data-[state=active]:shadow-sm">
-              {isStartup ? <><Users className="w-4 h-4" /> Interested Investors</> : <><Star className="w-4 h-4" /> Saved Interests</>}
-            </TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="primary" className="space-y-10">
+          <div className="flex justify-between items-center border-b pb-6">
+            <TabsList className="bg-muted/50 p-1.5 rounded-2xl h-14 w-fit shadow-inner">
+              <TabsTrigger value="primary" className="gap-3 px-8 h-11 rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
+                {isStartup ? <><Megaphone className="w-4 h-4" /> Active Pitches</> : <><LayoutGrid className="w-4 h-4" /> Market Feed</>}
+              </TabsTrigger>
+              <TabsTrigger value="secondary" className="gap-3 px-8 h-11 rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
+                {isStartup ? <><Users className="w-4 h-4" /> Interested Partners</> : <><Star className="w-4 h-4" /> Saved Opportunities</>}
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-          <TabsContent value="primary">
+          <TabsContent value="primary" className="mt-0 outline-none">
             {isStartup && loadingStartupPitches ? (
-              <div className="flex justify-center p-20"><Loader2 className="animate-spin w-10 h-10 text-primary opacity-20" /></div>
+              <div className="flex justify-center p-32"><Loader2 className="animate-spin w-16 h-16 text-primary opacity-20" /></div>
             ) : (isStartup ? startupPitches : allPitches)?.length ? (
-              <div className="grid md:grid-cols-3 gap-8">
+              <div className="grid md:grid-cols-3 gap-10">
                 {(isStartup ? startupPitches : allPitches)?.map((pitch) => {
                   const hasActiveConnection = isInvestor && (
                     investorInterests?.some(i => i.pitchId === pitch.id) || 
@@ -280,15 +293,15 @@ export default function DashboardPage() {
                   );
                   
                   return (
-                    <Card key={pitch.id} className="relative group overflow-hidden border-none shadow-md hover:shadow-xl transition-all rounded-2xl flex flex-col">
-                      <CardHeader className="pb-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <Badge variant="outline" className="border-primary/20 text-primary font-bold uppercase text-[9px] tracking-widest">{pitch.category || pitch.industry || 'Other'}</Badge>
+                    <Card key={pitch.id} className="relative group overflow-hidden border-none shadow-xl hover:shadow-3xl transition-all duration-500 rounded-[2.5rem] flex flex-col bg-white">
+                      <CardHeader className="p-8 pb-4">
+                        <div className="flex justify-between items-start mb-4">
+                          <Badge variant="outline" className="border-primary/20 text-primary font-black uppercase text-[9px] tracking-[0.2em] px-4 py-1.5 rounded-xl bg-primary/5">{pitch.category || pitch.industry || 'Other'}</Badge>
                           {hasActiveConnection && (
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="h-8 text-[9px] font-black uppercase text-amber-600 hover:bg-amber-50 rounded-full z-10 border border-amber-100"
+                              className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-amber-600 hover:bg-amber-50 rounded-full z-10 border-2 border-amber-100 shadow-sm"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -296,22 +309,22 @@ export default function DashboardPage() {
                               }}
                               disabled={resolving === pitch.id}
                             >
-                              {resolving === pitch.id ? <Loader2 className="animate-spin w-3 h-3" /> : <Zap className="w-3 h-3 mr-1" />}
-                              Resolve
+                              {resolving === pitch.id ? <Loader2 className="animate-spin w-3 h-3" /> : <Zap className="w-3 h-3 mr-2" />}
+                              Resolve Protocol
                             </Button>
                           )}
                         </div>
-                        <CardTitle className="text-xl font-black group-hover:text-primary transition-colors">{pitch.startupName}</CardTitle>
+                        <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors leading-none tracking-tight">{pitch.startupName}</CardTitle>
                       </CardHeader>
-                      <CardContent className="flex-1">
-                        <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed mb-6">{pitch.description}</p>
-                        <div className="flex justify-between items-center pt-4 border-t border-muted">
-                          <div className="space-y-0.5">
+                      <CardContent className="flex-1 p-8 pt-0">
+                        <p className="text-md text-muted-foreground line-clamp-3 leading-relaxed mb-8 border-l-2 border-primary/10 pl-4">{pitch.description}</p>
+                        <div className="flex justify-between items-center pt-6 border-t border-muted/50">
+                          <div className="space-y-1">
                             <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Goal</p>
-                            <span className="font-black text-primary text-lg">${pitch.fundingNeeded?.toLocaleString()}</span>
+                            <span className="font-black text-primary text-2xl tracking-tighter">${pitch.fundingNeeded?.toLocaleString()}</span>
                           </div>
                           <Link href={`/startup/${pitch.id}`}>
-                            <Button variant="ghost" size="sm" className="gap-2 rounded-full font-bold hover:bg-primary/5">Details <ArrowRight className="w-3 h-3" /></Button>
+                            <Button variant="ghost" size="sm" className="gap-2 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-primary/5 hover:text-primary transition-all">Details <ArrowRight className="w-4 h-4" /></Button>
                           </Link>
                         </div>
                       </CardContent>
@@ -320,44 +333,45 @@ export default function DashboardPage() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-20 bg-muted/20 rounded-3xl border-2 border-dashed flex flex-col items-center">
-                <Search className="w-12 h-12 text-muted-foreground opacity-20 mb-4" />
-                <h3 className="text-xl font-bold text-muted-foreground">No ventures found.</h3>
+              <div className="text-center py-32 bg-muted/10 rounded-[3rem] border-4 border-dashed flex flex-col items-center">
+                <Search className="w-20 h-20 text-muted-foreground opacity-10 mb-6" />
+                <h3 className="text-3xl font-black tracking-tight text-muted-foreground">No ventures identified.</h3>
                 {isStartup && (
-                  <Link href="/pitches/new" className="mt-4">
-                    <Button variant="outline">Create your first pitch</Button>
+                  <Link href="/pitches/new" className="mt-8">
+                    <Button variant="outline" className="rounded-2xl px-10 h-14 border-2 font-black uppercase text-[10px] tracking-widest">Initialize Your First Pitch</Button>
                   </Link>
                 )}
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="secondary">
+          <TabsContent value="secondary" className="mt-0 outline-none">
             {(isStartup ? startupInterests : investorInterests)?.length ? (
-              <div className="grid md:grid-cols-3 gap-8">
+              <div className="grid md:grid-cols-3 gap-10">
                 {(isStartup ? startupInterests : investorInterests)?.map((interest) => (
-                  <Card key={interest.id} className="border-none shadow-md hover:shadow-lg transition-all rounded-2xl">
-                    <CardHeader className="pb-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{isStartup ? 'Investor' : 'Venture'}</p>
-                      <CardTitle className="text-lg font-black truncate">
+                  <Card key={interest.id} className="border-none shadow-xl hover:shadow-3xl transition-all duration-500 rounded-[2.5rem] bg-white group">
+                    <CardHeader className="p-8 pb-4">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-3">{isStartup ? 'Investor Identity' : 'Venture Opportunity'}</p>
+                      <CardTitle className="text-2xl font-black truncate leading-none tracking-tight group-hover:text-primary transition-colors">
                         {isStartup ? interest.investorEmail : interest.startupName}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-bold uppercase">{interest.industry}</Badge>
+                    <CardContent className="p-8 pt-0">
+                      <Badge variant="secondary" className="bg-primary/5 text-primary border-none text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-xl">{interest.industry}</Badge>
                     </CardContent>
-                    <CardFooter className="pt-2">
+                    <CardFooter className="p-8 pt-4 border-t border-muted/50 bg-muted/5">
                       <Link href={isStartup ? `/investor/${interest.investorId}` : `/startup/${interest.pitchId}`} className="w-full">
-                        <Button variant="outline" className="w-full h-11 rounded-xl font-bold border-2 hover:bg-primary/5">View Context</Button>
+                        <Button variant="outline" className="w-full h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest border-2 hover:bg-primary/5 shadow-sm group-hover:shadow-md transition-all">Analyze Context</Button>
                       </Link>
                     </CardFooter>
                   </Card>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-20 bg-muted/20 rounded-3xl border-2 border-dashed flex flex-col items-center">
-                <Star className="w-12 h-12 text-muted-foreground opacity-20 mb-4" />
-                <h3 className="text-xl font-bold text-muted-foreground">No interests recorded yet.</h3>
+              <div className="text-center py-32 bg-muted/10 rounded-[3rem] border-4 border-dashed flex flex-col items-center">
+                <Star className="w-20 h-20 text-muted-foreground opacity-10 mb-6" />
+                <h3 className="text-3xl font-black tracking-tight text-muted-foreground">Strategic queue is empty.</h3>
+                <p className="text-muted-foreground italic mt-2">Active interests will appear here once identified in the ecosystem.</p>
               </div>
             )}
           </TabsContent>
