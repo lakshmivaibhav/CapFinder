@@ -1,6 +1,6 @@
 "use client";
 
-import Link from 'next/link';
+import Link from 'next/navigation';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
@@ -53,7 +53,7 @@ export function Navbar() {
 
   const navItems = [
     { label: 'Console', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Market Feed', href: '/pitches', icon: Search },
+    { label: 'Market', href: '/pitches', icon: Search },
     { 
       label: 'Inquiries', 
       href: '/requests', 
@@ -75,37 +75,35 @@ export function Navbar() {
     },
     { label: 'Account', href: '/profile', icon: User },
   ].filter(item => {
-    // Only show items that are not explicitly hidden for verified/role reasons
     if (item.show === false) return false;
-    // Hide most items if not email verified
     if (!emailVerified && item.href !== '/profile' && item.href !== '/dashboard') return false;
     return true;
   });
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-white/70 backdrop-blur-xl px-8 h-20 flex items-center justify-between">
-      <div className="flex items-center gap-12">
-        <Link href="/dashboard" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
-            <Zap className="text-white w-6 h-6" />
+    <nav className="sticky top-0 z-50 w-full border-b bg-white/70 backdrop-blur-xl px-4 md:px-8 h-20 flex items-center justify-between">
+      <div className="flex items-center gap-4 md:gap-12 overflow-hidden">
+        <Link href="/dashboard" className="flex items-center gap-2 md:gap-3 group shrink-0">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform">
+            <Zap className="text-white w-5 h-5 md:w-6 md:h-6" />
           </div>
-          <span className="text-2xl font-black tracking-tighter text-foreground group-hover:text-primary transition-colors">CapFinder</span>
+          <span className="text-xl md:text-2xl font-black tracking-tighter text-foreground group-hover:text-primary transition-colors hidden sm:block">CapFinder</span>
         </Link>
 
-        <div className="hidden lg:flex items-center gap-2">
+        <div className="hidden lg:flex items-center gap-1">
           {navItems.map((item) => (
             <Link key={item.href} href={item.href}>
               <Button
                 variant="ghost"
                 className={cn(
-                  "gap-2.5 px-6 h-12 rounded-xl transition-all relative font-black uppercase tracking-widest text-[10px]",
+                  "gap-2.5 px-4 md:px-6 h-12 rounded-xl transition-all relative font-black uppercase tracking-widest text-[10px]",
                   pathname === item.href 
                     ? "bg-primary/10 text-primary shadow-inner" 
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}
               >
                 <item.icon className={cn("w-4 h-4", pathname === item.href ? "text-primary" : "text-muted-foreground")} />
-                {item.label}
+                <span className="hidden xl:inline">{item.label}</span>
                 {item.badge && item.badge > 0 && (
                   <Badge 
                     className="absolute -top-1 -right-1 h-5 min-w-5 p-1 flex items-center justify-center bg-accent text-white border-2 border-white shadow-lg animate-bounce"
@@ -119,20 +117,37 @@ export function Navbar() {
         </div>
       </div>
 
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-2 md:gap-5">
         {loading ? (
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground opacity-20" />
         ) : (
           <>
             {profile?.role === 'startup' && emailVerified && (
               <Link href="/pitches/new" className="hidden sm:block">
-                <Button className="gap-2.5 h-11 px-6 rounded-xl bg-primary shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all font-black uppercase tracking-widest text-[10px]">
+                <Button className="gap-2.5 h-11 px-4 md:px-6 rounded-xl bg-primary shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all font-black uppercase tracking-widest text-[10px]">
                   <PlusCircle className="w-4 h-4" />
-                  New Venture
+                  <span className="hidden md:inline">New Venture</span>
                 </Button>
               </Link>
             )}
-            <div className="h-8 w-[1px] bg-muted mx-2 hidden lg:block" />
+            <div className="h-8 w-[1px] bg-muted mx-1 md:mx-2 hidden lg:block" />
+            
+            {/* Mobile Nav Trigger (Simple List Toggle) */}
+            <div className="flex lg:hidden gap-1">
+               {navItems.slice(0, 2).map((item) => (
+                 <Link key={item.href} href={item.href}>
+                   <Button variant="ghost" size="icon" className={cn("h-11 w-11 rounded-xl", pathname === item.href ? "bg-primary/10 text-primary" : "text-muted-foreground")}>
+                     <item.icon className="w-5 h-5" />
+                   </Button>
+                 </Link>
+               ))}
+               <Link href="/profile">
+                 <Button variant="ghost" size="icon" className={cn("h-11 w-11 rounded-xl", pathname === '/profile' ? "bg-primary/10 text-primary" : "text-muted-foreground")}>
+                   <User className="w-5 h-5" />
+                 </Button>
+               </Link>
+            </div>
+
             <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout" className="h-11 w-11 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all">
               <LogOut className="w-5 h-5" />
             </Button>
