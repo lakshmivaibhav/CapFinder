@@ -67,10 +67,14 @@ export function useCollection<T = any>(
     const isForbiddenMessageList = (q: any): boolean => {
       if (!q) return false;
       
-      // Extract path using public API where possible, falling back to internal for Query objects
-      const path = q.type === 'collection' 
-        ? (q as CollectionReference).path 
-        : (q as unknown as InternalQuery)._query?.path?.canonicalString?.();
+      // Extract path safely
+      let path = '';
+      if (q.type === 'collection') {
+        path = (q as CollectionReference).path;
+      } else {
+        const internalQuery = (q as unknown as InternalQuery)._query;
+        path = internalQuery?.path?.canonicalString?.() || '';
+      }
 
       if (path !== 'messages') return false;
 
@@ -84,7 +88,7 @@ export function useCollection<T = any>(
       // Block raw collection references as they trigger a full list operation
       if (q.type === 'collection') return true;
 
-      // For Query objects, check if they have filters. An unfiltered query is effectively a list.
+      // For Query objects, ensure they have filters. An unfiltered query is effectively a list.
       const internalQuery = (q as unknown as InternalQuery)._query;
       const hasFilters = internalQuery?.filters && internalQuery.filters.length > 0;
       
