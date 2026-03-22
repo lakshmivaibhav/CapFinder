@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -87,7 +88,8 @@ function AdminDashboardContent() {
   }, [db, user, profile]);
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
+    if (!user) return null; // STRICT AUTH GATE
+    if (!user.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
     return query(collection(db, 'messages'), limit(500));
   }, [db, user, profile]);
   

@@ -45,7 +45,8 @@ export default function MessagesPage() {
   }, [user, emailVerified, authLoading, router]);
 
   const connectionsQuery = useMemoFirebase(() => {
-    if (!user || !profile || !emailVerified) return null;
+    if (!user) return null; // STRICT AUTH CHECK
+    if (!profile || !emailVerified) return null;
     return query(
       collection(db, 'contactRequests'),
       where(profile.role === 'investor' ? 'senderId' : 'receiverId', '==', user.uid),
@@ -58,7 +59,8 @@ export default function MessagesPage() {
 
   // Optimized messages query for the selected conversation
   const messagesQuery = useMemoFirebase(() => {
-    if (!selectedConnection || !user) return null;
+    if (!user) return null; // STRICT AUTH CHECK
+    if (!selectedConnection) return null;
     return query(
       collection(db, 'messages'),
       and(
@@ -73,9 +75,10 @@ export default function MessagesPage() {
     );
   }, [db, selectedConnection, user]);
 
-  // Query ALL messages involving the user to show unread dots in the sidebar across all conversations
+  // Query ALL messages involving the user to show unread dots in the sidebar
   const sidebarMessagesQuery = useMemoFirebase(() => {
-    if (!user || !emailVerified) return null;
+    if (!user) return null; // STRICT AUTH CHECK
+    if (!emailVerified) return null;
     return query(
       collection(db, 'messages'),
       or(
