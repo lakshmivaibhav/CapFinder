@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -62,7 +63,21 @@ export function useCollection<T = any>(
   const [error, setError] = useState<FirestoreError | Error | null>(null);
 
   useEffect(() => {
-    if (!memoizedTargetRefOrQuery) {
+    // Safety check: Prevent listing the entire 'messages' collection without filters.
+    // Standard security rules typically deny 'list' on /messages unless filtered by participant ID.
+    const isForbiddenMessageList = (q: any): boolean => {
+      if (!q) return false;
+      
+      // Extract path using public API where possible, falling back to internal for Query objects
+      const path = q.type === 'collection' 
+        ? (q as CollectionReference).path 
+        : (q as unknown as InternalQuery)._query?.path?.canonicalString?.();
+
+      // Block raw collection references to 'messages' as they trigger a full list operation
+      return path === 'messages' && q.type === 'collection';
+    };
+
+    if (!memoizedTargetRefOrQuery || isForbiddenMessageList(memoizedTargetRefOrQuery)) {
       setData(null);
       setIsLoading(false);
       setError(null);
@@ -107,6 +122,7 @@ export function useCollection<T = any>(
 
     return () => unsubscribe();
   }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+  
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
   }
