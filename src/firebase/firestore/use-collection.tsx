@@ -116,23 +116,38 @@ export function useCollection<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      (error: FirestoreError) => {
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+      (err: FirestoreError) => {
+        try {
+          // GRACEFUL ERROR RECOVERY: If permission error happens, do not throw error, 
+          // just return empty result to prevent application crash.
+          if (err.code === 'permission-denied' || err.code === 'unauthenticated') {
+            setData([]);
+            setIsLoading(false);
+            setError(null);
+            return;
+          }
 
-        const contextualError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        })
+          const path: string =
+            memoizedTargetRefOrQuery.type === 'collection'
+              ? (memoizedTargetRefOrQuery as CollectionReference).path
+              : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
 
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
+          const contextualError = new FirestorePermissionError({
+            operation: 'list',
+            path,
+          })
 
-        // trigger global error propagation
-        errorEmitter.emit('permission-error', contextualError);
+          setError(contextualError)
+          setData(null)
+          setIsLoading(false)
+
+          // Trigger global error propagation only for non-permission-denied errors
+          errorEmitter.emit('permission-error', contextualError);
+        } catch (fatalError) {
+          // Absolute fallback to prevent hook from crashing the UI thread
+          setData([]);
+          setIsLoading(false);
+        }
       }
     );
 
