@@ -22,18 +22,6 @@ export function Navbar() {
     router.push('/');
   };
 
-  const unreadMessagesQuery = useMemoFirebase(() => {
-    if (!user?.uid || !profile?.role || profile.disabled === true || !emailVerified) return null;
-    return query(
-      collection(db, 'messages'),
-      where('receiverId', '==', user.uid),
-      where('read', '==', false)
-    );
-  }, [db, user, profile, emailVerified]);
-
-  const { data: unreadMessages } = useCollection(unreadMessagesQuery);
-  const unreadCount = unreadMessages?.length || 0;
-
   const pendingRequestsQuery = useMemoFirebase(() => {
     if (!user?.uid || !profile?.role || profile.disabled === true || !emailVerified) return null;
     return query(
@@ -64,7 +52,7 @@ export function Navbar() {
       label: 'Secure Chat', 
       href: '/messages', 
       icon: MessageSquare, 
-      badge: pathname === '/messages' ? 0 : unreadCount 
+      badge: 0 // Global unread count removed to prevent permission errors
     },
     { 
       label: 'Admin', 

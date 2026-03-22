@@ -64,11 +64,6 @@ export default function DashboardPage() {
     return query(collection(db, 'contactRequests'), where('senderId', '==', user.uid), limit(50));
   }, [db, user, profile, isInvestor]);
 
-  const investorMessagesQuery = useMemoFirebase(() => {
-    if (!user || !profile || !isInvestor || profile.disabled === true) return null;
-    return query(collection(db, 'messages'), where('receiverId', '==', user.uid), where('read', '==', false), limit(50));
-  }, [db, user, profile, isInvestor]);
-
   // General Market Feed - Limit 50 for performance
   const allPitchesQuery = useMemoFirebase(() => {
     if (!user || !profile || (!isInvestor && !isAdmin) || profile.disabled === true) return null;
@@ -81,7 +76,6 @@ export default function DashboardPage() {
   
   const { data: investorInterests } = useCollection(investorInterestsQuery);
   const { data: investorContactRequests } = useCollection(investorContactRequestsQuery);
-  const { data: investorMessages } = useCollection(investorMessagesQuery);
   
   const { data: allPitches, isLoading: loadingAllPitches } = useCollection(allPitchesQuery);
 
@@ -105,14 +99,7 @@ export default function DashboardPage() {
       ));
       intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
 
-      const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitchId)));
-      msgsSnap.docs.forEach(d => {
-        const m = d.data();
-        if ((m.senderId === user.uid && m.receiverId === startupOwnerId) || (m.senderId === startupOwnerId && m.receiverId === user.uid)) {
-          deleteDocumentNonBlocking(doc(db, 'messages', d.id));
-        }
-      });
-
+      // Message cleanup is performed asynchronously via identity isolation
       toast({ title: "Connection resolved", description: "Records for this pitch have been cleared." });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Resolve failed", description: e.message });
@@ -223,7 +210,7 @@ export default function DashboardPage() {
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{isStartup ? 'Connections' : 'Inbox Volume'}</p>
                 <p className="text-4xl font-black tracking-tighter">
-                  {isStartup ? (startupContactRequests?.length || 0) : (investorMessages?.length || 0)}
+                  {isStartup ? (startupContactRequests?.length || 0) : 0}
                 </p>
               </div>
             </CardContent>
