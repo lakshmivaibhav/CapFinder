@@ -28,6 +28,9 @@ export default function MessagesPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
   const db = useFirestore();
   const router = useRouter();
+  
+  // Sidebar selection stores the verified connectionId in state.
+  // This ID corresponds to the contactRequests document.
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -54,16 +57,13 @@ export default function MessagesPage() {
 
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
-  // Optimized query: load messages specifically for the selected connection
-  // Including participant check to satisfy security rules: allow list if isParticipant(resource.data)
+  // Message retrieval logic strictly aligned with the selected connection context.
+  // Utilizes connectionId for real-time isolation and accurate sequencing.
   const messagesQuery = useMemoFirebase(() => {
     if (!user || !selectedConnectionId) return null;
     return query(
       collection(db, 'messages'),
-      and(
-        where('connectionId', '==', selectedConnectionId),
-        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid))
-      ),
+      where('connectionId', '==', selectedConnectionId),
       orderBy('createdAt', 'asc'),
       limit(500)
     );
@@ -71,7 +71,7 @@ export default function MessagesPage() {
 
   const { data: messages, isLoading: loadingMessages } = useCollection(messagesQuery);
 
-  // Derive the active connection and partner identity
+  // Derive the active connection and partner identity from state
   const activeConnection = useMemo(() => 
     connections?.find(c => c.id === selectedConnectionId), 
     [connections, selectedConnectionId]
@@ -96,7 +96,7 @@ export default function MessagesPage() {
     e.preventDefault();
     if (!user || !partnerId || !selectedConnectionId || !messageText.trim()) return;
 
-    // Persist message with connectionId and serverTimestamp for instant real-time sync
+    // Standardized message persistence including connectionId and serverTimestamp for sequencing.
     addDocumentNonBlocking(collection(db, 'messages'), {
       connectionId: selectedConnectionId,
       senderId: user.uid,
