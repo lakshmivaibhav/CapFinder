@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -99,7 +100,6 @@ export default function DashboardPage() {
       ));
       intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
 
-      // Message cleanup is performed asynchronously via identity isolation
       toast({ title: "Connection resolved", description: "Records for this pitch have been cleared." });
     } catch (e: any) {
       toast({ variant: "destructive", title: "Resolve failed", description: e.message });

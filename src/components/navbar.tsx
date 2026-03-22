@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -52,7 +53,7 @@ export function Navbar() {
       label: 'Secure Chat', 
       href: '/messages', 
       icon: MessageSquare, 
-      badge: 0 // Global unread count removed to prevent permission errors
+      badge: 0 // Unread counts are handled locally in the Secure Hub to maintain rule compliance
     },
     { 
       label: 'Admin', 
