@@ -53,16 +53,16 @@ export default function MessagesPage() {
 
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
-  // Fetch ALL messages for the current user using a simple participant query to ensure rule compliance and instant syncing
+  // Fetch messages for the selected connection using connectionId
   const messagesQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user || !selectedConnectionId) return null;
     return query(
       collection(db, 'messages'),
-      or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid)),
+      where('connectionId', '==', selectedConnectionId),
       orderBy('createdAt', 'asc'),
       limit(500)
     );
-  }, [db, user]);
+  }, [db, user, selectedConnectionId]);
 
   const { data: messages, isLoading: loadingMessages } = useCollection(messagesQuery);
 
@@ -77,14 +77,10 @@ export default function MessagesPage() {
     return user.uid === activeConnection.senderId ? activeConnection.receiverId : activeConnection.senderId;
   }, [user, activeConnection]);
 
-  // Filter messages for the selected partner client-side
+  // Use scoped messages from the connection-based query
   const conversationMessages = useMemo(() => {
-    if (!partnerId || !messages) return [];
-    return messages.filter(msg => 
-      (msg.senderId === user?.uid && msg.receiverId === partnerId) ||
-      (msg.senderId === partnerId && msg.receiverId === user?.uid)
-    );
-  }, [messages, user?.uid, partnerId]);
+    return messages || [];
+  }, [messages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -98,10 +94,11 @@ export default function MessagesPage() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !partnerId || !messageText.trim()) return;
+    if (!user || !partnerId || !selectedConnectionId || !messageText.trim()) return;
 
-    // Persist message with exactly the requested 4 fields
+    // Persist message with the requested 5 fields, including connectionId for query matching
     addDocumentNonBlocking(collection(db, 'messages'), {
+      connectionId: selectedConnectionId,
       senderId: user.uid,
       receiverId: partnerId,
       text: messageText.trim(),
