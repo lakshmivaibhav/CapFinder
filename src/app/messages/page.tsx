@@ -55,11 +55,15 @@ export default function MessagesPage() {
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
   // Optimized query: load messages specifically for the selected connection
+  // Including participant check to satisfy security rules: allow list if isParticipant(resource.data)
   const messagesQuery = useMemoFirebase(() => {
     if (!user || !selectedConnectionId) return null;
     return query(
       collection(db, 'messages'),
-      where('connectionId', '==', selectedConnectionId),
+      and(
+        where('connectionId', '==', selectedConnectionId),
+        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid))
+      ),
       orderBy('createdAt', 'asc'),
       limit(500)
     );
