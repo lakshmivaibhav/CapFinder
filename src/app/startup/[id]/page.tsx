@@ -1,15 +1,14 @@
-
 "use client";
 
-import { use, useState, useMemo } from 'react';
+import { use, useState } from 'react';
 import { doc, collection, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info, ShieldCheck, Image as ImageIcon, Building } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info, ShieldCheck, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -24,11 +23,9 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
   const [resolving, setResolving] = useState(false);
   const [checking, setChecking] = useState(false);
 
-  // Fetch Pitch Data
   const pitchRef = useMemoFirebase(() => doc(db, 'pitches', id), [db, id]);
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
 
-  // Fetch Founder Data (using ownerId from pitch)
   const founderRef = useMemoFirebase(() => {
     if (!pitch?.ownerId) return null;
     return doc(db, 'users', pitch.ownerId);
@@ -38,7 +35,6 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
   const isInvestor = profile?.role === 'investor';
   const isOwner = user?.uid === pitch?.ownerId;
 
-  // Interaction Queries
   const interestsQuery = useMemoFirebase(() => {
     if (!user || !isInvestor || !pitch) return null;
     return query(collection(db, 'interests'), where('investorId', '==', user.uid), where('pitchId', '==', id));
@@ -84,7 +80,7 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
 
   const handleResolveConnection = async () => {
     if (!user || !pitch || !isInvestor) return;
-    if (!confirm("This will permanently remove your connection, messages, and interest for this pitch. Proceed?")) return;
+    if (!confirm("This will permanently remove your connection and interest for this pitch. Proceed?")) return;
 
     setResolving(true);
     try {
@@ -93,14 +89,6 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
 
       const reqSnap = await getDocs(query(collection(db, 'contactRequests'), where('pitchId', '==', pitch.id), where('senderId', '==', user.uid)));
       reqSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id)));
-
-      const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
-      msgsSnap.docs.forEach(d => {
-        const m = d.data();
-        if ((m.senderId === user.uid && m.receiverId === pitch.ownerId) || (m.senderId === pitch.ownerId && m.receiverId === user.uid)) {
-          deleteDocumentNonBlocking(doc(db, 'messages', d.id));
-        }
-      });
 
       toast({ title: "Connection resolved", description: "All records for this pitch have been cleared." });
     } catch (error: any) {
@@ -128,7 +116,7 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
         return;
       }
 
-      if (confirm("Confirm PERMANENT deletion of this pitch? This action cannot be reversed and all associated venture data will be purged.")) {
+      if (confirm("Confirm PERMANENT deletion of this pitch? This action cannot be reversed.")) {
         deleteDocumentNonBlocking(doc(db, 'pitches', pitch.id));
         toast({ title: "Venture Deleted", description: "Your pitch has been successfully removed from the marketplace." });
         router.push('/dashboard');
@@ -266,11 +254,6 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
                             <a href={`mailto:${pitch.contactEmail}`}>
                               <Mail className="mr-3 w-6 h-6" /> Email Founder
                             </a>
-                          </Button>
-                          <Button className="flex-1 h-20 text-lg font-black bg-accent hover:bg-accent/90 shadow-2xl shadow-accent/20 rounded-[1.5rem] transition-all active:scale-95" asChild>
-                            <Link href="/messages">
-                              <MessageSquare className="mr-3 w-6 h-6" /> Secure Hub
-                            </Link>
                           </Button>
                        </div>
                      ) : (

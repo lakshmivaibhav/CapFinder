@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, useAuth as useFirebaseAuth } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, MessageSquare, Inbox, ShieldAlert, Zap } from 'lucide-react';
+import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, ShieldAlert, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -47,12 +47,6 @@ export function Navbar() {
       icon: Inbox, 
       badge: pathname === '/requests' ? 0 : requestCount, 
       show: profile?.role === 'startup' 
-    },
-    { 
-      label: 'Secure Chat', 
-      href: '/messages', 
-      icon: MessageSquare, 
-      badge: 0 // Unread counts are handled locally in the Secure Hub to maintain rule compliance
     },
     { 
       label: 'Admin', 

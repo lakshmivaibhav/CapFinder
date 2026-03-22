@@ -8,7 +8,7 @@ import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, MessageSquare, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info, ShieldCheck, Image as ImageIcon } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, LayoutGrid, Info, ShieldCheck, Image as ImageIcon } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -104,7 +104,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
       e.stopPropagation();
     }
     if (!user || !pitch || !isInvestor) return;
-    if (!confirm("This will permanently remove your connection, messages, and interest for this pitch. Proceed?")) return;
+    if (!confirm("This will permanently remove your connection and interest for this pitch. Proceed?")) return;
 
     setResolving(true);
     try {
@@ -113,14 +113,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
 
       const reqSnap = await getDocs(query(collection(db, 'contactRequests'), where('pitchId', '==', pitch.id), where('senderId', '==', user.uid)));
       reqSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'contactRequests', d.id)));
-
-      const msgsSnap = await getDocs(query(collection(db, 'messages'), where('pitchId', '==', pitch.id)));
-      msgsSnap.docs.forEach(d => {
-        const m = d.data();
-        if ((m.senderId === user.uid && m.receiverId === pitch.ownerId) || (m.senderId === pitch.ownerId && m.receiverId === user.uid)) {
-          deleteDocumentNonBlocking(doc(db, 'messages', d.id));
-        }
-      });
 
       toast({ title: "Connection resolved", description: "All records for this pitch have been cleared." });
     } catch (error: any) {
@@ -290,11 +282,6 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                             <a href={`mailto:${pitch.contactEmail}`}>
                               <Mail className="mr-2 md:mr-3 w-5 h-5 md:w-6 md:h-6" /> Email Founder
                             </a>
-                          </Button>
-                          <Button className="flex-1 h-16 md:h-20 text-md md:text-lg font-black bg-accent hover:bg-accent/90 shadow-2xl shadow-accent/20 rounded-xl md:rounded-2xl transition-all active:scale-95 uppercase tracking-widest" asChild>
-                            <Link href="/messages">
-                              <MessageSquare className="mr-2 md:mr-3 w-5 h-5 md:w-6 md:h-6" /> Secure Hub
-                            </Link>
                           </Button>
                        </div>
                      ) : (

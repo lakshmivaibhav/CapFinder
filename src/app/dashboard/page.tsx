@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -6,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, limit, doc, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, limit, doc, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, MessageSquare } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -38,7 +37,6 @@ export default function DashboardPage() {
   const isInvestor = profile?.role === 'investor';
   const isAdmin = profile?.role === 'admin';
 
-  // Startup Specific Queries - Optimized with limits
   const startupPitchesQuery = useMemoFirebase(() => {
     if (!user || !profile || !isStartup || profile.disabled === true) return null;
     return query(collection(db, 'pitches'), where('ownerId', '==', user.uid), limit(20));
@@ -54,7 +52,6 @@ export default function DashboardPage() {
     return query(collection(db, 'contactRequests'), where('receiverId', '==', user.uid), limit(50));
   }, [db, user, profile, isStartup]);
 
-  // Investor Specific Queries - Optimized with limits
   const investorInterestsQuery = useMemoFirebase(() => {
     if (!user || !profile || !isInvestor || profile.disabled === true) return null;
     return query(collection(db, 'interests'), where('investorId', '==', user.uid), limit(50));
@@ -65,7 +62,6 @@ export default function DashboardPage() {
     return query(collection(db, 'contactRequests'), where('senderId', '==', user.uid), limit(50));
   }, [db, user, profile, isInvestor]);
 
-  // General Market Feed - Limit 50 for performance
   const allPitchesQuery = useMemoFirebase(() => {
     if (!user || !profile || (!isInvestor && !isAdmin) || profile.disabled === true) return null;
     return query(collection(db, 'pitches'), limit(50));
@@ -205,12 +201,12 @@ export default function DashboardPage() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-100 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl group-hover:scale-150 transition-transform duration-700" />
             <CardContent className="p-10 flex items-center gap-8">
               <div className="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-2xl shadow-emerald-500/30">
-                {isStartup ? <Inbox className="w-8 h-8" /> : <MessageSquare className="w-8 h-8" />}
+                <Inbox className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{isStartup ? 'Connections' : 'Inbox Volume'}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Active Connections</p>
                 <p className="text-4xl font-black tracking-tighter">
-                  {isStartup ? (startupContactRequests?.length || 0) : 0}
+                  {isStartup ? (startupContactRequests?.length || 0) : (investorContactRequests?.filter(r => r.status === 'accepted').length || 0)}
                 </p>
               </div>
             </CardContent>

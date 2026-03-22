@@ -6,10 +6,10 @@ import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
-import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Inbox, CheckCircle2, XCircle, Mail, Clock, User, ExternalLink, ShieldCheck, MessageSquare, Zap } from 'lucide-react';
+import { Loader2, Inbox, CheckCircle2, XCircle, Mail, Clock, User, ExternalLink, ShieldCheck, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -51,7 +51,7 @@ export default function RequestsPage() {
     updateDocumentNonBlocking(doc(db, 'contactRequests', req.id), { status });
     toast({
       title: `Identity Access ${status === 'accepted' ? 'Granted' : 'Revoked'}`,
-      description: status === 'accepted' ? 'The investor has been granted direct messaging access.' : 'The inquiry has been declined.',
+      description: status === 'accepted' ? 'The investor has been granted identity verification.' : 'The inquiry has been declined.',
     });
   };
 
@@ -150,11 +150,6 @@ export default function RequestsPage() {
                               <Mail className="w-4 h-4 mr-3" /> External Email
                             </a>
                           </Button>
-                          <Link href="/messages" className="w-full">
-                            <Button className="w-full h-12 bg-primary shadow-lg shadow-primary/20 rounded-xl font-bold">
-                              <MessageSquare className="w-4 h-4 mr-3" /> Open Secure Chat
-                            </Button>
-                          </Link>
                         </div>
                       </div>
                     ) : (

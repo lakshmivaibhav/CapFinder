@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -12,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, Users, MessageSquare, AlertTriangle, Zap, Building, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, Users, AlertTriangle, Zap, Building } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours } from 'date-fns';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -86,12 +85,6 @@ function AdminDashboardContent() {
     if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
     return query(collection(db, 'contactRequests'), limit(500));
   }, [db, user, profile]);
-
-  const messagesQuery = useMemoFirebase(() => {
-    if (!user) return null; // STRICT AUTH GATE
-    if (!user.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
-    return query(collection(db, 'messages'), limit(500));
-  }, [db, user, profile]);
   
   const deleteRequestsQuery = useMemoFirebase(() => {
     if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
@@ -101,7 +94,6 @@ function AdminDashboardContent() {
   const { data: allUsers, isLoading: loadingUsers } = useCollection(usersQuery);
   const { data: allPitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
   const { data: allRequests, isLoading: loadingRequests } = useCollection(requestsQuery);
-  const { data: allMessages, isLoading: loadingMessages } = useCollection(messagesQuery);
   const { data: allDeleteRequests, isLoading: loadingDeleteRequests } = useCollection(deleteRequestsQuery);
 
   const staleRequests = useMemo(() => {
@@ -168,7 +160,6 @@ function AdminDashboardContent() {
     { label: 'Total Members', value: allUsers?.length || 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Live Ventures', value: allPitches?.length || 0, icon: Megaphone, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: 'Market Connections', value: allRequests?.length || 0, icon: Inbox, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Inbox Volume', value: allMessages?.length || 0, icon: MessageSquare, color: 'text-purple-600', bg: 'bg-purple-50' },
   ];
 
   return (
@@ -188,7 +179,7 @@ function AdminDashboardContent() {
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
           {stats.map((stat, i) => (
             <Card key={i} className="border-none shadow-xl rounded-[2rem] overflow-hidden">
               <CardHeader className="pb-2">
