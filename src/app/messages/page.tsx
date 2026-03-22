@@ -42,7 +42,6 @@ export default function MessagesPage() {
   }, [user, authLoading, emailVerified, router]);
 
   // Fetch approved connections (contactRequests)
-  // FIXED: Nested composite filters within an explicit 'and' to comply with Firestore Query rules
   const connectionsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -58,11 +57,15 @@ export default function MessagesPage() {
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
   // Fetch messages for the selected connection
+  // FIXED: Explicitly filter by participant IDs to comply with Security Rules 'list' requirements
   const messagesQuery = useMemoFirebase(() => {
     if (!user || !selectedConnectionId) return null;
     return query(
       collection(db, 'messages'),
-      where('connectionId', '==', selectedConnectionId),
+      and(
+        where('connectionId', '==', selectedConnectionId),
+        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid))
+      ),
       orderBy('createdAt', 'asc'),
       limit(100)
     );
