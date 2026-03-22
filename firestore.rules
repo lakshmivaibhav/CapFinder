@@ -72,8 +72,8 @@ service cloud.firestore {
       );
       allow list: if isSignedIn() && (
         isAdmin() ||
-        request.query.filters.investorId == request.auth.uid || 
-        request.query.filters.startupOwnerId == request.auth.uid
+        resource.data.investorId == request.auth.uid || 
+        resource.data.startupOwnerId == request.auth.uid
       );
       
       allow create: if isAuthorized() && (getProfile().get('role', '') == 'investor' || isAdmin()) && request.resource.data.investorId == request.auth.uid;
@@ -82,7 +82,7 @@ service cloud.firestore {
 
     match /favorites/{favoriteId} {
       // Favorites are private to the investor
-      allow list: if isSignedIn() && request.query.filters.investorId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.investorId == request.auth.uid;
       allow get: if isSignedIn() && resource.data.investorId == request.auth.uid;
       allow create: if isAuthorized() && request.resource.data.investorId == request.auth.uid;
       allow delete: if isAuthorized() && (resource.data.investorId == request.auth.uid || isAdmin());
@@ -96,8 +96,7 @@ service cloud.firestore {
       );
       allow list: if isSignedIn() && (
         isAdmin() ||
-        request.query.filters.senderId == request.auth.uid || 
-        request.query.filters.receiverId == request.auth.uid
+        isParticipant(resource.data)
       );
       
       allow create: if isAuthorized() && (getProfile().get('role', '') == 'investor' || isAdmin()) && request.resource.data.senderId == request.auth.uid;
@@ -118,9 +117,7 @@ service cloud.firestore {
       
       allow list: if isSignedIn() && (
         isAdmin() ||
-        request.query.filters.senderId == request.auth.uid || 
-        request.query.filters.receiverId == request.auth.uid ||
-        (request.query.filters.participantIds != null && request.query.filters.participantIds.array_contains == request.auth.uid)
+        isParticipant(resource.data)
       );
       
       allow get: if isSignedIn() && (
@@ -139,7 +136,7 @@ service cloud.firestore {
 
     match /deleteRequests/{requestId} {
       // Requests visible to owner and admins
-      allow list: if isAdmin() || (isAuthorized() && request.query.filters.userId == request.auth.uid);
+      allow list: if isAdmin() || (isAuthorized() && resource.data.userId == request.auth.uid);
       allow get: if isAdmin() || (isAuthorized() && resource.data.userId == request.auth.uid);
       allow create: if isAuthorized() && request.resource.data.userId == request.auth.uid;
       allow update: if isAdmin();
