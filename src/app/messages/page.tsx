@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { collection, query, where, serverTimestamp, doc, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, serverTimestamp, doc, limit, orderBy, or, and } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { Navbar } from '@/components/navbar';
@@ -55,19 +56,38 @@ export default function MessagesPage() {
 
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
-  // Optimized messages query with participantIds filter to satisfy security rules
+  // Optimized messages query for the selected conversation
   const messagesQuery = useMemoFirebase(() => {
     if (!selectedConnection || !user) return null;
     return query(
       collection(db, 'messages'),
-      where('pitchId', '==', selectedConnection.pitchId),
-      where('participantIds', 'array-contains', user.uid),
+      and(
+        where('pitchId', '==', selectedConnection.pitchId),
+        or(
+          where('senderId', '==', user.uid),
+          where('receiverId', '==', user.uid)
+        )
+      ),
       orderBy('timestamp', 'desc'),
       limit(100)
     );
   }, [db, selectedConnection, user]);
 
+  // Query ALL messages involving the user to show unread dots in the sidebar across all conversations
+  const sidebarMessagesQuery = useMemoFirebase(() => {
+    if (!user || !emailVerified) return null;
+    return query(
+      collection(db, 'messages'),
+      or(
+        where('senderId', '==', user.uid),
+        where('receiverId', '==', user.uid)
+      ),
+      limit(200)
+    );
+  }, [db, user, emailVerified]);
+
   const { data: rawMessages } = useCollection(messagesQuery);
+  const { data: allMessagesForUser } = useCollection(sidebarMessagesQuery);
 
   const messages = useMemo(() => {
     if (!rawMessages || !selectedConnection) return [];
@@ -197,7 +217,7 @@ export default function MessagesPage() {
             ) : connections && connections.length > 0 ? (
               <div className="p-4 space-y-2">
                 {connections.map((conn) => {
-                  const hasUnread = rawMessages?.some(m => m.pitchId === conn.pitchId && m.receiverId === user.uid && m.read === false);
+                  const hasUnread = allMessagesForUser?.some(m => m.pitchId === conn.pitchId && m.receiverId === user.uid && m.read === false);
                   const isActive = selectedConnection?.id === conn.id;
                   return (
                     <div
