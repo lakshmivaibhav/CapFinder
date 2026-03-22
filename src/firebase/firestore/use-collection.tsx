@@ -78,13 +78,6 @@ export function useCollection<T = any>(
 
       if (path !== 'messages') return false;
 
-      // STRATEGIC LOCK: Only allow messaging queries when on specific authorized pages
-      if (typeof window !== 'undefined') {
-        const pathname = window.location.pathname;
-        const isAllowedContext = pathname.startsWith('/messages') || pathname.startsWith('/admin');
-        if (!isAllowedContext) return true;
-      }
-
       // Block raw collection references as they trigger a full list operation
       if (q.type === 'collection') return true;
 
@@ -92,6 +85,7 @@ export function useCollection<T = any>(
       const internalQuery = (q as unknown as InternalQuery)._query;
       const hasFilters = internalQuery?.filters && internalQuery.filters.length > 0;
       
+      // Only ignore if it has NO filters. If it has filters, it's a targeted inquiry.
       return !hasFilters;
     };
 
@@ -120,18 +114,30 @@ export function useCollection<T = any>(
         try {
           // GRACEFUL ERROR RECOVERY: If permission error happens, do not throw error, 
           // just return empty result to prevent application crash.
-          if (err.code === 'permission-denied' || err.code === 'unauthenticated') {
-            setData([]);
-            setIsLoading(false);
-            setError(null);
-            return;
-          }
-
           const path: string =
-            memoizedTargetRefOrQuery.type === 'collection'
-              ? (memoizedTargetRefOrQuery as CollectionReference).path
-              : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+          memoizedTargetRefOrQuery.type === 'collection'
+            ? (memoizedTargetRefOrQuery as CollectionReference).path
+            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        
+        // Check if query has filters for accurate silencing
+        const internalQuery = (memoizedTargetRefOrQuery as unknown as InternalQuery)._query;
+        const hasFilters = memoizedTargetRefOrQuery.type !== 'collection' && 
+                           internalQuery?.filters && 
+                           internalQuery.filters.length > 0;
 
+        // Ignore permission errors for messages collection only if unfiltered or if it's a standard permission denied error
+        if (
+          err.code === 'permission-denied' ||
+          err.code === 'unauthenticated' ||
+          (path === 'messages' && !hasFilters)
+        ) {
+          setData([]);
+          setIsLoading(false);
+          setError(null);
+          return;
+        }
+
+         
           const contextualError = new FirestorePermissionError({
             operation: 'list',
             path,
