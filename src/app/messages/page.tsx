@@ -18,7 +18,8 @@ import {
   ArrowLeft, 
   Inbox, 
   ShieldCheck,
-  Building
+  Building,
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -53,7 +54,7 @@ export default function MessagesPage() {
 
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
-  // Fetch messages for the selected connection using connectionId
+  // Optimized query: load messages specifically for the selected connection
   const messagesQuery = useMemoFirebase(() => {
     if (!user || !selectedConnectionId) return null;
     return query(
@@ -77,16 +78,11 @@ export default function MessagesPage() {
     return user.uid === activeConnection.senderId ? activeConnection.receiverId : activeConnection.senderId;
   }, [user, activeConnection]);
 
-  // Use scoped messages from the connection-based query
-  const conversationMessages = useMemo(() => {
-    return messages || [];
-  }, [messages]);
-
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [conversationMessages]);
+  }, [messages]);
 
   const partnerName = activeConnection 
     ? (user?.uid === activeConnection.senderId ? activeConnection.startupName : activeConnection.investorEmail)
@@ -96,7 +92,7 @@ export default function MessagesPage() {
     e.preventDefault();
     if (!user || !partnerId || !selectedConnectionId || !messageText.trim()) return;
 
-    // Persist message with the requested 5 fields, including connectionId for query matching
+    // Persist message with connectionId and serverTimestamp for instant real-time sync
     addDocumentNonBlocking(collection(db, 'messages'), {
       connectionId: selectedConnectionId,
       senderId: user.uid,
@@ -213,8 +209,8 @@ export default function MessagesPage() {
                 <div className="max-w-4xl mx-auto space-y-6">
                   {loadingMessages ? (
                     <div className="flex justify-center p-20"><Loader2 className="animate-spin opacity-20" /></div>
-                  ) : conversationMessages && conversationMessages.length > 0 ? (
-                    conversationMessages.map((msg) => {
+                  ) : messages && messages.length > 0 ? (
+                    messages.map((msg) => {
                       const isMe = msg.senderId === user?.uid;
                       return (
                         <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
@@ -234,7 +230,10 @@ export default function MessagesPage() {
                       );
                     })
                   ) : (
-                    <div className="text-center py-20 opacity-20 italic font-black text-sm">Initiate secure dialogue...</div>
+                    <div className="text-center py-20 flex flex-col items-center gap-4 opacity-30">
+                      <Zap className="w-10 h-10 text-primary" />
+                      <p className="italic font-black text-sm uppercase tracking-widest">Initiate secure dialogue...</p>
+                    </div>
                   )}
                   <div ref={scrollRef} />
                 </div>
