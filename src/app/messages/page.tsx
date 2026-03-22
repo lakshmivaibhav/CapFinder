@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from 'react';
@@ -15,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Loader2, Send, MessageSquare, Clock, CheckCheck, Inbox, Zap, Smile, Paperclip, FileText, Download, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import dynamic from 'next/dynamic';
+import dynamic from 'dynamic';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 
@@ -55,28 +56,34 @@ export default function MessagesPage() {
 
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
-  // Optimized messages query with limit
+  // Optimized messages query with participantIds filter to satisfy security rules
   const messagesQuery = useMemoFirebase(() => {
-    if (!selectedConnection) return null;
+    if (!selectedConnection || !user) return null;
     return query(
       collection(db, 'messages'),
       where('pitchId', '==', selectedConnection.pitchId),
+      where('participantIds', 'array-contains', user.uid),
       orderBy('timestamp', 'desc'),
       limit(100)
     );
-  }, [db, selectedConnection]);
+  }, [db, selectedConnection, user]);
 
   const { data: rawMessages } = useCollection(messagesQuery);
 
   const messages = useMemo(() => {
     if (!rawMessages || !selectedConnection) return [];
+    
+    const partnerId = user?.uid === selectedConnection.senderId 
+      ? selectedConnection.receiverId 
+      : selectedConnection.senderId;
+
     return rawMessages
       .filter(msg => 
-        (msg.senderId === selectedConnection.senderId && msg.receiverId === selectedConnection.receiverId) ||
-        (msg.senderId === selectedConnection.receiverId && msg.receiverId === selectedConnection.senderId)
+        (msg.senderId === user?.uid && msg.receiverId === partnerId) ||
+        (msg.senderId === partnerId && msg.receiverId === user?.uid)
       )
       .sort((a, b) => (a.timestamp?.toMillis?.() || 0) - (b.timestamp?.toMillis?.() || 0));
-  }, [rawMessages, selectedConnection]);
+  }, [rawMessages, selectedConnection, user]);
 
   useEffect(() => {
     if (selectedConnection && user && messages.length > 0) {
@@ -104,6 +111,7 @@ export default function MessagesPage() {
       text: messageText,
       timestamp: serverTimestamp(),
       read: false,
+      participantIds: [user.uid, receiverId],
     });
 
     setMessageText('');
@@ -148,6 +156,7 @@ export default function MessagesPage() {
         fileName: file.name,
         timestamp: serverTimestamp(),
         read: false,
+        participantIds: [user.uid, receiverId],
       });
 
       toast({ title: "File Sent", description: "Your document has been successfully attached to the session." });

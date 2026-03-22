@@ -29,7 +29,9 @@ service cloud.firestore {
     }
 
     function isParticipant(data) {
-      return request.auth.uid == data.senderId || request.auth.uid == data.receiverId;
+      return request.auth.uid == data.senderId || 
+             request.auth.uid == data.receiverId || 
+             (data.participantIds != null && request.auth.uid in data.participantIds);
     }
 
     match /users/{userId} {
@@ -69,9 +71,9 @@ service cloud.firestore {
         isAdmin()
       );
       allow list: if isSignedIn() && (
+        isAdmin() ||
         request.query.filters.investorId == request.auth.uid || 
-        request.query.filters.startupOwnerId == request.auth.uid || 
-        isAdmin()
+        request.query.filters.startupOwnerId == request.auth.uid
       );
       
       allow create: if isAuthorized() && (getProfile().get('role', '') == 'investor' || isAdmin()) && request.resource.data.investorId == request.auth.uid;
@@ -83,7 +85,7 @@ service cloud.firestore {
       allow list: if isSignedIn() && request.query.filters.investorId == request.auth.uid;
       allow get: if isSignedIn() && resource.data.investorId == request.auth.uid;
       allow create: if isAuthorized() && request.resource.data.investorId == request.auth.uid;
-      allow delete: if isAuthorized() && resource.data.investorId == request.auth.uid;
+      allow delete: if isAuthorized() && (resource.data.investorId == request.auth.uid || isAdmin());
     }
 
     match /contactRequests/{requestId} {
@@ -93,9 +95,9 @@ service cloud.firestore {
         isAdmin()
       );
       allow list: if isSignedIn() && (
+        isAdmin() ||
         request.query.filters.senderId == request.auth.uid || 
-        request.query.filters.receiverId == request.auth.uid || 
-        isAdmin()
+        request.query.filters.receiverId == request.auth.uid
       );
       
       allow create: if isAuthorized() && (getProfile().get('role', '') == 'investor' || isAdmin()) && request.resource.data.senderId == request.auth.uid;
@@ -114,21 +116,22 @@ service cloud.firestore {
       allow create: if isAuthorized() && 
         request.resource.data.senderId == request.auth.uid;
       
-      allow list: if isAuthorized() && (
+      allow list: if isSignedIn() && (
+        isAdmin() ||
         request.query.filters.senderId == request.auth.uid || 
         request.query.filters.receiverId == request.auth.uid ||
-        isAdmin()
+        (request.query.filters.participantIds != null && request.query.filters.participantIds.array_contains == request.auth.uid)
       );
       
-      allow get: if isAuthorized() && (
-        isParticipant(resource.data) || 
-        isAdmin()
+      allow get: if isSignedIn() && (
+        isAdmin() ||
+        isParticipant(resource.data)
       );
 
       // Only receiver can mark as read
       allow update: if isAuthorized() && (
-        (resource.data.receiverId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read'])) ||
-        isAdmin()
+        isAdmin() ||
+        (resource.data.receiverId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']))
       );
       
       allow delete: if isAdmin();
