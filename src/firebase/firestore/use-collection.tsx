@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -74,6 +73,13 @@ export function useCollection<T = any>(
         : (q as unknown as InternalQuery)._query?.path?.canonicalString?.();
 
       if (path !== 'messages') return false;
+
+      // STRATEGIC LOCK: Only allow messaging queries when on specific authorized pages
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname;
+        const isAllowedContext = pathname.startsWith('/messages') || pathname.startsWith('/admin');
+        if (!isAllowedContext) return true;
+      }
 
       // Block raw collection references as they trigger a full list operation
       if (q.type === 'collection') return true;
