@@ -7,7 +7,7 @@ import { useFirestore, useCollection, useDoc, useMemoFirebase, addDocumentNonBlo
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, TrendingUp, Mail, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, ArrowRight, Users, LayoutGrid, FilterX, CheckCircle2, Sparkles, Image as ImageIcon, Building } from 'lucide-react';
+import { Loader2, Search, TrendingUp, Mail, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, ArrowRight, Users, LayoutGrid, FilterX, CheckCircle2, Sparkles, Image as ImageIcon, Building, MessageSquare } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -192,8 +192,10 @@ export default function PitchesFeedPage() {
     if (request.status === 'pending') return <Button variant="secondary" className="flex-1 h-12 rounded-xl opacity-70 cursor-default bg-muted font-black uppercase text-[10px] tracking-widest" disabled><Clock className="mr-2 w-4 h-4 animate-pulse" /> Pending</Button>;
     if (request.status === 'accepted') return (
       <div className="flex-1 flex gap-2">
-        <Link href={`/messages`} className="flex-1">
-          <Button variant="default" className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 shadow-lg shadow-accent/20 font-black uppercase text-[10px] tracking-widest transition-all active:scale-95">Message</Button>
+        <Link href="/messages" className="flex-1">
+          <Button variant="default" className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 shadow-lg shadow-accent/20 font-black uppercase text-[10px] tracking-widest transition-all active:scale-95">
+            <MessageSquare className="w-4 h-4 mr-2" /> Hub
+          </Button>
         </Link>
       </div>
     );

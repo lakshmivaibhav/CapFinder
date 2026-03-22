@@ -9,7 +9,7 @@ import { Navbar } from '@/components/navbar';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Inbox, CheckCircle2, XCircle, Mail, Clock, User, ExternalLink, ShieldCheck, Zap } from 'lucide-react';
+import { Loader2, Inbox, CheckCircle2, XCircle, Mail, Clock, User, ExternalLink, ShieldCheck, Zap, MessageSquare } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -145,6 +145,11 @@ export default function RequestsPage() {
                            </p>
                         </div>
                         <div className="flex flex-col gap-3">
+                          <Link href="/messages" className="w-full">
+                            <Button className="w-full h-12 rounded-xl bg-primary shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest">
+                              <MessageSquare className="w-4 h-4 mr-3" /> Secure Hub
+                            </Button>
+                          </Link>
                           <Button variant="outline" className="w-full h-12 rounded-xl font-bold border-2" asChild>
                             <a href={`mailto:${req.investorEmail}`}>
                               <Mail className="w-4 h-4 mr-3" /> External Email

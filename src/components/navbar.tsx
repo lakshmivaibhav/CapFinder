@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useCollection, useMemoFirebase, useAuth as useFirebaseAuth } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
-import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, ShieldAlert, Zap } from 'lucide-react';
+import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, ShieldAlert, Zap, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 
@@ -41,6 +41,11 @@ export function Navbar() {
   const navItems = [
     { label: 'Console', href: '/dashboard', icon: LayoutDashboard },
     { label: 'Market', href: '/pitches', icon: Search },
+    { 
+      label: 'Hub', 
+      href: '/messages', 
+      icon: MessageSquare
+    },
     { 
       label: 'Inquiries', 
       href: '/requests', 
@@ -114,7 +119,7 @@ export function Navbar() {
             <div className="h-8 w-[1px] bg-muted mx-1 md:mx-2 hidden lg:block" />
             
             <div className="flex lg:hidden gap-1">
-               {navItems.slice(0, 2).map((item) => (
+               {navItems.slice(0, 3).map((item) => (
                  <Link key={item.href} href={item.href}>
                    <Button variant="ghost" size="icon" className={cn("h-11 w-11 rounded-xl", pathname === item.href ? "bg-primary/10 text-primary" : "text-muted-foreground")}>
                      <item.icon className="w-5 h-5" />
