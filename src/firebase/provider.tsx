@@ -50,6 +50,10 @@ export interface UserHookResult {
 
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
+/**
+ * Centrally manages Firebase service instances and basic authentication state.
+ * This provider performs no background data queries to maintain institutional privacy and rule compliance.
+ */
 export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   children,
   firebaseApp,
@@ -148,6 +152,9 @@ export const useFirebaseApp = (): FirebaseApp => {
 
 type MemoFirebase <T> = T & {__memo?: boolean};
 
+/**
+ * Stabilizes Firebase references and queries for use in real-time hooks.
+ */
 export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | (MemoFirebase<T>) {
   const memoized = useMemo(factory, deps);
   
