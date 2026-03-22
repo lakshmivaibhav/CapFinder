@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
@@ -53,44 +53,57 @@ export default function MessagesPage() {
 
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
-  // Fetch messages for the selected connection with explicit participant filter to satisfy Security Rules
+  // Fetch ALL messages for the current user using a simple participant query to ensure rule compliance and instant syncing
   const messagesQuery = useMemoFirebase(() => {
-    if (!user || !selectedConnectionId) return null;
+    if (!user) return null;
     return query(
       collection(db, 'messages'),
-      and(
-        where('connectionId', '==', selectedConnectionId),
-        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid))
-      ),
+      or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid)),
       orderBy('createdAt', 'asc'),
-      limit(100)
+      limit(500)
     );
-  }, [db, user, selectedConnectionId]);
+  }, [db, user]);
 
   const { data: messages, isLoading: loadingMessages } = useCollection(messagesQuery);
+
+  // Derive the active connection and partner identity
+  const activeConnection = useMemo(() => 
+    connections?.find(c => c.id === selectedConnectionId), 
+    [connections, selectedConnectionId]
+  );
+
+  const partnerId = useMemo(() => {
+    if (!user || !activeConnection) return null;
+    return user.uid === activeConnection.senderId ? activeConnection.receiverId : activeConnection.senderId;
+  }, [user, activeConnection]);
+
+  // Filter messages for the selected partner client-side
+  const conversationMessages = useMemo(() => {
+    if (!partnerId || !messages) return [];
+    return messages.filter(msg => 
+      (msg.senderId === user?.uid && msg.receiverId === partnerId) ||
+      (msg.senderId === partnerId && msg.receiverId === user?.uid)
+    );
+  }, [messages, user?.uid, partnerId]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages]);
+  }, [conversationMessages]);
 
-  const activeConnection = connections?.find(c => c.id === selectedConnectionId);
   const partnerName = activeConnection 
     ? (user?.uid === activeConnection.senderId ? activeConnection.startupName : activeConnection.investorEmail)
     : 'Select Contact';
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedConnectionId || !messageText.trim() || !activeConnection) return;
+    if (!user || !partnerId || !messageText.trim()) return;
 
-    const receiverId = user.uid === activeConnection.senderId ? activeConnection.receiverId : activeConnection.senderId;
-
-    // Persist message with required fields: senderId, receiverId, text, createdAt, connectionId
+    // Persist message with exactly the requested 4 fields
     addDocumentNonBlocking(collection(db, 'messages'), {
-      connectionId: selectedConnectionId,
       senderId: user.uid,
-      receiverId: receiverId,
+      receiverId: partnerId,
       text: messageText.trim(),
       createdAt: serverTimestamp(),
     });
@@ -203,8 +216,8 @@ export default function MessagesPage() {
                 <div className="max-w-4xl mx-auto space-y-6">
                   {loadingMessages ? (
                     <div className="flex justify-center p-20"><Loader2 className="animate-spin opacity-20" /></div>
-                  ) : messages && messages.length > 0 ? (
-                    messages.map((msg) => {
+                  ) : conversationMessages && conversationMessages.length > 0 ? (
+                    conversationMessages.map((msg) => {
                       const isMe = msg.senderId === user?.uid;
                       return (
                         <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
