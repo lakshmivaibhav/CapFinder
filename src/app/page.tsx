@@ -298,7 +298,7 @@ export default function HomePage() {
             <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Governance</h5>
             <div className="flex flex-col gap-5">
               <span className="text-sm font-bold text-muted-foreground hover:text-primary cursor-pointer transition-colors">Security Audit</span>
-              <span className="text-sm font-bold text-muted-foreground hover:text-primary cursor-pointer transition-colors">Privacy Policy</span>
+              <Link href="/privacy" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link>
               <span className="text-sm font-bold text-muted-foreground hover:text-primary cursor-pointer transition-colors">Terms of Service</span>
               <span className="text-sm font-bold text-muted-foreground hover:text-primary cursor-pointer transition-colors">Compliance</span>
             </div>
