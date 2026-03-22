@@ -4,35 +4,25 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useCollection, useMemoFirebase, useAuth as useFirebaseAuth } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useAuth as useFirebaseAuth } from '@/firebase';
 import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, ShieldAlert, Zap, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 
+/**
+ * Global Navigation Bar.
+ * Sanitized to remove all global Firestore queries and unread counters 
+ * to ensure rule compliance and resolve permission errors.
+ */
 export function Navbar() {
   const { user, profile, loading, emailVerified } = useAuth();
   const firebaseAuth = useFirebaseAuth();
   const pathname = usePathname();
   const router = useRouter();
-  const db = useFirestore();
 
   const handleLogout = async () => {
     await firebaseAuth.signOut();
     router.push('/');
   };
-
-  const pendingRequestsQuery = useMemoFirebase(() => {
-    if (!user?.uid || !profile?.role || profile.disabled === true || !emailVerified) return null;
-    return query(
-      collection(db, 'contactRequests'),
-      where('receiverId', '==', user.uid),
-      where('status', '==', 'pending')
-    );
-  }, [db, user, profile, emailVerified]);
-
-  const { data: pendingRequests } = useCollection(pendingRequestsQuery);
-  const requestCount = pendingRequests?.length || 0;
 
   if (!user) return null;
 
@@ -50,7 +40,6 @@ export function Navbar() {
       label: 'Inquiries', 
       href: '/requests', 
       icon: Inbox, 
-      badge: pathname === '/requests' ? 0 : requestCount, 
       show: profile?.role === 'startup' 
     },
     { 
@@ -90,13 +79,6 @@ export function Navbar() {
               >
                 <item.icon className={cn("w-4 h-4", pathname === item.href ? "text-primary" : "text-muted-foreground")} />
                 <span className="hidden xl:inline">{item.label}</span>
-                {item.badge && item.badge > 0 && (
-                  <Badge 
-                    className="absolute -top-1 -right-1 h-5 min-w-5 p-1 flex items-center justify-center bg-accent text-white border-2 border-white shadow-lg animate-bounce"
-                  >
-                    {item.badge > 9 ? '9+' : item.badge}
-                  </Badge>
-                )}
               </Button>
             </Link>
           ))}

@@ -53,6 +53,7 @@ export const FirebaseContext = createContext<FirebaseContextState | undefined>(u
 /**
  * Centrally manages Firebase service instances and basic authentication state.
  * This provider performs no background data queries to maintain institutional privacy and rule compliance.
+ * All global Firestore queries have been removed to resolve permission errors.
  */
 export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   children,
