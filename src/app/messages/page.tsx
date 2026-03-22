@@ -1,13 +1,11 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, orderBy, limit, or, and, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, or, and, serverTimestamp } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,7 +15,6 @@ import {
   Send, 
   User, 
   Loader2, 
-  Search, 
   ArrowLeft, 
   Inbox, 
   ShieldCheck,
@@ -56,8 +53,7 @@ export default function MessagesPage() {
 
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
-  // Fetch messages for the selected connection
-  // FIXED: Explicitly filter by participant IDs to comply with Security Rules 'list' requirements
+  // Fetch messages for the selected connection with explicit participant filter to satisfy Security Rules
   const messagesQuery = useMemoFirebase(() => {
     if (!user || !selectedConnectionId) return null;
     return query(
@@ -90,6 +86,7 @@ export default function MessagesPage() {
 
     const receiverId = user.uid === activeConnection.senderId ? activeConnection.receiverId : activeConnection.senderId;
 
+    // Persist message with required fields: senderId, receiverId, text, createdAt, connectionId
     addDocumentNonBlocking(collection(db, 'messages'), {
       connectionId: selectedConnectionId,
       senderId: user.uid,
@@ -127,9 +124,9 @@ export default function MessagesPage() {
                 <div className="p-8 text-center"><Loader2 className="animate-spin mx-auto opacity-20" /></div>
               ) : connections && connections.length > 0 ? (
                 connections.map((conn) => {
-                  const isInvestor = user?.uid === conn.senderId;
-                  const displayName = isInvestor ? conn.startupName : conn.investorEmail;
-                  const role = isInvestor ? 'Venture' : 'Capital Partner';
+                  const isUserInvestor = user?.uid === conn.senderId;
+                  const displayName = isUserInvestor ? conn.startupName : conn.investorEmail;
+                  const role = isUserInvestor ? 'Venture' : 'Capital Partner';
 
                   return (
                     <button
@@ -146,7 +143,7 @@ export default function MessagesPage() {
                         "w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-110",
                         selectedConnectionId === conn.id ? "bg-white/20" : "bg-muted"
                       )}>
-                        {isInvestor ? <Building className="w-6 h-6" /> : <User className="w-6 h-6" />}
+                        {isUserInvestor ? <Building className="w-6 h-6" /> : <User className="w-6 h-6" />}
                       </div>
                       <div className="overflow-hidden">
                         <p className="font-black text-sm truncate leading-none mb-1">{displayName}</p>
@@ -207,7 +204,7 @@ export default function MessagesPage() {
                   {loadingMessages ? (
                     <div className="flex justify-center p-20"><Loader2 className="animate-spin opacity-20" /></div>
                   ) : messages && messages.length > 0 ? (
-                    messages.map((msg, i) => {
+                    messages.map((msg) => {
                       const isMe = msg.senderId === user?.uid;
                       return (
                         <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
