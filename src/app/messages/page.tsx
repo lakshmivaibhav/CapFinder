@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, orderBy, limit, or, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, or, and, serverTimestamp, doc } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,12 +42,15 @@ export default function MessagesPage() {
   }, [user, authLoading, emailVerified, router]);
 
   // Fetch approved connections (contactRequests)
+  // FIXED: Nested composite filters within an explicit 'and' to comply with Firestore Query rules
   const connectionsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
       collection(db, 'contactRequests'),
-      or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid)),
-      where('status', '==', 'accepted'),
+      and(
+        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid)),
+        where('status', '==', 'accepted')
+      ),
       limit(50)
     );
   }, [db, user]);
@@ -240,6 +244,7 @@ export default function MessagesPage() {
                     className="h-14 w-14 rounded-2xl bg-primary shadow-xl shadow-primary/20 shrink-0"
                     disabled={!messageText.trim()}
                   >
+                    <span className="sr-only">Send Message</span>
                     <Send className="w-6 h-6" />
                   </Button>
                 </form>
