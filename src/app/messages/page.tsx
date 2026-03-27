@@ -224,7 +224,7 @@ export default function MessagesPage() {
           {selectedConnectionId ? (
             <>
               {/* Header */}
-              <header className="h-20 border-b bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
+              <header className="h-24 border-b bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10 shadow-sm">
                 <div className="flex items-center gap-4">
                   <Button 
                     variant="ghost" 
@@ -237,17 +237,30 @@ export default function MessagesPage() {
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
+                  
+                  {/* Identity Avatar */}
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-primary/5 flex items-center justify-center border-2 border-primary/10 overflow-hidden shrink-0 shadow-inner">
+                      <User className="w-6 h-6 text-primary opacity-40" />
+                    </div>
+                    {/* Active Status Indicator */}
+                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm" />
+                  </div>
+
                   <div className="space-y-0.5">
-                    <h3 className="font-black tracking-tight">{partnerName}</h3>
-                    <div className="flex items-center gap-2">
+                    <h3 className="font-black text-lg tracking-tight leading-none text-foreground">{partnerName}</h3>
+                    <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Active Strategic Dialogue</p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.1em] text-emerald-600">Online & Authenticated</p>
                     </div>
                   </div>
                 </div>
-                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 rounded-lg px-3 py-1 font-black text-[9px] uppercase tracking-widest">
-                  <ShieldCheck className="w-3 h-3 mr-1.5" /> Identity Verified
-                </Badge>
+                
+                <div className="hidden sm:block">
+                  <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 rounded-lg px-4 py-1.5 font-black text-[9px] uppercase tracking-[0.2em] shadow-sm">
+                    <ShieldCheck className="w-3.5 h-3.5 mr-2" /> Identity Verified
+                  </Badge>
+                </div>
               </header>
 
               {/* Dialogue Stream */}
