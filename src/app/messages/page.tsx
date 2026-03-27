@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -253,7 +252,7 @@ export default function MessagesPage() {
 
               {/* Dialogue Stream */}
               <ScrollArea className="flex-1 p-6">
-                <div className="max-w-4xl mx-auto space-y-6">
+                <div className="max-w-4xl mx-auto space-y-4">
                   {loadingMessages ? (
                     <div className="flex justify-center p-20">
                       <Loader2 className="animate-spin opacity-20" />
@@ -264,12 +263,14 @@ export default function MessagesPage() {
                       return (
                         <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
                           <div className={cn(
-                            "max-w-[80%] p-4 md:p-6 rounded-[1.5rem] shadow-sm relative group",
-                            isMe ? "bg-primary text-white rounded-tr-none" : "bg-white text-foreground rounded-tl-none"
+                            "max-w-[60%] p-3.5 rounded-[1rem] shadow-sm relative group",
+                            isMe 
+                              ? "bg-primary text-white" 
+                              : "bg-muted text-foreground"
                           )}>
-                            <p className="text-sm md:text-md font-medium leading-relaxed">{msg.text}</p>
+                            <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
                             <p className={cn(
-                              "text-[8px] font-black uppercase tracking-widest mt-2 opacity-40",
+                              "text-[8px] font-black uppercase tracking-widest mt-1.5 opacity-40",
                               isMe ? "text-right" : "text-left"
                             )}>
                               {msg.timestamp?.toDate ? format(msg.timestamp.toDate(), 'HH:mm') : 'Syncing...'}
