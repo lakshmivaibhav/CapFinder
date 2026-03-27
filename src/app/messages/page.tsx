@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, orderBy, limit, or, and, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, and, or, serverTimestamp } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,13 +24,16 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
+/**
+ * @fileOverview Secure Messaging Hub.
+ * Verified partners can engage in real-time dialogue streams.
+ * Data isolation is enforced via connectionId protocols.
+ */
 export default function MessagesPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
   const db = useFirestore();
   const router = useRouter();
   
-  // Sidebar selection stores the verified connectionId in state.
-  // This ID corresponds to the contactRequests document.
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -58,7 +61,7 @@ export default function MessagesPage() {
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
   // Message retrieval logic strictly aligned with the selected connection context.
-  // Utilizes connectionId for real-time isolation and accurate sequencing.
+  // Using connectionId for real-time isolation.
   const messagesQuery = useMemoFirebase(() => {
     if (!user || !selectedConnectionId) return null;
     return query(
@@ -69,7 +72,7 @@ export default function MessagesPage() {
     );
   }, [db, user, selectedConnectionId]);
 
-  const { data: messages, isLoading: loadingMessages } = useCollection(messagesQuery);
+  const { data: messages, isLoading: loadingMessages, error: errorMessages } = useCollection(messagesQuery);
 
   // Derive the active connection and partner identity from state
   const activeConnection = useMemo(() => 
@@ -96,7 +99,7 @@ export default function MessagesPage() {
     e.preventDefault();
     if (!user || !partnerId || !selectedConnectionId || !messageText.trim()) return;
 
-    // Standardized message persistence including connectionId and serverTimestamp for sequencing.
+    // Standardized message persistence using connectionId and serverTimestamp.
     addDocumentNonBlocking(collection(db, 'messages'), {
       connectionId: selectedConnectionId,
       senderId: user.uid,
@@ -212,7 +215,9 @@ export default function MessagesPage() {
               <ScrollArea className="flex-1 p-6">
                 <div className="max-w-4xl mx-auto space-y-6">
                   {loadingMessages ? (
-                    <div className="flex justify-center p-20"><Loader2 className="animate-spin opacity-20" /></div>
+                    <div className="flex justify-center p-20">
+                      <Loader2 className="animate-spin opacity-20" />
+                    </div>
                   ) : messages && messages.length > 0 ? (
                     messages.map((msg) => {
                       const isMe = msg.senderId === user?.uid;
@@ -236,7 +241,12 @@ export default function MessagesPage() {
                   ) : (
                     <div className="text-center py-20 flex flex-col items-center gap-4 opacity-30">
                       <Zap className="w-10 h-10 text-primary" />
-                      <p className="italic font-black text-sm uppercase tracking-widest">Initiate secure dialogue...</p>
+                      <p className="italic font-black text-sm uppercase tracking-widest">No dialogue history found.</p>
+                    </div>
+                  )}
+                  {errorMessages && (
+                    <div className="p-4 bg-destructive/10 text-destructive text-[10px] font-black uppercase tracking-widest rounded-xl text-center">
+                      Protocol Error: Verification required for this dialogue stream.
                     </div>
                   )}
                   <div ref={scrollRef} />
