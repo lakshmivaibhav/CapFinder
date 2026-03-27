@@ -26,7 +26,7 @@ import { format } from 'date-fns';
 
 /**
  * @fileOverview Secure Messaging Hub.
- * Optimized for real-time synchronization using pitchId-based isolation.
+ * Optimized for real-time synchronization and high-density professional dialogue.
  */
 export default function MessagesPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
@@ -78,21 +78,21 @@ export default function MessagesPage() {
 
   /**
    * Pitch-based query.
-   * Fetches all messages for the selected pitch context.
+   * Optimized for localized dialogue retrieval.
    */
   const messagesQuery = useMemoFirebase(() => {
-    if (!user || !selectedPitchId) return null;
+    if (!selectedPitchId) return null;
     return query(
       collection(db, 'messages'),
       where('pitchId', '==', selectedPitchId),
       orderBy('timestamp', 'asc'),
       limit(500)
     );
-  }, [db, user, selectedPitchId]);
+  }, [db, selectedPitchId]);
 
   /**
    * Manual Real-time Listener.
-   * Ensures that the messages state is updated strictly from the Firestore snapshot.
+   * Ensures high-fidelity state synchronization directly from Firestore snapshots.
    */
   useEffect(() => {
     if (!messagesQuery || !selectedPitchId) {
@@ -110,7 +110,7 @@ export default function MessagesPage() {
       setMessages(msgs);
       setLoadingMessages(false);
     }, (error) => {
-      console.error("Strategic dialogue sync error:", error);
+      console.error("Dialogue synchronization error:", error);
       setLoadingMessages(false);
     });
 
@@ -131,7 +131,7 @@ export default function MessagesPage() {
     e.preventDefault();
     if (!user || !partnerId || !selectedPitchId || !messageText.trim()) return;
 
-    // Persist strategic message using the standardized schema
+    // Persist strategic message using standardized schema
     addDocumentNonBlocking(collection(db, 'messages'), {
       pitchId: selectedPitchId,
       senderId: user.uid,
@@ -252,7 +252,7 @@ export default function MessagesPage() {
 
               {/* Dialogue Stream */}
               <ScrollArea className="flex-1 p-6">
-                <div className="max-w-4xl mx-auto space-y-4">
+                <div className="max-w-4xl mx-auto space-y-2">
                   {loadingMessages ? (
                     <div className="flex justify-center p-20">
                       <Loader2 className="animate-spin opacity-20" />
@@ -263,14 +263,14 @@ export default function MessagesPage() {
                       return (
                         <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
                           <div className={cn(
-                            "max-w-[60%] p-3.5 rounded-[1rem] shadow-sm relative group",
+                            "max-w-[60%] p-3.5 rounded-2xl shadow-sm relative group transition-all",
                             isMe 
                               ? "bg-primary text-white" 
-                              : "bg-muted text-foreground"
+                              : "bg-white text-foreground border border-muted"
                           )}>
                             <p className="text-sm font-medium leading-relaxed">{msg.text}</p>
                             <p className={cn(
-                              "text-[8px] font-black uppercase tracking-widest mt-1.5 opacity-40",
+                              "text-[8px] font-black uppercase tracking-widest mt-1 opacity-40",
                               isMe ? "text-right" : "text-left"
                             )}>
                               {msg.timestamp?.toDate ? format(msg.timestamp.toDate(), 'HH:mm') : 'Syncing...'}
@@ -285,7 +285,7 @@ export default function MessagesPage() {
                       <p className="italic font-black text-sm uppercase tracking-widest">Initiate secure dialogue.</p>
                     </div>
                   )}
-                  <div ref={scrollRef} />
+                  <div ref={scrollRef} className="h-4" />
                 </div>
               </ScrollArea>
 
