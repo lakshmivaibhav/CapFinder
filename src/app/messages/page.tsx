@@ -252,7 +252,7 @@ export default function MessagesPage() {
 
               {/* Dialogue Stream */}
               <ScrollArea className="flex-1 p-6">
-                <div className="max-w-4xl mx-auto space-y-2">
+                <div className="max-w-4xl mx-auto space-y-1">
                   {loadingMessages ? (
                     <div className="flex justify-center p-20">
                       <Loader2 className="animate-spin opacity-20" />
@@ -263,7 +263,7 @@ export default function MessagesPage() {
                       return (
                         <div key={msg.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
                           <div className={cn(
-                            "max-w-[60%] p-3.5 rounded-2xl shadow-sm relative group transition-all",
+                            "max-w-[60%] p-3 px-4 rounded-2xl shadow-sm relative group transition-all",
                             isMe 
                               ? "bg-primary text-white" 
                               : "bg-white text-foreground border border-muted"
@@ -291,19 +291,19 @@ export default function MessagesPage() {
 
               {/* Message Input */}
               <footer className="p-6 bg-white border-t">
-                <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex gap-4">
+                <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative flex items-center bg-muted/30 rounded-full p-1.5 shadow-sm border border-muted group focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                   <Input 
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     placeholder="Enter strategic message..."
-                    className="h-14 rounded-2xl bg-muted/30 border-none shadow-inner px-6 text-md font-medium"
+                    className="flex-1 h-12 bg-transparent border-none shadow-none focus-visible:ring-0 px-6 text-md font-medium"
                   />
                   <Button 
                     type="submit" 
-                    className="h-14 w-14 rounded-2xl bg-primary shadow-xl shadow-primary/20 shrink-0"
+                    className="h-12 w-12 rounded-full bg-primary shadow-lg shadow-primary/20 shrink-0 transition-transform active:scale-95"
                     disabled={!messageText.trim()}
                   >
-                    <Send className="w-6 h-6" />
+                    <Send className="w-5 h-5" />
                   </Button>
                 </form>
               </footer>
