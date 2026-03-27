@@ -10,6 +10,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import EmojiPicker, { Theme } from 'emoji-picker-react';
 import { 
   MessageSquare, 
   Send, 
@@ -19,7 +21,8 @@ import {
   Inbox, 
   ShieldCheck,
   Building,
-  Zap
+  Zap,
+  Smile
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -38,6 +41,7 @@ export default function MessagesPage() {
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Verification of tactical alignment
@@ -305,11 +309,30 @@ export default function MessagesPage() {
               {/* Message Input */}
               <footer className="p-6 bg-white border-t">
                 <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative flex items-center bg-muted/30 rounded-full p-1.5 shadow-sm border border-muted group focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                  <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button type="button" variant="ghost" size="icon" className="h-10 w-10 rounded-full shrink-0 text-muted-foreground hover:text-primary transition-colors ml-1">
+                        <Smile className="w-5 h-5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent side="top" align="start" className="p-0 border-none shadow-2xl mb-4">
+                      <EmojiPicker 
+                        onEmojiClick={(emojiData) => {
+                          setMessageText(prev => prev + emojiData.emoji);
+                          setIsEmojiPickerOpen(false);
+                        }}
+                        theme={Theme.LIGHT}
+                        width={350}
+                        height={450}
+                      />
+                    </PopoverContent>
+                  </Popover>
+
                   <Input 
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
                     placeholder="Enter strategic message..."
-                    className="flex-1 h-12 bg-transparent border-none shadow-none focus-visible:ring-0 px-6 text-md font-medium"
+                    className="flex-1 h-12 bg-transparent border-none shadow-none focus-visible:ring-0 px-4 text-md font-medium"
                   />
                   <Button 
                     type="submit" 
