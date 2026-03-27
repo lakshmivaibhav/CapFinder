@@ -26,8 +26,8 @@ import { format } from 'date-fns';
 
 /**
  * @fileOverview Secure Messaging Hub.
- * Verified partners can engage in real-time dialogue streams.
- * Data is grouped by pitchId and sequenced by timestamp.
+ * Optimized for real-time synchronization of sent and received strategic communications.
+ * Uses a participant-locked query to satisfy security rules while ensuring immediate visibility.
  */
 export default function MessagesPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
@@ -60,7 +60,7 @@ export default function MessagesPage() {
 
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
-  // Derive the active connection context from state
+  // Derive the active connection context
   const activeConnection = useMemo(() => 
     connections?.find(c => c.id === selectedConnectionId), 
     [connections, selectedConnectionId]
@@ -72,21 +72,28 @@ export default function MessagesPage() {
     return user.uid === activeConnection.senderId ? activeConnection.receiverId : activeConnection.senderId;
   }, [user, activeConnection]);
 
-  // Message retrieval logic strictly aligned with the pitch context and participant rules.
+  /**
+   * Participant-locked query. 
+   * Fetches all messages where the user is a participant to satisfy security rules.
+   * Client-side filtering is then applied to isolate the specific pitch dialogue.
+   */
   const messagesQuery = useMemoFirebase(() => {
-    if (!user || !selectedPitchId || !partnerId) return null;
+    if (!user || !selectedConnectionId) return null;
     return query(
       collection(db, 'messages'),
-      and(
-        where('pitchId', '==', selectedPitchId),
-        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid))
-      ),
+      or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid)),
       orderBy('timestamp', 'asc'),
       limit(500)
     );
-  }, [db, user, selectedPitchId, partnerId]);
+  }, [db, user, selectedConnectionId]);
 
-  const { data: messages, isLoading: loadingMessages, error: errorMessages } = useCollection(messagesQuery);
+  const { data: rawMessages, isLoading: loadingMessages } = useCollection(messagesQuery);
+
+  // Filter messages by current pitch context client-side for immediate reactivity
+  const messages = useMemo(() => {
+    if (!rawMessages || !selectedPitchId) return [];
+    return rawMessages.filter(m => m.pitchId === selectedPitchId);
+  }, [rawMessages, selectedPitchId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -102,7 +109,7 @@ export default function MessagesPage() {
     e.preventDefault();
     if (!user || !partnerId || !selectedPitchId || !messageText.trim()) return;
 
-    // Standardized message persistence using pitchId and timestamp.
+    // Persist strategic message using the standardized schema
     addDocumentNonBlocking(collection(db, 'messages'), {
       pitchId: selectedPitchId,
       senderId: user.uid,
@@ -122,7 +129,7 @@ export default function MessagesPage() {
       <Navbar />
 
       <main className="flex-1 flex overflow-hidden">
-        {/* Sidebar: Connection List */}
+        {/* Sidebar: Verified Connections */}
         <aside className={cn(
           "w-full md:w-96 border-r bg-white flex flex-col transition-all duration-300",
           selectedConnectionId && "hidden md:flex"
@@ -184,14 +191,14 @@ export default function MessagesPage() {
           </ScrollArea>
         </aside>
 
-        {/* Chat Area */}
+        {/* Chat Interface */}
         <section className={cn(
           "flex-1 flex flex-col bg-[#f8fafc] relative",
           !selectedConnectionId && "hidden md:flex"
         )}>
           {selectedConnectionId ? (
             <>
-              {/* Chat Header */}
+              {/* Header */}
               <header className="h-20 border-b bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10">
                 <div className="flex items-center gap-4">
                   <Button 
@@ -206,7 +213,7 @@ export default function MessagesPage() {
                     <h3 className="font-black tracking-tight">{partnerName}</h3>
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Encrypted Strategic Dialogue</p>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Active Strategic Dialogue</p>
                     </div>
                   </div>
                 </div>
@@ -215,14 +222,14 @@ export default function MessagesPage() {
                 </Badge>
               </header>
 
-              {/* Message List */}
+              {/* Dialogue Stream */}
               <ScrollArea className="flex-1 p-6">
                 <div className="max-w-4xl mx-auto space-y-6">
                   {loadingMessages ? (
                     <div className="flex justify-center p-20">
                       <Loader2 className="animate-spin opacity-20" />
                     </div>
-                  ) : messages && messages.length > 0 ? (
+                  ) : messages.length > 0 ? (
                     messages.map((msg) => {
                       const isMe = msg.senderId === user?.uid;
                       return (
@@ -245,19 +252,14 @@ export default function MessagesPage() {
                   ) : (
                     <div className="text-center py-20 flex flex-col items-center gap-4 opacity-30">
                       <Zap className="w-10 h-10 text-primary" />
-                      <p className="italic font-black text-sm uppercase tracking-widest">No dialogue history found.</p>
-                    </div>
-                  )}
-                  {errorMessages && (
-                    <div className="p-4 bg-destructive/10 text-destructive text-[10px] font-black uppercase tracking-widest rounded-xl text-center">
-                      Protocol Error: Verification required for this dialogue stream.
+                      <p className="italic font-black text-sm uppercase tracking-widest">Initiate secure dialogue.</p>
                     </div>
                   )}
                   <div ref={scrollRef} />
                 </div>
               </ScrollArea>
 
-              {/* Input Area */}
+              {/* Message Input */}
               <footer className="p-6 bg-white border-t">
                 <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex gap-4">
                   <Input 
@@ -271,7 +273,6 @@ export default function MessagesPage() {
                     className="h-14 w-14 rounded-2xl bg-primary shadow-xl shadow-primary/20 shrink-0"
                     disabled={!messageText.trim()}
                   >
-                    <span className="sr-only">Send Message</span>
                     <Send className="w-6 h-6" />
                   </Button>
                 </form>
@@ -286,7 +287,7 @@ export default function MessagesPage() {
               <div className="max-w-sm space-y-2">
                 <h3 className="text-2xl font-black tracking-tight">Professional Message Hub</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed italic border-l-4 border-primary/20 pl-6">
-                  Select a verified connection from the sidebar to engage in secure, identity-verified communications.
+                  Select a verified partner to initiate secure communications.
                 </p>
               </div>
             </div>
