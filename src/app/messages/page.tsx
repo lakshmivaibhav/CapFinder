@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, orderBy, limit, and, or, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, and, or, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,6 +36,8 @@ export default function MessagesPage() {
   
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -85,7 +88,32 @@ export default function MessagesPage() {
     );
   }, [db, user, selectedPitchId]);
 
-  const { data: messages, isLoading: loadingMessages } = useCollection(messagesQuery);
+  /**
+   * Manual Real-time Listener.
+   * Ensures that the messages state is updated strictly from the Firestore snapshot.
+   */
+  useEffect(() => {
+    if (!messagesQuery) {
+      setMessages([]);
+      setLoadingMessages(false);
+      return;
+    }
+
+    setLoadingMessages(true);
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setMessages(msgs);
+      setLoadingMessages(false);
+    }, (error) => {
+      console.error("Strategic dialogue sync error:", error);
+      setLoadingMessages(false);
+    });
+
+    return () => unsubscribe();
+  }, [messagesQuery]);
 
   useEffect(() => {
     if (scrollRef.current) {
