@@ -26,8 +26,7 @@ import { format } from 'date-fns';
 
 /**
  * @fileOverview Secure Messaging Hub.
- * Optimized for real-time synchronization of sent and received strategic communications.
- * Uses a participant-locked query to satisfy security rules while ensuring immediate visibility.
+ * Optimized for real-time synchronization using pitchId-based isolation.
  */
 export default function MessagesPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
@@ -73,27 +72,20 @@ export default function MessagesPage() {
   }, [user, activeConnection]);
 
   /**
-   * Participant-locked query. 
-   * Fetches all messages where the user is a participant to satisfy security rules.
-   * Client-side filtering is then applied to isolate the specific pitch dialogue.
+   * Pitch-based query.
+   * Fetches all messages for the selected pitch context.
    */
   const messagesQuery = useMemoFirebase(() => {
-    if (!user || !selectedConnectionId) return null;
+    if (!user || !selectedPitchId) return null;
     return query(
       collection(db, 'messages'),
-      or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid)),
+      where('pitchId', '==', selectedPitchId),
       orderBy('timestamp', 'asc'),
       limit(500)
     );
-  }, [db, user, selectedConnectionId]);
+  }, [db, user, selectedPitchId]);
 
-  const { data: rawMessages, isLoading: loadingMessages } = useCollection(messagesQuery);
-
-  // Filter messages by current pitch context client-side for immediate reactivity
-  const messages = useMemo(() => {
-    if (!rawMessages || !selectedPitchId) return [];
-    return rawMessages.filter(m => m.pitchId === selectedPitchId);
-  }, [rawMessages, selectedPitchId]);
+  const { data: messages, isLoading: loadingMessages } = useCollection(messagesQuery);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -229,7 +221,7 @@ export default function MessagesPage() {
                     <div className="flex justify-center p-20">
                       <Loader2 className="animate-spin opacity-20" />
                     </div>
-                  ) : messages.length > 0 ? (
+                  ) : messages && messages.length > 0 ? (
                     messages.map((msg) => {
                       const isMe = msg.senderId === user?.uid;
                       return (
