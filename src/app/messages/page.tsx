@@ -27,7 +27,7 @@ import { format } from 'date-fns';
 /**
  * @fileOverview Secure Messaging Hub.
  * Verified partners can engage in real-time dialogue streams.
- * Data isolation is enforced via connectionId protocols.
+ * Data is grouped by pitchId and sequenced by timestamp.
  */
 export default function MessagesPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
@@ -60,30 +60,33 @@ export default function MessagesPage() {
 
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
-  // Message retrieval logic strictly aligned with the selected connection context.
-  // Using connectionId for real-time isolation.
-  const messagesQuery = useMemoFirebase(() => {
-    if (!user || !selectedConnectionId) return null;
-    return query(
-      collection(db, 'messages'),
-      where('connectionId', '==', selectedConnectionId),
-      orderBy('createdAt', 'asc'),
-      limit(500)
-    );
-  }, [db, user, selectedConnectionId]);
-
-  const { data: messages, isLoading: loadingMessages, error: errorMessages } = useCollection(messagesQuery);
-
-  // Derive the active connection and partner identity from state
+  // Derive the active connection context from state
   const activeConnection = useMemo(() => 
     connections?.find(c => c.id === selectedConnectionId), 
     [connections, selectedConnectionId]
   );
 
+  const selectedPitchId = activeConnection?.pitchId;
   const partnerId = useMemo(() => {
     if (!user || !activeConnection) return null;
     return user.uid === activeConnection.senderId ? activeConnection.receiverId : activeConnection.senderId;
   }, [user, activeConnection]);
+
+  // Message retrieval logic strictly aligned with the pitch context and participant rules.
+  const messagesQuery = useMemoFirebase(() => {
+    if (!user || !selectedPitchId || !partnerId) return null;
+    return query(
+      collection(db, 'messages'),
+      and(
+        where('pitchId', '==', selectedPitchId),
+        or(where('senderId', '==', user.uid), where('receiverId', '==', user.uid))
+      ),
+      orderBy('timestamp', 'asc'),
+      limit(500)
+    );
+  }, [db, user, selectedPitchId, partnerId]);
+
+  const { data: messages, isLoading: loadingMessages, error: errorMessages } = useCollection(messagesQuery);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -97,15 +100,16 @@ export default function MessagesPage() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !partnerId || !selectedConnectionId || !messageText.trim()) return;
+    if (!user || !partnerId || !selectedPitchId || !messageText.trim()) return;
 
-    // Standardized message persistence using connectionId and serverTimestamp.
+    // Standardized message persistence using pitchId and timestamp.
     addDocumentNonBlocking(collection(db, 'messages'), {
-      connectionId: selectedConnectionId,
+      pitchId: selectedPitchId,
       senderId: user.uid,
       receiverId: partnerId,
       text: messageText.trim(),
-      createdAt: serverTimestamp(),
+      timestamp: serverTimestamp(),
+      read: false
     });
 
     setMessageText('');
@@ -202,7 +206,7 @@ export default function MessagesPage() {
                     <h3 className="font-black tracking-tight">{partnerName}</h3>
                     <div className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Secure Encryption Active</p>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Encrypted Strategic Dialogue</p>
                     </div>
                   </div>
                 </div>
@@ -232,7 +236,7 @@ export default function MessagesPage() {
                               "text-[8px] font-black uppercase tracking-widest mt-2 opacity-40",
                               isMe ? "text-right" : "text-left"
                             )}>
-                              {msg.createdAt?.toDate ? format(msg.createdAt.toDate(), 'HH:mm') : 'Syncing...'}
+                              {msg.timestamp?.toDate ? format(msg.timestamp.toDate(), 'HH:mm') : 'Syncing...'}
                             </p>
                           </div>
                         </div>
