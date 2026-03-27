@@ -35,10 +35,14 @@ export default function MessagesPage() {
   const router = useRouter();
   
   const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+  const [selectedPitchId, setSelectedPitchId] = useState<string | null>(null);
   const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Verification of tactical alignment
+  console.log("Selected Pitch:", selectedPitchId);
 
   useEffect(() => {
     if (!authLoading) {
@@ -68,7 +72,6 @@ export default function MessagesPage() {
     [connections, selectedConnectionId]
   );
 
-  const selectedPitchId = activeConnection?.pitchId;
   const partnerId = useMemo(() => {
     if (!user || !activeConnection) return null;
     return user.uid === activeConnection.senderId ? activeConnection.receiverId : activeConnection.senderId;
@@ -93,7 +96,7 @@ export default function MessagesPage() {
    * Ensures that the messages state is updated strictly from the Firestore snapshot.
    */
   useEffect(() => {
-    if (!messagesQuery) {
+    if (!messagesQuery || !selectedPitchId) {
       setMessages([]);
       setLoadingMessages(false);
       return;
@@ -113,7 +116,7 @@ export default function MessagesPage() {
     });
 
     return () => unsubscribe();
-  }, [messagesQuery]);
+  }, [messagesQuery, selectedPitchId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -175,7 +178,10 @@ export default function MessagesPage() {
                   return (
                     <button
                       key={conn.id}
-                      onClick={() => setSelectedConnectionId(conn.id)}
+                      onClick={() => {
+                        setSelectedConnectionId(conn.id);
+                        setSelectedPitchId(conn.pitchId);
+                      }}
                       className={cn(
                         "w-full p-4 rounded-2xl flex items-center gap-4 transition-all text-left group",
                         selectedConnectionId === conn.id 
@@ -225,7 +231,10 @@ export default function MessagesPage() {
                     variant="ghost" 
                     size="icon" 
                     className="md:hidden rounded-xl" 
-                    onClick={() => setSelectedConnectionId(null)}
+                    onClick={() => {
+                      setSelectedConnectionId(null);
+                      setSelectedPitchId(null);
+                    }}
                   >
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
