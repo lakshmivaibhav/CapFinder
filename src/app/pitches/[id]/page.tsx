@@ -336,6 +336,7 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                       </div>
                     ))}
                   </div>
+                  <p className="text-[9px] font-medium text-white/40 italic mt-2 border-t border-white/5 pt-4">This score is based on completeness and clarity of the pitch.</p>
                 </div>
               </div>
               <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[2rem] border border-white/20 shadow-2xl min-w-[280px] text-center space-y-2 self-start md:self-end">
