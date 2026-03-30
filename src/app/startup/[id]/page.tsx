@@ -82,6 +82,12 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
   const scoreLabel = maturityIndex >= 8 ? "Strong" : maturityIndex >= 5 ? "Moderate" : "Needs Improvement";
   const scoreColor = maturityIndex >= 8 ? "text-emerald-400" : maturityIndex >= 5 ? "text-amber-400" : "text-red-400";
   const barColor = maturityIndex >= 8 ? "bg-emerald-400" : maturityIndex >= 5 ? "bg-amber-400" : "bg-red-400";
+  
+  const scoreBadgeStyles = maturityIndex >= 8 
+    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" 
+    : maturityIndex >= 5 
+      ? "bg-amber-500/20 text-amber-400 border-amber-500/30" 
+      : "bg-red-500/20 text-red-400 border-red-500/30";
 
   const breakdown = useMemo(() => {
     if (!pitch) return [];
@@ -260,11 +266,14 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
                       </div>
                     </div>
                     <div className="h-12 w-[1px] bg-white/10" />
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Quality Rating</p>
-                      <p className={cn("text-xl md:text-2xl font-black uppercase tracking-tighter", scoreColor)}>
+                      <div className={cn(
+                        "px-4 py-1.5 rounded-xl border text-[11px] font-black uppercase tracking-[0.1em] inline-block shadow-md",
+                        scoreBadgeStyles
+                      )}>
                         {scoreLabel}
-                      </p>
+                      </div>
                     </div>
                   </div>
 
