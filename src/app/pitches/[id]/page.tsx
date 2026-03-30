@@ -83,6 +83,32 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
   const scoreLabel = maturityIndex >= 8 ? "Strong" : maturityIndex >= 5 ? "Moderate" : "Needs Improvement";
   const scoreColor = maturityIndex >= 8 ? "text-emerald-400" : maturityIndex >= 5 ? "text-amber-400" : "text-red-400";
 
+  const breakdown = useMemo(() => {
+    if (!pitch) return [];
+    return [
+      { 
+        label: "Founder Commitment", 
+        met: (pitch.founderInvestment && Number(pitch.founderInvestment) > 0) || (pitch.noInvestmentReason && pitch.noInvestmentReason.length > 0),
+        missingLabel: "Missing Founder Investment"
+      },
+      { 
+        label: "Fund Usage", 
+        met: pitch.fundUsage && pitch.fundUsage.length > 20,
+        missingLabel: "Weak Fund Allocation Plan"
+      },
+      { 
+        label: "Vision", 
+        met: pitch.longTermVision && pitch.longTermVision.length > 20,
+        missingLabel: "Weak Long-Term Vision"
+      },
+      { 
+        label: "Description", 
+        met: pitch.description && pitch.description.length > 50,
+        missingLabel: "Brief Narrative"
+      }
+    ];
+  }, [pitch]);
+
   const handleShowInterest = () => {
     if (!user || !pitch || isInterested) return;
     addDocumentNonBlocking(collection(db, 'interests'), {
@@ -253,24 +279,45 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                 </h1>
                 
                 {/* Investor Score display */}
-                <div className="mt-8 flex items-center gap-6 p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 w-fit">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Investor Score</p>
-                    <div className="flex items-end gap-2">
-                      <span className="text-4xl font-black text-white">{maturityIndex}</span>
-                      <span className="text-xl font-bold text-white/40 mb-1">/ 10</span>
+                <div className="mt-8 flex flex-col gap-6 p-8 rounded-[2rem] bg-white/5 backdrop-blur-sm border border-white/10 w-fit">
+                  <div className="flex items-center gap-8">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Investor Score</p>
+                      <div className="flex items-end gap-2">
+                        <span className="text-4xl font-black text-white">{maturityIndex}</span>
+                        <span className="text-xl font-bold text-white/40 mb-1">/ 10</span>
+                      </div>
+                    </div>
+                    <div className="h-10 w-[1px] bg-white/10" />
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Quality Rating</p>
+                      <p className={cn("text-xl font-black uppercase tracking-tighter", scoreColor)}>
+                        {scoreLabel}
+                      </p>
                     </div>
                   </div>
-                  <div className="h-10 w-[1px] bg-white/10" />
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Quality Rating</p>
-                    <p className={cn("text-xl font-black uppercase tracking-tighter", scoreColor)}>
-                      {scoreLabel}
-                    </p>
+
+                  {/* Score Breakdown */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 pt-6 border-t border-white/10">
+                    {breakdown.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        {item.met ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-400 shrink-0" />
+                        )}
+                        <span className={cn(
+                          "text-[10px] font-black uppercase tracking-widest",
+                          item.met ? "text-white/80" : "text-red-400"
+                        )}>
+                          {item.met ? item.label : item.missingLabel}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
-              <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[2rem] border border-white/20 shadow-2xl min-w-[280px] text-center space-y-2">
+              <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[2rem] border border-white/20 shadow-2xl min-w-[280px] text-center space-y-2 self-start md:self-end">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">Target Capital</p>
                 <p className="text-4xl md:text-5xl font-black text-white tracking-tighter">
                   ${pitch.fundingNeeded?.toLocaleString()}
