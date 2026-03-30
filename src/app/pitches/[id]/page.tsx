@@ -80,6 +80,9 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
     return parseFloat(((score / 8) * 10).toFixed(1));
   }, [pitch]);
 
+  const scoreLabel = maturityIndex >= 8 ? "Strong" : maturityIndex >= 5 ? "Moderate" : "Needs Improvement";
+  const scoreColor = maturityIndex >= 8 ? "text-emerald-400" : maturityIndex >= 5 ? "text-amber-400" : "text-red-400";
+
   const handleShowInterest = () => {
     if (!user || !pitch || isInterested) return;
     addDocumentNonBlocking(collection(db, 'interests'), {
@@ -244,13 +247,28 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                   <Badge className="bg-emerald-500/20 backdrop-blur-md text-emerald-400 border-emerald-500/30 px-5 py-2 font-black uppercase tracking-[0.2em] text-[10px] rounded-lg">
                     <ShieldCheck className="w-3.5 h-3.5 mr-2" /> Verified ID
                   </Badge>
-                  <Badge className="bg-accent/20 backdrop-blur-md text-accent border-accent/30 px-5 py-2 font-black uppercase tracking-[0.2em] text-[10px] rounded-lg">
-                    Maturity: {maturityIndex}/10
-                  </Badge>
                 </div>
                 <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-none text-white drop-shadow-2xl">
                   {pitch.startupName}
                 </h1>
+                
+                {/* Investor Score display */}
+                <div className="mt-8 flex items-center gap-6 p-6 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 w-fit">
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Investor Score</p>
+                    <div className="flex items-end gap-2">
+                      <span className="text-4xl font-black text-white">{maturityIndex}</span>
+                      <span className="text-xl font-bold text-white/40 mb-1">/ 10</span>
+                    </div>
+                  </div>
+                  <div className="h-10 w-[1px] bg-white/10" />
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Quality Rating</p>
+                    <p className={cn("text-xl font-black uppercase tracking-tighter", scoreColor)}>
+                      {scoreLabel}
+                    </p>
+                  </div>
+                </div>
               </div>
               <div className="bg-white/10 backdrop-blur-xl p-8 rounded-[2rem] border border-white/20 shadow-2xl min-w-[280px] text-center space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60">Target Capital</p>
