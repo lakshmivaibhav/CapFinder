@@ -285,8 +285,8 @@ export default function PitchDetailsPage({ params }: { params: Promise<{ id: str
                   {pitch.startupName}
                 </h1>
                 
-                {/* Investor Score display */}
-                <div className="mt-8 flex flex-col gap-6 p-8 rounded-[2rem] bg-white/5 backdrop-blur-sm border border-white/10 w-fit min-w-[320px]">
+                {/* Investor Maturity Card (Premium) */}
+                <div className="mt-8 flex flex-col gap-6 p-8 rounded-[2rem] bg-white/10 backdrop-blur-xl border border-white/20 w-fit min-w-[320px] shadow-2xl shadow-black/20">
                   <div className="flex items-center gap-8">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Investor Score</p>
