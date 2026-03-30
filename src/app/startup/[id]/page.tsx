@@ -8,7 +8,7 @@ import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info, ShieldCheck, Image as ImageIcon } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info, ShieldCheck, Image as ImageIcon, Wallet, PieChart, FastForward } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -233,6 +233,56 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
                     </div>
                     <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground font-black">Strategic Sector</p>
                     <p className="text-4xl font-black text-foreground tracking-tight">{pitch.category || pitch.industry || 'Other'}</p>
+                  </div>
+                </div>
+
+                {/* Strategic Roadmap Section */}
+                <div className="space-y-10 pt-10 border-t border-dashed">
+                  <div className="space-y-6">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary flex items-center gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full" /> Capital Alignment
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="p-8 bg-muted/10 rounded-3xl border space-y-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                          <Wallet className="w-3.5 h-3.5" /> Founder Commitment
+                        </p>
+                        {pitch.founderInvestment && Number(pitch.founderInvestment) > 0 ? (
+                          <p className="text-xl font-black text-foreground">
+                            ${Number(pitch.founderInvestment).toLocaleString()}
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            <Badge variant="outline" className="text-destructive border-destructive/20 bg-destructive/5 uppercase font-black text-[8px] px-2 py-0.5 rounded-lg">No personal investment</Badge>
+                            <p className="text-sm text-muted-foreground italic leading-relaxed">
+                              {pitch.noInvestmentReason || "No rationale provided."}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-8 bg-muted/10 rounded-3xl border space-y-3">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                          <PieChart className="w-3.5 h-3.5" /> Deployment Strategy
+                        </p>
+                        <p className="text-sm text-foreground font-medium leading-relaxed">
+                          {pitch.fundUsage || "Allocation details restricted to authenticated partners."}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary flex items-center gap-3">
+                      <div className="w-2 h-2 bg-primary rounded-full" /> Strategic Outlook
+                    </h3>
+                    <div className="p-8 md:p-10 bg-muted/10 rounded-[2.5rem] border border-muted/50 space-y-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <FastForward className="w-3.5 h-3.5 text-primary" /> Long-Term Vision (3–10 Years)
+                      </p>
+                      <p className="text-lg md:text-xl text-foreground/80 leading-relaxed italic font-medium">
+                        &quot;{pitch.longTermVision || "Roadmap details restricted to verified partners."}&quot;
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
