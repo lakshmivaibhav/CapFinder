@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from 'react';
+import { use, useState, useMemo } from 'react';
 import { doc, collection, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
@@ -49,6 +49,35 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
   }, [db, user, isInvestor, id, pitch]);
   const { data: contactRequests } = useCollection(contactRequestsQuery);
   const contactRequest = contactRequests?.[0];
+
+  const maturityIndex = useMemo(() => {
+    if (!pitch) return 0;
+    let score = 0;
+    
+    if (pitch.founderInvestment && Number(pitch.founderInvestment) > 0) {
+      score += 2;
+    } else if (pitch.noInvestmentReason && pitch.noInvestmentReason.length > 0) {
+      score += 1;
+    }
+
+    if (pitch.fundUsage && pitch.fundUsage.length > 20) {
+      score += 2;
+    }
+
+    if (pitch.longTermVision && pitch.longTermVision.length > 20) {
+      score += 2;
+    }
+
+    if (pitch.description && pitch.description.length > 50) {
+      score += 1;
+    }
+
+    if (pitch.startupName && (pitch.category || pitch.industry) && pitch.fundingNeeded) {
+      score += 1;
+    }
+
+    return parseFloat(((score / 8) * 10).toFixed(1));
+  }, [pitch]);
 
   const handleShowInterest = () => {
     if (!user || !pitch || isInterested) return;
@@ -184,6 +213,9 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
                   </Badge>
                   <Badge className="bg-emerald-500/20 backdrop-blur-md text-emerald-400 border-emerald-500/30 px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl">
                     <ShieldCheck className="w-4 h-4 mr-2" /> Authenticated
+                  </Badge>
+                  <Badge className="bg-accent/20 backdrop-blur-md text-accent border-accent/30 px-6 py-2 text-[10px] font-black uppercase tracking-[0.2em] rounded-xl">
+                    Maturity Index: {maturityIndex}/10
                   </Badge>
                 </div>
                 <h1 className="text-5xl md:text-8xl font-black tracking-tighter leading-none text-white drop-shadow-2xl">
