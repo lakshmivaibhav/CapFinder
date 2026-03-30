@@ -81,6 +81,7 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
 
   const scoreLabel = maturityIndex >= 8 ? "Strong" : maturityIndex >= 5 ? "Moderate" : "Needs Improvement";
   const scoreColor = maturityIndex >= 8 ? "text-emerald-400" : maturityIndex >= 5 ? "text-amber-400" : "text-red-400";
+  const barColor = maturityIndex >= 8 ? "bg-emerald-400" : maturityIndex >= 5 ? "bg-amber-400" : "bg-red-400";
 
   const breakdown = useMemo(() => {
     if (!pitch) return [];
@@ -249,7 +250,7 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
                 </h1>
 
                 {/* Investor Score display */}
-                <div className="mt-8 flex flex-col gap-8 p-10 rounded-[2.5rem] bg-white/5 backdrop-blur-sm border border-white/10 w-fit">
+                <div className="mt-8 flex flex-col gap-8 p-10 rounded-[2.5rem] bg-white/5 backdrop-blur-sm border border-white/10 w-fit min-w-[360px]">
                   <div className="flex items-center gap-10">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60">Investor Score</p>
@@ -265,6 +266,17 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
                         {scoreLabel}
                       </p>
                     </div>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="w-full bg-white/10 h-2 md:h-2.5 rounded-full overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full transition-all duration-1000 ease-out",
+                        barColor
+                      )}
+                      style={{ width: `${maturityIndex * 10}%` }}
+                    />
                   </div>
 
                   {/* Score Breakdown */}
