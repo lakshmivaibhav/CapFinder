@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -10,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowLeft, Send, Sparkles, ShieldAlert, Camera, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Loader2, ArrowLeft, Send, Sparkles, ShieldAlert, Camera, Trash2, Image as ImageIcon, Wallet, PieChart, FastForward } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -48,6 +49,10 @@ export default function NewPitchPage() {
     category: '',
     contactEmail: '',
     imageURL: '',
+    founderInvestment: '',
+    noInvestmentReason: '',
+    fundUsage: '',
+    longTermVision: '',
   });
 
   const router = useRouter();
@@ -127,16 +132,34 @@ export default function NewPitchPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || (profile?.role !== 'startup' && profile?.role !== 'admin')) return;
+    
     if (!formData.category) {
       toast({ variant: "destructive", title: "Selection Required", description: "Please select a venture category." });
       return;
     }
+
+    // Validation
+    const founderInv = Number(formData.founderInvestment) || 0;
+    if (founderInv <= 0 && !formData.noInvestmentReason.trim()) {
+      toast({ variant: "destructive", title: "Rationale Required", description: "Please explain your personal investment status." });
+      return;
+    }
+    if (!formData.fundUsage.trim()) {
+      toast({ variant: "destructive", title: "Allocation Required", description: "Please specify how you will use the investment." });
+      return;
+    }
+    if (!formData.longTermVision.trim()) {
+      toast({ variant: "destructive", title: "Vision Required", description: "Please describe your long-term vision." });
+      return;
+    }
+
     setLoading(true);
     
     try {
       await addDocumentNonBlocking(collection(db, 'pitches'), {
         ...formData,
         fundingNeeded: Number(formData.fundingNeeded) || 0,
+        founderInvestment: Number(formData.founderInvestment) || 0,
         ownerVerified: !!profile?.verified,
         industry: formData.category, 
         ownerId: user.uid,
@@ -275,19 +298,79 @@ export default function NewPitchPage() {
               />
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
+            {/* Strategic Details Section */}
+            <div className="space-y-8 pt-6 border-t border-dashed">
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <Label htmlFor="founderInvestment" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <Wallet className="w-4 h-4 text-primary" /> Founder Commitment ($)
+                  </Label>
+                  <Input 
+                    id="founderInvestment" 
+                    type="number"
+                    className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium"
+                    value={formData.founderInvestment}
+                    onChange={(e) => setFormData({...formData, founderInvestment: e.target.value})}
+                    placeholder="Total personal capital invested"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <Label htmlFor="fundingNeeded" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                    <PieChart className="w-4 h-4 text-primary" /> Target Capital ($)
+                  </Label>
+                  <Input 
+                    id="fundingNeeded" 
+                    required
+                    type="number"
+                    className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-xl font-black"
+                    value={formData.fundingNeeded}
+                    onChange={(e) => setFormData({...formData, fundingNeeded: e.target.value})}
+                    placeholder="e.g. 1000000"
+                  />
+                </div>
+              </div>
+
+              {(formData.founderInvestment === '' || Number(formData.founderInvestment) === 0) && (
+                <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <Label htmlFor="noInvestmentReason" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Investment Rationale</Label>
+                  <Textarea 
+                    id="noInvestmentReason" 
+                    className="min-h-[120px] rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium italic p-6"
+                    value={formData.noInvestmentReason}
+                    onChange={(e) => setFormData({...formData, noInvestmentReason: e.target.value})}
+                    placeholder="Provide context regarding the lack of personal capital commitment..."
+                  />
+                </div>
+              )}
+
               <div className="space-y-3">
-                <Label htmlFor="fundingNeeded" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Target Capital ($)</Label>
-                <Input 
-                  id="fundingNeeded" 
+                <Label htmlFor="fundUsage" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <PieChart className="w-4 h-4 text-primary" /> Capital Allocation Strategy
+                </Label>
+                <Textarea 
+                  id="fundUsage" 
                   required
-                  type="number"
-                  className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-xl font-black"
-                  value={formData.fundingNeeded}
-                  onChange={(e) => setFormData({...formData, fundingNeeded: e.target.value})}
-                  placeholder="e.g. 1000000"
+                  className="min-h-[150px] rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium italic p-6"
+                  value={formData.fundUsage}
+                  onChange={(e) => setFormData({...formData, fundUsage: e.target.value})}
+                  placeholder="Describe how the investment will be utilized (e.g., 40% Product, 30% Marketing)..."
                 />
               </div>
+
+              <div className="space-y-3">
+                <Label htmlFor="longTermVision" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  <FastForward className="w-4 h-4 text-primary" /> Strategic Vision (3–10 Years)
+                </Label>
+                <Textarea 
+                  id="longTermVision" 
+                  required
+                  className="min-h-[150px] rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium italic p-6"
+                  value={formData.longTermVision}
+                  onChange={(e) => setFormData({...formData, longTermVision: e.target.value})}
+                  placeholder="Detail your roadmap for growth and market disruption..."
+                />
+              </div>
+
               <div className="space-y-3">
                 <Label htmlFor="contactEmail" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Direct Inquiry Email</Label>
                 <Input 
