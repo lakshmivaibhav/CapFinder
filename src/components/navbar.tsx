@@ -104,7 +104,12 @@ export function Navbar() {
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                 )}
               >
-                <item.icon className={cn("w-4 h-4", pathname === item.href ? "text-primary" : "text-muted-foreground")} />
+                <div className="relative">
+                  <item.icon className={cn("w-4 h-4", pathname === item.href ? "text-primary" : "text-muted-foreground")} />
+                  {hasUnreadMessages && item.href === '/messages' && (
+                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm" />
+                  )}
+                </div>
                 <span className="hidden xl:inline">{item.label}</span>
               </Button>
             </Link>
@@ -131,7 +136,12 @@ export function Navbar() {
                {navItems.slice(0, 3).map((item) => (
                  <Link key={item.href} href={item.href}>
                    <Button variant="ghost" size="icon" className={cn("h-11 w-11 rounded-xl", pathname === item.href ? "bg-primary/10 text-primary" : "text-muted-foreground")}>
-                     <item.icon className="w-5 h-5" />
+                     <div className="relative">
+                       <item.icon className="w-5 h-5" />
+                       {hasUnreadMessages && item.href === '/messages' && (
+                         <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm" />
+                       )}
+                     </div>
                    </Button>
                  </Link>
                ))}
