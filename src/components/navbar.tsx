@@ -18,9 +18,16 @@ export function Navbar() {
   const router = useRouter();
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
+  // Clear unread indicator when user navigates to the messages page
+  useEffect(() => {
+    if (pathname === '/messages') {
+      setHasUnreadMessages(false);
+    }
+  }, [pathname]);
+
   useEffect(() => {
     const checkUnreadMessages = async () => {
-      if (!user?.uid) return;
+      if (!user?.uid || pathname === '/messages') return;
       
       try {
         // Query for any messages sent to the current user that are still unread.
@@ -50,7 +57,7 @@ export function Navbar() {
     };
 
     checkUnreadMessages();
-  }, [user, db]);
+  }, [user, db, pathname]);
 
   const handleLogout = async () => {
     await firebaseAuth.signOut();
