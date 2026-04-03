@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ export function Navbar() {
   const firebaseAuth = useFirebaseAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
   const handleLogout = async () => {
     await firebaseAuth.signOut();
