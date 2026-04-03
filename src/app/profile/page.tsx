@@ -74,7 +74,7 @@ export default function ProfilePage() {
     if (!file || !user) return;
 
     if (!file.type.startsWith('image/')) {
-      toast({ variant: "destructive", title: "Invalid file", description: "Please select an image file." });
+      toast({ variant: "destructive", title: "Invalid file", description: "Please upload an image." });
       return;
     }
 
@@ -93,7 +93,7 @@ export default function ProfilePage() {
       });
 
       if (!response.ok) {
-        throw new Error('Cloudinary upload failed');
+        throw new Error('Upload failed');
       }
 
       const data = await response.json();
@@ -106,9 +106,9 @@ export default function ProfilePage() {
       
       setFormData(prev => ({ ...prev, photoURL: secureURL }));
       await refreshProfile();
-      toast({ title: "Photo Updated", description: "Your profile picture has been synchronized." });
+      toast({ title: "Photo Updated", description: "Your profile picture has been saved." });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload profile picture." });
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload photo." });
     } finally {
       setUploading(false);
     }
@@ -119,7 +119,7 @@ export default function ProfilePage() {
     if (!file || !user) return;
 
     if (!file.type.startsWith('image/')) {
-      toast({ variant: "destructive", title: "Invalid file", description: "Please select an image file." });
+      toast({ variant: "destructive", title: "Invalid file", description: "Please upload an image." });
       return;
     }
 
@@ -149,9 +149,9 @@ export default function ProfilePage() {
       
       setFormData(prev => ({ ...prev, logoURL: secureURL }));
       await refreshProfile();
-      toast({ title: "Corporate Logo Updated", description: "Venture identity assets have been synchronized." });
+      toast({ title: "Logo Updated", description: "Company logo has been saved." });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload startup logo." });
+      toast({ variant: "destructive", title: "Upload Failed", description: "Could not upload logo." });
     } finally {
       setUploadingLogo(false);
     }
@@ -172,9 +172,9 @@ export default function ProfilePage() {
         updatedAt: serverTimestamp(),
       });
       await refreshProfile();
-      toast({ title: "Profile synchronization complete", description: "All changes are now live." });
+      toast({ title: "Profile updated", description: "Your changes have been saved." });
     } catch (error) {
-      toast({ variant: "destructive", title: "Persistence Error", description: "Unable to save profile changes." });
+      toast({ variant: "destructive", title: "Error", description: "Failed to save changes." });
     } finally {
       setSaving(false);
     }
@@ -198,14 +198,14 @@ export default function ProfilePage() {
       if (!interestsSnap.empty || !requestsSnap.empty) {
         toast({
           variant: "destructive",
-          title: "Active Connections Detected",
-          description: "All interests and connections must be resolved before requesting account deletion."
+          title: "Active Connections",
+          description: "Please disconnect from all partners before deleting your account."
         });
         setChecking(false);
         return;
       }
 
-      if (confirm("Confirm account deletion request? An administrator will review and finalize the purge.")) {
+      if (confirm("Are you sure you want to delete your account? This will be reviewed by our team.")) {
         addDocumentNonBlocking(collection(db, 'deleteRequests'), {
           userId: user.uid,
           targetType: 'account',
@@ -214,10 +214,10 @@ export default function ProfilePage() {
           timestamp: serverTimestamp(),
           details: `Account deletion request: ${user.email}`
         });
-        toast({ title: "Purge Request Filed", description: "Administrative review initiated." });
+        toast({ title: "Request Sent", description: "We'll review your deletion request shortly." });
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Operational Error", description: "Verification check failed." });
+      toast({ variant: "destructive", title: "Error", description: "Failed to process request." });
     } finally {
       setChecking(false);
     }
@@ -236,10 +236,10 @@ export default function ProfilePage() {
               <div className="p-1.5 md:p-2 bg-muted rounded-lg group-hover:bg-primary/10 transition-all">
                 <ArrowLeft className="w-4 h-4" />
               </div>
-              Return to Console
+              Back to Dashboard
             </Link>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">Account Governance</h1>
-            <p className="text-muted-foreground text-md md:text-lg font-medium italic border-l-4 border-primary/20 pl-4 md:pl-6">Establish and maintain your professional identity.</p>
+            <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">Settings</h1>
+            <p className="text-muted-foreground text-md md:text-lg font-medium italic border-l-4 border-primary/20 pl-4 md:pl-6">Manage your profile and account settings.</p>
           </div>
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4">
             <Badge className="bg-primary/5 text-primary border-none px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm">
@@ -247,7 +247,7 @@ export default function ProfilePage() {
             </Badge>
             {formData.verified && (
               <Badge className="bg-emerald-500 text-white border-none px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20">
-                <ShieldCheck className="w-4 h-4" /> Platform Verified
+                <ShieldCheck className="w-4 h-4" /> Verified
               </Badge>
             )}
           </div>
@@ -305,7 +305,7 @@ export default function ProfilePage() {
                 {formData.role === 'startup' && (
                   <div className="space-y-4 md:space-y-5">
                     <Label className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-2 md:gap-3 justify-center">
-                      <div className="w-1 md:w-1.5 h-1 md:h-1.5 bg-primary rounded-full" /> Corporate Identity
+                      <div className="w-1 md:w-1.5 h-1 md:h-1.5 bg-primary rounded-full" /> Company Logo
                     </Label>
                     <div 
                       className="relative w-24 h-24 md:w-32 md:h-32 mx-auto rounded-3xl border-4 border-dashed border-muted bg-muted/5 flex items-center justify-center cursor-pointer group/logo hover:border-primary/30 transition-all overflow-hidden"
@@ -332,7 +332,7 @@ export default function ProfilePage() {
                   disabled={checking}
                 >
                   {checking ? <Loader2 className="animate-spin w-4 h-4" /> : <Trash2 className="w-4 h-4" />}
-                  Initiate Account Purge
+                  Delete Account
                 </Button>
               </div>
             </Card>
@@ -340,10 +340,10 @@ export default function ProfilePage() {
             <Card className="border-none shadow-xl bg-accent text-white rounded-[2rem] p-8 md:p-12 relative overflow-hidden group">
                <Sparkles className="absolute -right-8 -bottom-8 md:-right-10 md:-bottom-10 w-32 h-32 md:w-48 md:h-48 text-white/10 -rotate-12 transition-transform duration-700 group-hover:scale-110" />
                <h3 className="text-xl md:text-2xl font-black mb-4 md:mb-6 flex items-center gap-3 md:gap-4">
-                 <ShieldCheck className="w-6 h-6 md:w-8 md:h-8" /> Security Standard
+                 <ShieldCheck className="w-6 h-6 md:w-8 md:h-8" /> Secure Platform
                </h3>
                <p className="text-xs md:text-sm opacity-90 leading-relaxed font-medium italic border-l-2 border-white/20 pl-4 md:pl-6">
-                 "Platform interactions are fully encrypted. All member data is governed by preliminary verification protocols."
+                 "All conversations are encrypted. Your data is protected by industry-standard security."
                </p>
             </Card>
           </div>
@@ -351,68 +351,68 @@ export default function ProfilePage() {
           <div className="md:col-span-8 space-y-8 md:space-y-10">
             <Card className="border-none shadow-xl bg-white rounded-[2rem] overflow-hidden transition-all">
               <CardHeader className="bg-muted/30 border-b p-8 md:p-12">
-                <CardTitle className="text-2xl md:text-3xl font-black tracking-tight">Professional Presence</CardTitle>
-                <CardDescription className="text-sm md:text-md font-medium text-muted-foreground mt-1 md:mt-2">Manage your institutional credentials and venture objectives.</CardDescription>
+                <CardTitle className="text-2xl md:text-3xl font-black tracking-tight">Public Profile</CardTitle>
+                <CardDescription className="text-sm md:text-md font-medium text-muted-foreground mt-1 md:mt-2">Update your information visible to the community.</CardDescription>
               </CardHeader>
               <CardContent className="p-8 md:p-12">
                 <form onSubmit={handleSave} className="space-y-8 md:space-y-10">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
                     <div className="space-y-3 md:space-y-4">
                       <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
-                        <User className="w-4 h-4 text-primary" /> Verified Legal Name
+                        <User className="w-4 h-4 text-primary" /> Full Name
                       </Label>
                       <Input 
                         id="name" 
                         className="h-12 md:h-14 rounded-xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-md md:text-lg font-bold px-6 md:px-8" 
                         value={formData.name} 
                         onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                        placeholder="Legal Entity or Representative"
+                        placeholder="Your full name or legal name"
                       />
                     </div>
                     <div className="space-y-3 md:space-y-4">
                       <Label htmlFor="company" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
-                        <Building className="w-4 h-4 text-primary" /> Institution / Affiliation
+                        <Building className="w-4 h-4 text-primary" /> Company / Organization
                       </Label>
                       <Input 
                         id="company" 
                         className="h-12 md:h-14 rounded-xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-md md:text-lg font-bold px-6 md:px-8" 
                         value={formData.company} 
                         onChange={(e) => setFormData({...formData, company: e.target.value})} 
-                        placeholder="Venture Capital or Startup Group"
+                        placeholder="Company or fund name"
                       />
                     </div>
                   </div>
                   
                   <div className="space-y-3 md:space-y-4">
                     <Label htmlFor="bio" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
-                      <Mail className="w-4 h-4 text-primary" /> Professional Narrative
+                      <Mail className="w-4 h-4 text-primary" /> Bio
                     </Label>
                     <Textarea 
                       id="bio" 
                       className="min-h-[180px] md:min-h-[220px] rounded-[1.5rem] border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-primary/10 text-md md:text-lg font-medium leading-relaxed italic p-6 md:p-10" 
                       value={formData.bio} 
                       onChange={(e) => setFormData({...formData, bio: e.target.value})} 
-                      placeholder="Detail your track record and strategic goals..."
+                      placeholder="Tell us about yourself and your goals..."
                     />
                   </div>
 
                   {formData.role === 'investor' ? (
                     <div className="space-y-3 md:space-y-4">
                       <Label htmlFor="investmentInterest" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
-                        <Sparkles className="w-4 h-4 text-accent" /> Strategic Focus (Comma Separated)
+                        <Sparkles className="w-4 h-4 text-accent" /> Interests (Comma Separated)
                       </Label>
                       <Input 
                         id="investmentInterest" 
                         className="h-12 md:h-14 rounded-xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-accent/10 text-md md:text-lg font-bold px-6 md:px-8" 
                         value={formData.investmentInterest} 
                         onChange={(e) => setFormData({...formData, investmentInterest: e.target.value})} 
-                        placeholder="e.g. AI, Fintech, BioTech" 
+                        placeholder="e.g. AI, SaaS, Green Tech" 
                       />
                     </div>
                   ) : (
                     <div className="space-y-3 md:space-y-4">
                       <Label htmlFor="fundingNeeded" className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2 md:gap-3">
-                        <Save className="w-4 h-4 text-emerald-500" /> Capital Required (USD)
+                        <Save className="w-4 h-4 text-emerald-500" /> Funding Goal ($)
                       </Label>
                       <Input 
                         id="fundingNeeded" 
@@ -420,7 +420,7 @@ export default function ProfilePage() {
                         className="h-12 md:h-14 rounded-xl border-none shadow-inner bg-muted/30 focus:ring-4 focus:ring-emerald-500/10 text-lg md:text-xl font-black px-6 md:px-8" 
                         value={formData.fundingNeeded} 
                         onChange={(e) => setFormData({...formData, fundingNeeded: e.target.value})} 
-                        placeholder="e.g. 2500000"
+                        placeholder="e.g. 500000"
                       />
                     </div>
                   )}
@@ -431,7 +431,7 @@ export default function ProfilePage() {
                     disabled={saving}
                   >
                     {saving ? <Loader2 className="animate-spin w-6 h-6" /> : <Save className="w-6 h-6" />}
-                    Synchronize Changes
+                    Save Profile
                   </Button>
                 </form>
               </CardContent>

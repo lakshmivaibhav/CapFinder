@@ -78,7 +78,7 @@ export default function DashboardPage() {
 
   const handleResolveConnection = async (pitchId: string, startupOwnerId: string, startupName: string) => {
     if (!user || !isInvestor) return;
-    if (!confirm(`Resolve connection with ${startupName}? This will clear your interest, requests, and associated data.`)) return;
+    if (!confirm(`Disconnect from ${startupName}? This will remove your interest and any chat history.`)) return;
 
     setResolving(pitchId);
     try {
@@ -96,9 +96,9 @@ export default function DashboardPage() {
       ));
       intSnap.docs.forEach(d => deleteDocumentNonBlocking(doc(db, 'interests', d.id)));
 
-      toast({ title: "Connection resolved", description: "Records for this pitch have been cleared." });
+      toast({ title: "Disconnected", description: "Connection has been removed." });
     } catch (e: any) {
-      toast({ variant: "destructive", title: "Resolve failed", description: e.message });
+      toast({ variant: "destructive", title: "Action failed", description: e.message });
     } finally {
       setResolving(null);
     }
@@ -143,25 +143,25 @@ export default function DashboardPage() {
       <main className="flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full">
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
-            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">System Overview</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Overview</p>
             <h1 className="text-3xl md:text-5xl font-black tracking-tighter leading-none">Welcome, {profile.name || user.email?.split('@')[0]}</h1>
             <div className="text-muted-foreground flex flex-wrap items-center justify-center md:justify-start gap-2 text-xs md:text-sm font-medium">
-              Console authenticated for <span className="text-foreground capitalize font-black underline decoration-primary decoration-4 underline-offset-8">{profile.role}</span>
-              {isAdmin && <Badge className="bg-destructive text-white border-none ml-2 rounded-lg font-black uppercase text-[8px] px-3">Root Admin</Badge>}
+              Signed in as <span className="text-foreground capitalize font-black underline decoration-primary decoration-4 underline-offset-8">{profile.role}</span>
+              {isAdmin && <Badge className="bg-destructive text-white border-none ml-2 rounded-lg font-black uppercase text-[8px] px-3">Admin</Badge>}
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
             {isStartup && (
               <Link href="/pitches/new" className="w-full sm:w-auto">
                 <Button className="w-full gap-3 h-14 px-8 rounded-xl bg-primary shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all font-black uppercase tracking-widest text-[10px]">
-                  <Plus className="w-5 h-5" /> New Venture Pitch
+                  <Plus className="w-5 h-5" /> Create New Pitch
                 </Button>
               </Link>
             )}
             {(isInvestor || isAdmin) && (
               <Link href="/pitches" className="w-full sm:w-auto">
                 <Button variant="outline" className="w-full gap-3 h-14 px-8 rounded-xl border-2 hover:bg-primary/5 transition-all font-black uppercase tracking-widest text-[10px]">
-                  <Search className="w-5 h-5" /> Browse Marketplace
+                  <Search className="w-5 h-5" /> Browse Pitches
                 </Button>
               </Link>
             )}
@@ -176,7 +176,7 @@ export default function DashboardPage() {
                 <Megaphone className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{isStartup ? 'Total Portfolio' : 'Strategic Interests'}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{isStartup ? 'My Pitches' : 'Interests'}</p>
                 <p className="text-4xl font-black tracking-tighter">
                   {isStartup ? (startupPitches?.length || 0) : (investorInterests?.length || 0)}
                 </p>
@@ -190,7 +190,7 @@ export default function DashboardPage() {
                 <Users className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{isStartup ? 'Engagements' : 'Access Requests'}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{isStartup ? 'Interest Shown' : 'My Requests'}</p>
                 <p className="text-4xl font-black tracking-tighter">
                   {isStartup ? (startupInterests?.length || 0) : (investorContactRequests?.length || 0)}
                 </p>
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                 <Inbox className="w-8 h-8" />
               </div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Active Connections</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">Active Chats</p>
                 <p className="text-4xl font-black tracking-tighter">
                   {isStartup ? (startupContactRequests?.length || 0) : (investorContactRequests?.filter(r => r.status === 'accepted').length || 0)}
                 </p>
@@ -220,8 +220,8 @@ export default function DashboardPage() {
                 <Sparkles className="w-6 h-6 text-accent" />
               </div>
               <div className="space-y-0.5">
-                <h2 className="text-3xl font-black tracking-tight">Strategic Matches</h2>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">AI-Driven Venture Alignment</p>
+                <h2 className="text-3xl font-black tracking-tight">Recommended for You</h2>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Based on your interests</p>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
@@ -257,10 +257,10 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center border-b pb-6">
             <TabsList className="bg-muted/50 p-1.5 rounded-2xl h-14 w-full sm:w-fit shadow-inner">
               <TabsTrigger value="primary" className="flex-1 sm:flex-none gap-3 px-8 h-11 rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
-                {isStartup ? <><Megaphone className="w-4 h-4" /> Active</> : <><LayoutGrid className="w-4 h-4" /> Feed</>}
+                {isStartup ? <><Megaphone className="w-4 h-4" /> My Active Pitches</> : <><LayoutGrid className="w-4 h-4" /> Explore Feed</>}
               </TabsTrigger>
               <TabsTrigger value="secondary" className="flex-1 sm:flex-none gap-3 px-8 h-11 rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
-                {isStartup ? <><Users className="w-4 h-4" /> Partners</> : <><Star className="w-4 h-4" /> Saved</>}
+                {isStartup ? <><Users className="w-4 h-4" /> My Partners</> : <><Star className="w-4 h-4" /> Saved Pitches</>}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -294,7 +294,7 @@ export default function DashboardPage() {
                               disabled={!!resolving && resolving === pitch.id}
                             >
                               {resolving === pitch.id ? <Loader2 className="animate-spin w-3 h-3" /> : <Zap className="w-3 h-3 mr-2" />}
-                              <span className="hidden sm:inline">Resolve Protocol</span>
+                              <span className="hidden sm:inline">Disconnect</span>
                             </Button>
                           )}
                         </div>
@@ -319,10 +319,10 @@ export default function DashboardPage() {
             ) : (
               <div className="text-center py-32 bg-muted/10 rounded-[2rem] border-4 border-dashed flex flex-col items-center p-6">
                 <Search className="w-20 h-20 text-muted-foreground opacity-10 mb-6" />
-                <h3 className="text-3xl font-black tracking-tight text-muted-foreground">No ventures identified.</h3>
+                <h3 className="text-3xl font-black tracking-tight text-muted-foreground">No pitches found.</h3>
                 {isStartup && (
                   <Link href="/pitches/new" className="mt-8">
-                    <Button variant="outline" className="rounded-xl px-10 h-14 border-2 font-black uppercase text-[10px] tracking-widest">Initialize Your First Pitch</Button>
+                    <Button variant="outline" className="rounded-xl px-10 h-14 border-2 font-black uppercase text-[10px] tracking-widest">Create Your First Pitch</Button>
                   </Link>
                 )}
               </div>
@@ -335,7 +335,7 @@ export default function DashboardPage() {
                 {(isStartup ? startupInterests : investorInterests)?.map((interest) => (
                   <Card key={interest.id} className="border-none shadow-xl transition-all duration-500 rounded-[2rem] bg-white group">
                     <CardHeader className="p-8 pb-4">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-3">{isStartup ? 'Investor Identity' : 'Venture Opportunity'}</p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-3">{isStartup ? 'Interested Investor' : 'Saved Opportunity'}</p>
                       <CardTitle className="text-2xl font-black truncate leading-none tracking-tight group-hover:text-primary transition-colors">
                         {isStartup ? interest.investorEmail : interest.startupName}
                       </CardTitle>
@@ -345,7 +345,7 @@ export default function DashboardPage() {
                     </CardContent>
                     <CardFooter className="p-8 pt-4 border-t border-muted/50 bg-muted/5">
                       <Link href={isStartup ? `/investor/${interest.investorId}` : `/startup/${interest.pitchId}`} className="w-full">
-                        <Button variant="outline" className="w-full h-14 rounded-xl font-black uppercase text-[10px] tracking-widest border-2 hover:bg-primary/5 shadow-sm transition-all">Analyze Context</Button>
+                        <Button variant="outline" className="w-full h-14 rounded-xl font-black uppercase text-[10px] tracking-widest border-2 hover:bg-primary/5 shadow-sm transition-all">View Details</Button>
                       </Link>
                     </CardFooter>
                   </Card>
@@ -354,8 +354,8 @@ export default function DashboardPage() {
             ) : (
               <div className="text-center py-32 bg-muted/10 rounded-[2rem] border-4 border-dashed flex flex-col items-center p-6">
                 <Star className="w-20 h-20 text-muted-foreground opacity-10 mb-6" />
-                <h3 className="text-3xl font-black tracking-tight text-muted-foreground">Strategic queue is empty.</h3>
-                <p className="text-muted-foreground text-sm italic mt-2">Active interests will appear here once identified in the ecosystem.</p>
+                <h3 className="text-3xl font-black tracking-tight text-muted-foreground">Your list is empty.</h3>
+                <p className="text-muted-foreground text-sm italic mt-2">Active interests will appear here once you start exploring.</p>
               </div>
             )}
           </TabsContent>

@@ -5,14 +5,9 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { useAuth as useFirebaseAuth } from '@/firebase';
-import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, ShieldAlert, Zap, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, Zap, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/**
- * Global Navigation Bar.
- * Sanitized to remove all global Firestore queries and unread counters 
- * to ensure rule compliance and resolve permission errors.
- */
 export function Navbar() {
   const { user, profile, loading, emailVerified } = useAuth();
   const firebaseAuth = useFirebaseAuth();
@@ -29,26 +24,20 @@ export function Navbar() {
   const isAdmin = profile?.role === 'admin';
 
   const navItems = [
-    { label: 'Console', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Market', href: '/pitches', icon: Search },
+    { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { label: 'Explore', href: '/pitches', icon: Search },
     { 
-      label: 'Hub', 
+      label: 'Messages', 
       href: '/messages', 
       icon: MessageSquare
     },
     { 
-      label: 'Inquiries', 
+      label: 'Requests', 
       href: '/requests', 
       icon: Inbox, 
       show: profile?.role === 'startup' 
     },
-    { 
-      label: 'Admin', 
-      href: '/admin', 
-      icon: ShieldAlert, 
-      show: isAdmin 
-    },
-    { label: 'Account', href: '/profile', icon: User },
+    { label: 'Profile', href: '/profile', icon: User },
   ].filter(item => {
     if (item.show === false) return false;
     if (!emailVerified && item.href !== '/profile' && item.href !== '/dashboard') return false;
@@ -94,7 +83,7 @@ export function Navbar() {
               <Link href="/pitches/new" className="hidden sm:block">
                 <Button className="gap-2.5 h-11 px-4 md:px-6 rounded-xl bg-primary shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all font-black uppercase tracking-widest text-[10px]">
                   <PlusCircle className="w-4 h-4" />
-                  <span className="hidden md:inline">New Venture</span>
+                  <span className="hidden md:inline">New Pitch</span>
                 </Button>
               </Link>
             )}

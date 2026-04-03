@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -11,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowLeft, Send, Sparkles, ShieldAlert, Camera, Trash2, Image as ImageIcon, Wallet, PieChart, FastForward } from 'lucide-react';
+import { Loader2, ArrowLeft, Send, Sparkles, ShieldAlert, Camera, Image as ImageIcon, Wallet, PieChart, FastForward } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -63,7 +62,7 @@ export default function NewPitchPage() {
       toast({ 
         variant: "destructive", 
         title: "Access Denied", 
-        description: "Only startup accounts can create investment pitches." 
+        description: "Only startups can create pitches." 
       });
       router.push('/dashboard');
     }
@@ -74,7 +73,7 @@ export default function NewPitchPage() {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      toast({ variant: "destructive", title: "Invalid format", description: "Please provide an image file." });
+      toast({ variant: "destructive", title: "Invalid file", description: "Please upload an image." });
       return;
     }
 
@@ -92,9 +91,9 @@ export default function NewPitchPage() {
 
       const data = await response.json();
       setFormData(prev => ({ ...prev, imageURL: data.secure_url }));
-      toast({ title: "Visual assets uploaded", description: "Venture image is now synchronized." });
+      toast({ title: "Image uploaded", description: "Your pitch image is ready." });
     } catch (error) {
-      toast({ variant: "destructive", title: "Upload failed", description: "Could not persist venture imagery." });
+      toast({ variant: "destructive", title: "Upload failed", description: "Could not upload image." });
     } finally {
       setUploadingImage(false);
     }
@@ -116,7 +115,7 @@ export default function NewPitchPage() {
       setAiResult(result);
       setShowAiModal(true);
     } catch (error) {
-      toast({ variant: "destructive", title: "AI Assistant error", description: "Could not refine pitch at this time." });
+      toast({ variant: "destructive", title: "AI Error", description: "Could not refine pitch at this time." });
     } finally {
       setRefining(false);
     }
@@ -134,22 +133,21 @@ export default function NewPitchPage() {
     if (!user || (profile?.role !== 'startup' && profile?.role !== 'admin')) return;
     
     if (!formData.category) {
-      toast({ variant: "destructive", title: "Selection Required", description: "Please select a venture category." });
+      toast({ variant: "destructive", title: "Required", description: "Please select a category." });
       return;
     }
 
-    // Validation
     const founderInv = Number(formData.founderInvestment) || 0;
     if (founderInv <= 0 && !formData.noInvestmentReason.trim()) {
-      toast({ variant: "destructive", title: "Rationale Required", description: "Please explain your personal investment status." });
+      toast({ variant: "destructive", title: "Required", description: "Please explain your investment status." });
       return;
     }
     if (!formData.fundUsage.trim()) {
-      toast({ variant: "destructive", title: "Allocation Required", description: "Please specify how you will use the investment." });
+      toast({ variant: "destructive", title: "Required", description: "Please specify how you will use the funds." });
       return;
     }
     if (!formData.longTermVision.trim()) {
-      toast({ variant: "destructive", title: "Vision Required", description: "Please describe your long-term vision." });
+      toast({ variant: "destructive", title: "Required", description: "Please describe your vision." });
       return;
     }
 
@@ -167,12 +165,12 @@ export default function NewPitchPage() {
       });
 
       toast({ 
-        title: "Venture Submitted", 
-        description: "Your pitch has been successfully published to the ecosystem." 
+        title: "Pitch Created", 
+        description: "Your pitch has been published successfully." 
       });
       router.push('/dashboard');
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Deployment failed", description: error.message });
+      toast({ variant: "destructive", title: "Failed", description: error.message });
     } finally {
       setLoading(false);
     }
@@ -191,9 +189,9 @@ export default function NewPitchPage() {
       <div className="p-20 text-center space-y-4">
         <ShieldAlert className="w-16 h-16 text-destructive mx-auto" />
         <h2 className="text-2xl font-black">Unauthorized Access</h2>
-        <p className="text-muted-foreground">This session is restricted to startup profiles only.</p>
+        <p className="text-muted-foreground">Only startups can create pitches.</p>
         <Link href="/dashboard">
-          <Button variant="link" className="font-bold">Return to Console</Button>
+          <Button variant="link" className="font-bold">Return to Dashboard</Button>
         </Link>
       </div>
     );
@@ -205,20 +203,19 @@ export default function NewPitchPage() {
         <div className="p-2 bg-muted rounded-lg group-hover:bg-primary/10 transition-all">
           <ArrowLeft className="w-4 h-4" />
         </div>
-        Back to Console
+        Back to Dashboard
       </Link>
 
       <Card className="border-none shadow-2xl rounded-[2.5rem] overflow-hidden">
         <CardHeader className="bg-muted/30 border-b p-10">
-          <CardTitle className="text-3xl font-black tracking-tight">Venture Establishment</CardTitle>
-          <CardDescription className="text-sm font-medium">Define your strategic objectives to attract capital partners.</CardDescription>
+          <CardTitle className="text-3xl font-black tracking-tight">New Pitch</CardTitle>
+          <CardDescription className="text-sm font-medium">Tell us about your startup to find investors.</CardDescription>
         </CardHeader>
         <CardContent className="p-10">
           <form onSubmit={handleSubmit} className="space-y-10">
-            {/* Image Upload Zone */}
             <div className="space-y-4">
               <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                <Camera className="w-4 h-4 text-primary" /> Primary Venture Identity (Image)
+                <Camera className="w-4 h-4 text-primary" /> Cover Image
               </Label>
               <div 
                 className="relative aspect-video rounded-[2rem] border-4 border-dashed border-muted bg-muted/10 flex flex-col items-center justify-center cursor-pointer group hover:border-primary/30 transition-all overflow-hidden"
@@ -232,14 +229,14 @@ export default function NewPitchPage() {
                       {uploadingImage ? <Loader2 className="w-8 h-8 animate-spin" /> : <ImageIcon className="w-8 h-8" />}
                     </div>
                     <div>
-                      <p className="font-black text-sm uppercase tracking-widest">Select Visual Asset</p>
-                      <p className="text-xs text-muted-foreground mt-1">Recommended: 16:9 high-resolution landscape</p>
+                      <p className="font-black text-sm uppercase tracking-widest">Select Image</p>
+                      <p className="text-xs text-muted-foreground mt-1">Recommended: High-resolution landscape</p>
                     </div>
                   </div>
                 )}
                 {formData.imageURL && !uploadingImage && (
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
-                    <Button variant="outline" size="sm" className="bg-white rounded-xl font-bold">Replace Visual</Button>
+                    <Button variant="outline" size="sm" className="bg-white rounded-xl font-bold">Change Image</Button>
                   </div>
                 )}
                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
@@ -248,18 +245,18 @@ export default function NewPitchPage() {
 
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-3">
-                <Label htmlFor="startupName" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Entity Name</Label>
+                <Label htmlFor="startupName" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Startup Name</Label>
                 <Input 
                   id="startupName" 
                   required
                   className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium"
                   value={formData.startupName}
                   onChange={(e) => setFormData({...formData, startupName: e.target.value})}
-                  placeholder="e.g. InnovateX Systems"
+                  placeholder="e.g. My Startup"
                 />
               </div>
               <div className="space-y-3">
-                <Label htmlFor="category" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Venture Classification</Label>
+                <Label htmlFor="category" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Category</Label>
                 <Select value={formData.category} onValueChange={(val) => setFormData({...formData, category: val})}>
                   <SelectTrigger className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 font-bold px-6">
                     <SelectValue placeholder="Select a category" />
@@ -275,7 +272,7 @@ export default function NewPitchPage() {
 
             <div className="space-y-3">
               <div className="flex justify-between items-center mb-1">
-                <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Executive Overview</Label>
+                <Label htmlFor="description" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Description</Label>
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -285,7 +282,7 @@ export default function NewPitchPage() {
                   disabled={refining}
                 >
                   {refining ? <Loader2 className="animate-spin w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-                  Refine with AI
+                  Use AI Assistant
                 </Button>
               </div>
               <Textarea 
@@ -294,16 +291,15 @@ export default function NewPitchPage() {
                 className="min-h-[220px] rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium leading-relaxed italic p-8"
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
-                placeholder="Detail your problem, solution, market size, and strategic advantage..."
+                placeholder="Explain what your startup does and why it's great..."
               />
             </div>
 
-            {/* Strategic Details Section */}
             <div className="space-y-8 pt-6 border-t border-dashed">
               <div className="grid md:grid-cols-2 gap-8">
                 <div className="space-y-3">
                   <Label htmlFor="founderInvestment" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                    <Wallet className="w-4 h-4 text-primary" /> Founder Commitment ($)
+                    <Wallet className="w-4 h-4 text-primary" /> Personal Investment ($)
                   </Label>
                   <Input 
                     id="founderInvestment" 
@@ -311,12 +307,12 @@ export default function NewPitchPage() {
                     className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium"
                     value={formData.founderInvestment}
                     onChange={(e) => setFormData({...formData, founderInvestment: e.target.value})}
-                    placeholder="Total personal capital invested"
+                    placeholder="Amount you've invested"
                   />
                 </div>
                 <div className="space-y-3">
                   <Label htmlFor="fundingNeeded" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                    <PieChart className="w-4 h-4 text-primary" /> Target Capital ($)
+                    <PieChart className="w-4 h-4 text-primary" /> Funding Goal ($)
                   </Label>
                   <Input 
                     id="fundingNeeded" 
@@ -325,7 +321,7 @@ export default function NewPitchPage() {
                     className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-xl font-black"
                     value={formData.fundingNeeded}
                     onChange={(e) => setFormData({...formData, fundingNeeded: e.target.value})}
-                    placeholder="e.g. 1000000"
+                    placeholder="Amount you're seeking"
                   />
                 </div>
               </div>
@@ -338,14 +334,14 @@ export default function NewPitchPage() {
                     className="min-h-[120px] rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium italic p-6"
                     value={formData.noInvestmentReason}
                     onChange={(e) => setFormData({...formData, noInvestmentReason: e.target.value})}
-                    placeholder="Provide context regarding the lack of personal capital commitment..."
+                    placeholder="Why haven't you invested personally yet?"
                   />
                 </div>
               )}
 
               <div className="space-y-3">
                 <Label htmlFor="fundUsage" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <PieChart className="w-4 h-4 text-primary" /> Capital Allocation Strategy
+                  <PieChart className="w-4 h-4 text-primary" /> Use of Funds
                 </Label>
                 <Textarea 
                   id="fundUsage" 
@@ -353,13 +349,13 @@ export default function NewPitchPage() {
                   className="min-h-[150px] rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium italic p-6"
                   value={formData.fundUsage}
                   onChange={(e) => setFormData({...formData, fundUsage: e.target.value})}
-                  placeholder="Describe how the investment will be utilized (e.g., 40% Product, 30% Marketing)..."
+                  placeholder="How will you use the investment?"
                 />
               </div>
 
               <div className="space-y-3">
                 <Label htmlFor="longTermVision" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                  <FastForward className="w-4 h-4 text-primary" /> Strategic Vision (3–10 Years)
+                  <FastForward className="w-4 h-4 text-primary" /> Vision (3–10 Years)
                 </Label>
                 <Textarea 
                   id="longTermVision" 
@@ -367,12 +363,12 @@ export default function NewPitchPage() {
                   className="min-h-[150px] rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium italic p-6"
                   value={formData.longTermVision}
                   onChange={(e) => setFormData({...formData, longTermVision: e.target.value})}
-                  placeholder="Detail your roadmap for growth and market disruption..."
+                  placeholder="Where do you see the startup in the future?"
                 />
               </div>
 
               <div className="space-y-3">
-                <Label htmlFor="contactEmail" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Direct Inquiry Email</Label>
+                <Label htmlFor="contactEmail" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Contact Email</Label>
                 <Input 
                   id="contactEmail" 
                   type="email"
@@ -380,14 +376,14 @@ export default function NewPitchPage() {
                   className="h-14 rounded-2xl border-none shadow-inner bg-muted/30 focus:ring-2 focus:ring-primary/20 text-lg font-medium"
                   value={formData.contactEmail}
                   onChange={(e) => setFormData({...formData, contactEmail: e.target.value})}
-                  placeholder="founder@entity.com"
+                  placeholder="hello@startup.com"
                 />
               </div>
             </div>
 
             <Button type="submit" className="w-full h-16 bg-primary shadow-xl shadow-primary/20 rounded-2xl font-black text-xl gap-3 transition-all hover:scale-[1.01]" disabled={loading || uploadingImage}>
               {loading ? <Loader2 className="animate-spin w-6 h-6" /> : <Send className="w-6 h-6" />}
-              Establish Venture Pitch
+              Create Pitch
             </Button>
           </form>
         </CardContent>
@@ -399,9 +395,9 @@ export default function NewPitchPage() {
             <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
               <Sparkles className="text-primary w-7 h-7" />
             </div>
-            <DialogTitle className="text-2xl font-black tracking-tight">AI-Refined Synthesis</DialogTitle>
+            <DialogTitle className="text-2xl font-black tracking-tight">AI Suggestions</DialogTitle>
             <DialogDescription className="text-md font-medium leading-relaxed">
-              Our analyzer has optimized your overview for maximum professional impact.
+              We've refined your description to be more compelling for investors.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-8 py-6">
@@ -410,7 +406,7 @@ export default function NewPitchPage() {
             </div>
             {aiResult?.suggestions && aiResult.suggestions.length > 0 && (
               <div className="space-y-4">
-                <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Strategic Suggestions:</h4>
+                <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Tips:</h4>
                 <div className="grid gap-3">
                   {aiResult.suggestions.map((s, idx) => (
                     <div key={idx} className="flex items-start gap-3 p-4 bg-muted/10 rounded-xl border">
@@ -426,7 +422,7 @@ export default function NewPitchPage() {
           </div>
           <DialogFooter className="flex gap-4">
             <Button variant="ghost" className="flex-1 h-14 rounded-2xl font-bold uppercase tracking-widest text-xs" onClick={() => setShowAiModal(false)}>Discard</Button>
-            <Button className="flex-1 h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg" onClick={applyAiRefinement}>Apply Optimization</Button>
+            <Button className="flex-1 h-14 bg-primary rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg" onClick={applyAiRefinement}>Use This Version</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

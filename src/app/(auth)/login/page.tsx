@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, Loader2, Zap, ArrowRight, ShieldCheck, KeyRound } from 'lucide-react';
+import { Zap, ArrowRight, ShieldCheck, KeyRound, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
@@ -37,8 +37,8 @@ export default function LoginPage() {
         await auth.signOut();
         toast({ 
           variant: "destructive", 
-          title: "Account Restricted", 
-          description: "This session has been deactivated by platform administration." 
+          title: "Account Disabled", 
+          description: "This account has been deactivated by administration." 
         });
         setLoading(false);
         return;
@@ -48,13 +48,13 @@ export default function LoginPage() {
         lastActive: serverTimestamp(),
       }, { merge: true });
 
-      toast({ title: "Welcome back", description: "Authenticating session..." });
+      toast({ title: "Welcome back", description: "Signing you in..." });
       router.push('/dashboard');
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
-        title: "Authentication Failed", 
-        description: "Verify credentials and security status." 
+        title: "Login Failed", 
+        description: "Please check your email and password." 
       });
     } finally {
       setLoading(false);
@@ -68,8 +68,8 @@ export default function LoginPage() {
     try {
       await sendPasswordResetEmail(auth, resetEmail);
       toast({ 
-        title: "Recovery email sent", 
-        description: "Please check your inbox for instructions to reset your security key." 
+        title: "Reset email sent", 
+        description: "Check your inbox for instructions to reset your password." 
       });
       setIsResetDialogOpen(false);
       setResetEmail('');
@@ -77,7 +77,7 @@ export default function LoginPage() {
       toast({ 
         variant: "destructive", 
         title: "Request failed", 
-        description: error.message || "Verification of identity failed." 
+        description: error.message || "Failed to send reset email." 
       });
     } finally {
       setResetLoading(false);
@@ -91,19 +91,19 @@ export default function LoginPage() {
           <div className="mx-auto w-16 h-16 bg-primary rounded-[1.5rem] flex items-center justify-center shadow-2xl shadow-primary/30">
             <Zap className="text-white w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-black tracking-tighter">CapFinder Console</h1>
-          <p className="text-muted-foreground font-medium uppercase tracking-widest text-[10px]">Venture Capital Connection Hub</p>
+          <h1 className="text-3xl font-black tracking-tighter text-foreground">CapFinder</h1>
+          <p className="text-muted-foreground font-medium uppercase tracking-widest text-[10px]">Connecting Startups & Capital</p>
         </div>
 
         <Card className="shadow-2xl border-none rounded-[2rem] overflow-hidden bg-white/80 backdrop-blur-sm">
           <CardHeader className="p-8 pb-4 text-center">
-            <CardTitle className="text-xl font-black">Authorized Access</CardTitle>
-            <CardDescription className="font-medium">Sign in to manage your professional network.</CardDescription>
+            <CardTitle className="text-xl font-black">Welcome Back</CardTitle>
+            <CardDescription className="font-medium">Sign in to your account.</CardDescription>
           </CardHeader>
           <CardContent className="p-8">
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-3">
-                <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Member Email</Label>
+                <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email Address</Label>
                 <Input 
                   id="email" 
                   type="email" 
@@ -116,24 +116,24 @@ export default function LoginPage() {
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center px-1">
-                  <Label htmlFor="password" id="password-label" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Security Key</Label>
+                  <Label htmlFor="password" id="password-label" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Password</Label>
                   <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
                     <DialogTrigger asChild>
-                      <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline outline-none">Forgot key?</button>
+                      <button type="button" className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline outline-none">Forgot password?</button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-md rounded-[2rem] border-none shadow-2xl p-8">
                       <DialogHeader className="space-y-4">
                         <div className="mx-auto w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
                           <KeyRound className="w-7 h-7 text-primary" />
                         </div>
-                        <DialogTitle className="text-2xl font-black text-center">Identity Recovery</DialogTitle>
+                        <DialogTitle className="text-2xl font-black text-center">Reset Password</DialogTitle>
                         <DialogDescription className="text-center font-medium leading-relaxed">
-                          Provide your registered email address to receive a secure recovery protocol.
+                          Enter your email address to receive a password reset link.
                         </DialogDescription>
                       </DialogHeader>
                       <form onSubmit={handleResetPassword} className="space-y-6 mt-4">
                         <div className="space-y-3">
-                          <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Verified Email</Label>
+                          <Label htmlFor="reset-email" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Your Email</Label>
                           <Input 
                             id="reset-email" 
                             type="email" 
@@ -145,7 +145,7 @@ export default function LoginPage() {
                           />
                         </div>
                         <Button type="submit" className="w-full h-14 bg-primary shadow-xl shadow-primary/20 rounded-2xl font-black text-lg gap-3 transition-all hover:scale-[1.02]" disabled={resetLoading}>
-                          {resetLoading ? <Loader2 className="animate-spin" /> : "Initiate Recovery"}
+                          {resetLoading ? <Loader2 className="animate-spin" /> : "Send Reset Link"}
                         </Button>
                       </form>
                     </DialogContent>
@@ -161,23 +161,19 @@ export default function LoginPage() {
                 />
               </div>
               <Button type="submit" className="w-full h-16 bg-primary shadow-xl shadow-primary/20 rounded-2xl font-black text-xl gap-3 transition-all hover:scale-[1.02]" disabled={loading}>
-                {loading ? <Loader2 className="animate-spin" /> : <><ShieldCheck className="w-6 h-6" /> Authenticate</>}
+                {loading ? <Loader2 className="animate-spin" /> : <><ShieldCheck className="w-6 h-6" /> Sign In</>}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="justify-center p-8 bg-muted/5 border-t border-muted">
             <p className="text-sm font-bold text-muted-foreground flex items-center gap-2">
-              New to the ecosystem?{' '}
+              New to CapFinder?{' '}
               <Link href="/signup" className="text-primary font-black hover:underline inline-flex items-center gap-1 group">
-                Apply for Access <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                Sign Up <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
               </Link>
             </p>
           </CardFooter>
         </Card>
-
-        <p className="text-center text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground opacity-50">
-          Secure identity protocol v2.4.0
-        </p>
       </div>
     </div>
   );

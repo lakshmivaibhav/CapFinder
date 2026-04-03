@@ -7,7 +7,7 @@ import { useFirestore, useCollection, useDoc, useMemoFirebase, addDocumentNonBlo
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Search, TrendingUp, Mail, Landmark, Bookmark, BookmarkCheck, Clock, ShieldCheck, ArrowRight, Users, LayoutGrid, FilterX, CheckCircle2, Sparkles, Image as ImageIcon, Building, MessageSquare } from 'lucide-react';
+import { Loader2, Search, Mail, Landmark, Bookmark, BookmarkCheck, ShieldCheck, ArrowRight, Users, LayoutGrid, FilterX, CheckCircle2, Sparkles, Image as ImageIcon, Building, MessageSquare, TrendingUp } from 'lucide-react';
 import { Navbar } from '@/components/navbar';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -72,7 +72,6 @@ export default function PitchesFeedPage() {
   const isStartup = profile?.role === 'startup';
   const isAdmin = profile?.role === 'admin';
 
-  // Optimized query with 100 limit
   const pitchesQuery = useMemoFirebase(() => {
     if (!profile || profile.disabled === true || (!isAdmin && !isInvestor)) return null;
     return query(collection(db, 'pitches'), limit(100));
@@ -80,7 +79,6 @@ export default function PitchesFeedPage() {
 
   const { data: pitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
 
-  // Optimized query with 50 limit
   const investorsQuery = useMemoFirebase(() => {
     if (!profile || profile.disabled === true || (!isAdmin && !isStartup)) return null;
     return query(
@@ -165,7 +163,7 @@ export default function PitchesFeedPage() {
       industry: pitch.category || pitch.industry || 'Other',
       timestamp: serverTimestamp(),
     });
-    toast({ title: "Interest shown!" });
+    toast({ title: "Interest sent!" });
   };
 
   const handleRequestContact = async (pitch: any) => {
@@ -189,12 +187,12 @@ export default function PitchesFeedPage() {
     if (!isInvestor) return null;
     const request = contactRequests.find(r => r.pitchId === pitch.id);
     if (!request) return <Button variant="outline" className="flex-1 h-12 rounded-xl border-2 font-black uppercase text-[10px] tracking-widest transition-all hover:bg-primary hover:text-white hover:border-primary active:scale-95 shadow-sm" onClick={() => handleRequestContact(pitch)}><Mail className="mr-2 w-4 h-4" /> Connect</Button>;
-    if (request.status === 'pending') return <Button variant="secondary" className="flex-1 h-12 rounded-xl opacity-70 cursor-default bg-muted font-black uppercase text-[10px] tracking-widest" disabled><Clock className="mr-2 w-4 h-4 animate-pulse" /> Pending</Button>;
+    if (request.status === 'pending') return <Button variant="secondary" className="flex-1 h-12 rounded-xl opacity-70 cursor-default bg-muted font-black uppercase text-[10px] tracking-widest" disabled>Pending</Button>;
     if (request.status === 'accepted') return (
       <div className="flex-1 flex gap-2">
         <Link href="/messages" className="flex-1">
           <Button variant="default" className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 shadow-lg shadow-accent/20 font-black uppercase text-[10px] tracking-widest transition-all active:scale-95">
-            <MessageSquare className="w-4 h-4 mr-2" /> Hub
+            <MessageSquare className="w-4 h-4 mr-2" /> Chat
           </Button>
         </Link>
       </div>
@@ -212,10 +210,10 @@ export default function PitchesFeedPage() {
         <div className="flex flex-col gap-12">
           <div className="space-y-4 max-w-3xl text-center md:text-left">
             <h1 className="text-6xl font-black tracking-tighter leading-tight">
-              {isStartup ? "Investor Network" : isInvestor ? "Venture Marketplace" : "Market Hub"}
+              {isStartup ? "Find Investors" : isInvestor ? "Explore Pitches" : "Marketplace"}
             </h1>
             <p className="text-2xl leading-relaxed italic border-l-8 border-primary/20 pl-8 text-muted-foreground">
-              {isStartup ? `Bridge your vision with our ${investors?.length || 0} strategic investment partners.` : `Curated high-potential opportunities. Explore active ventures within our verified protocol.`}
+              {isStartup ? `Find and connect with ${investors?.length || 0} potential partners.` : `Discover high-potential startups ready for investment.`}
             </p>
           </div>
 
@@ -224,14 +222,14 @@ export default function PitchesFeedPage() {
               <div className="p-3 bg-primary rounded-xl shadow-lg shadow-primary/20">
                 <Landmark className="w-6 h-6 text-white" />
               </div>
-              <h3 className="font-black uppercase tracking-[0.3em] text-primary text-[10px]">Strategic Discovery Engine</h3>
+              <h3 className="font-black uppercase tracking-[0.3em] text-primary text-[10px]">Search</h3>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
               <div className="md:col-span-5 relative group">
                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground w-6 h-6 group-focus-within:text-primary transition-colors" />
                 <input 
-                  placeholder={isStartup ? "Filter potential partners..." : "Search ventures, sectors, technology..."}
+                  placeholder={isStartup ? "Filter potential partners..." : "Search startups, sectors, industry..."}
                   className="pl-14 h-16 w-full bg-white border-none shadow-inner rounded-xl text-lg font-medium placeholder:text-muted-foreground/40 focus:ring-4 focus:ring-primary/10 transition-all outline-none"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -290,7 +288,7 @@ export default function PitchesFeedPage() {
           {(isAdmin || (isStartup && isInvestor)) && (
             <div className="flex justify-center">
               <TabsList className="bg-muted/50 p-1.5 rounded-2xl h-16 w-full sm:w-fit shadow-inner">
-                <TabsTrigger value="pitches" className="flex-1 sm:flex-none px-12 h-13 rounded-xl text-sm font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">Ventures</TabsTrigger>
+                <TabsTrigger value="pitches" className="flex-1 sm:flex-none px-12 h-13 rounded-xl text-sm font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">Startups</TabsTrigger>
                 <TabsTrigger value="investors" className="flex-1 sm:flex-none px-12 h-13 rounded-xl text-sm font-black uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">Investors</TabsTrigger>
               </TabsList>
             </div>
@@ -355,7 +353,7 @@ export default function PitchesFeedPage() {
                             <CardTitle className="text-2xl font-black tracking-tight group-hover:text-primary transition-colors leading-none">{pitch.startupName}</CardTitle>
                             {pitch.ownerVerified && <ShieldCheck className="w-5 h-5 text-primary" />}
                           </div>
-                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Strategic Venture</p>
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Startup</p>
                         </div>
                       </div>
                     </CardHeader>
@@ -376,7 +374,7 @@ export default function PitchesFeedPage() {
                         </div>
                         <div className="space-y-1.5 flex flex-col justify-end">
                           <p className="text-[9px] uppercase tracking-[0.3em] text-muted-foreground font-black flex items-center gap-2">
-                            <LayoutGrid className="w-3 h-3 text-accent" /> Analysis
+                            <LayoutGrid className="w-3 h-3 text-accent" /> Info
                           </p>
                           <p className="text-[10px] font-black flex items-center gap-1.5 text-accent uppercase tracking-widest group-hover:translate-x-1 transition-transform">
                             Details <ArrowRight className="w-3 h-3" />
@@ -396,7 +394,7 @@ export default function PitchesFeedPage() {
                           onClick={() => handleShowInterest(pitch)} 
                           disabled={userInterests.includes(pitch.id)}
                         >
-                          {userInterests.includes(pitch.id) ? <><CheckCircle2 className="mr-2 w-4 h-4" /> Logged</> : <><Sparkles className="mr-2 w-4 h-4" /> Interest</>}
+                          {userInterests.includes(pitch.id) ? <><CheckCircle2 className="mr-2 w-4 h-4" /> Sent</> : <><Sparkles className="mr-2 w-4 h-4" /> Interest</>}
                         </Button>
                       </CardFooter>
                     )}
@@ -408,9 +406,9 @@ export default function PitchesFeedPage() {
                 <div className="p-10 bg-muted/10 rounded-full mb-10 scale-125">
                   <Search className="w-16 h-16 text-muted-foreground opacity-20" />
                 </div>
-                <h3 className="text-4xl font-black mb-4 tracking-tighter">No Ventures Match Criteria</h3>
-                <p className="text-xl mb-10 max-w-md font-medium italic text-muted-foreground">Adjust your discovery protocols or reset filters to broaden your search.</p>
-                <Button variant="outline" size="lg" className="rounded-xl px-12 h-16 border-2 font-black uppercase tracking-widest text-[10px] transition-all hover:bg-primary hover:text-white hover:border-primary active:scale-95 shadow-xl" onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); }}>Reset All Protocols</Button>
+                <h3 className="text-4xl font-black mb-4 tracking-tighter">No Results</h3>
+                <p className="text-xl mb-10 max-w-md font-medium italic text-muted-foreground">Adjust your filters to see more results.</p>
+                <Button variant="outline" size="lg" className="rounded-xl px-12 h-16 border-2 font-black uppercase tracking-widest text-[10px] transition-all hover:bg-primary hover:text-white hover:border-primary active:scale-95 shadow-xl" onClick={() => { setSearch(''); setCategoryFilter('all'); setFundingFilter('all'); }}>Clear All Filters</Button>
               </div>
             )}
           </TabsContent>
@@ -428,21 +426,21 @@ export default function PitchesFeedPage() {
                     )}>
                       <CardHeader className="p-10 pb-6">
                         <div className="flex justify-between items-start mb-8">
-                          <Badge className="bg-primary/10 text-primary border-none font-black uppercase tracking-[0.2em] text-[10px] px-5 py-1.5 rounded-lg">Capital Partner</Badge>
+                          <Badge className="bg-primary/10 text-primary border-none font-black uppercase tracking-[0.2em] text-[10px] px-5 py-1.5 rounded-lg">Investor</Badge>
                           <div className="p-4 bg-primary/5 rounded-xl group-hover:bg-primary group-hover:text-white group-hover:shadow-lg shadow-primary/20 transition-all duration-500">
                             <Users className="w-6 h-6" />
                           </div>
                         </div>
                         <div className="space-y-2">
                           <div className="flex items-center gap-3">
-                            <CardTitle className="text-3xl font-black tracking-tight group-hover:text-primary transition-colors leading-none">{investor.name || 'Private Member'}</CardTitle>
+                            <CardTitle className="text-3xl font-black tracking-tight group-hover:text-primary transition-colors leading-none">{investor.name || 'Investor'}</CardTitle>
                             {investor.verified && <ShieldCheck className="w-6 h-6 text-primary" />}
                           </div>
-                          <CardDescription className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">{investor.company || 'Institutional Group'}</CardDescription>
+                          <CardDescription className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">{investor.company || 'Investment Group'}</CardDescription>
                         </div>
                       </CardHeader>
                       <CardContent className="p-10 pt-4 pb-12">
-                        <p className="text-md text-muted-foreground italic leading-relaxed line-clamp-3 mb-10 border-l-2 border-primary/10 pl-6">&quot;{investor.bio || "Actively identifying and fueling the next generation of global market disruptions through strategic capital deployment."}&quot;</p>
+                        <p className="text-md text-muted-foreground italic leading-relaxed line-clamp-3 mb-10 border-l-2 border-primary/10 pl-6">&quot;{investor.bio || "Looking for high-growth startups to support."}&quot;</p>
                         <div className="flex flex-wrap gap-2.5">
                           {investor.investmentInterest?.split(',').slice(0, 4).map((tag: string, i: number) => (
                             <Badge key={i} variant="secondary" className="bg-muted/40 text-muted-foreground font-black uppercase tracking-widest text-[8px] px-4 py-1.5 rounded-lg border-none hover:bg-primary/5 hover:text-primary transition-colors">{tag.trim()}</Badge>
@@ -455,7 +453,7 @@ export default function PitchesFeedPage() {
                             <ShieldCheck className="w-4 h-4" />
                           </div>
                           <span className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em]">
-                            {investor.verified ? "Verified Identity" : "Member Identity"}
+                            {investor.verified ? "Verified Member" : "Profile"}
                           </span>
                         </div>
                         <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center shadow-md group-hover:translate-x-2 transition-transform duration-500">
@@ -472,8 +470,8 @@ export default function PitchesFeedPage() {
                   <Users className="w-16 h-16 text-muted-foreground opacity-20" />
                 </div>
                 <h3 className="text-4xl font-black mb-4 tracking-tighter">No Investors Found</h3>
-                <p className="text-xl mb-10 max-w-md font-medium italic text-muted-foreground">Broaden your sector criteria to identify matching strategic partners within the ecosystem.</p>
-                <Button variant="outline" size="lg" className="rounded-xl px-12 h-16 border-2 font-black uppercase tracking-widest text-[10px] transition-all hover:bg-primary hover:text-white hover:border-primary active:scale-95 shadow-xl" onClick={() => setSearch('')}>Clear Selection Protocol</Button>
+                <p className="text-xl mb-10 max-w-md font-medium italic text-muted-foreground">Adjust your filters to see more results.</p>
+                <Button variant="outline" size="lg" className="rounded-xl px-12 h-16 border-2 font-black uppercase tracking-widest text-[10px] transition-all hover:bg-primary hover:text-white hover:border-primary active:scale-95 shadow-xl" onClick={() => setSearch('')}>Clear Filters</Button>
               </div>
             )}
           </TabsContent>

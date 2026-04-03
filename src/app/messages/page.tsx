@@ -27,10 +27,6 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
-/**
- * @fileOverview Secure Messaging Hub.
- * Optimized for real-time synchronization and high-density professional dialogue.
- */
 export default function MessagesPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
   const db = useFirestore();
@@ -44,9 +40,6 @@ export default function MessagesPage() {
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Verification of tactical alignment
-  console.log("Selected Pitch:", selectedPitchId);
-
   useEffect(() => {
     if (!authLoading) {
       if (!user) router.push('/login');
@@ -54,7 +47,6 @@ export default function MessagesPage() {
     }
   }, [user, authLoading, emailVerified, router]);
 
-  // Fetch approved connections (contactRequests)
   const connectionsQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -69,7 +61,6 @@ export default function MessagesPage() {
 
   const { data: connections, isLoading: loadingConnections } = useCollection(connectionsQuery);
 
-  // Derive the active connection context
   const activeConnection = useMemo(() => 
     connections?.find(c => c.id === selectedConnectionId), 
     [connections, selectedConnectionId]
@@ -80,10 +71,6 @@ export default function MessagesPage() {
     return user.uid === activeConnection.senderId ? activeConnection.receiverId : activeConnection.senderId;
   }, [user, activeConnection]);
 
-  /**
-   * Pitch-based query.
-   * Optimized for localized dialogue retrieval.
-   */
   const messagesQuery = useMemoFirebase(() => {
     if (!selectedPitchId) return null;
     return query(
@@ -94,10 +81,6 @@ export default function MessagesPage() {
     );
   }, [db, selectedPitchId]);
 
-  /**
-   * Manual Real-time Listener.
-   * Ensures high-fidelity state synchronization directly from Firestore snapshots.
-   */
   useEffect(() => {
     if (!messagesQuery || !selectedPitchId) {
       setMessages([]);
@@ -114,7 +97,7 @@ export default function MessagesPage() {
       setMessages(msgs);
       setLoadingMessages(false);
     }, (error) => {
-      console.error("Dialogue synchronization error:", error);
+      console.error("Message sync error:", error);
       setLoadingMessages(false);
     });
 
@@ -129,13 +112,12 @@ export default function MessagesPage() {
 
   const partnerName = activeConnection 
     ? (user?.uid === activeConnection.senderId ? activeConnection.startupName : activeConnection.investorEmail)
-    : 'Select Contact';
+    : 'Select Chat';
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !partnerId || !selectedPitchId || !messageText.trim()) return;
 
-    // Persist strategic message using standardized schema
     addDocumentNonBlocking(collection(db, 'messages'), {
       pitchId: selectedPitchId,
       senderId: user.uid,
@@ -155,7 +137,6 @@ export default function MessagesPage() {
       <Navbar />
 
       <main className="flex-1 flex overflow-hidden">
-        {/* Sidebar: Verified Connections */}
         <aside className={cn(
           "w-full md:w-96 border-r bg-white flex flex-col transition-all duration-300",
           selectedConnectionId && "hidden md:flex"
@@ -163,9 +144,9 @@ export default function MessagesPage() {
           <div className="p-6 border-b bg-muted/10">
             <h2 className="text-xl font-black tracking-tight flex items-center gap-3">
               <Inbox className="w-5 h-5 text-primary" />
-              Secure Hub
+              Messages
             </h2>
-            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">Verified Venture Partners</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">My Connections</p>
           </div>
 
           <ScrollArea className="flex-1">
@@ -176,7 +157,7 @@ export default function MessagesPage() {
                 connections.map((conn) => {
                   const isUserInvestor = user?.uid === conn.senderId;
                   const displayName = isUserInvestor ? conn.startupName : conn.investorEmail;
-                  const role = isUserInvestor ? 'Venture' : 'Capital Partner';
+                  const role = isUserInvestor ? 'Startup' : 'Investor';
 
                   return (
                     <button
@@ -213,21 +194,19 @@ export default function MessagesPage() {
                   <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto opacity-20">
                     <MessageSquare className="w-6 h-6" />
                   </div>
-                  <p className="text-xs font-black uppercase tracking-widest text-muted-foreground italic">No active inquiries</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-muted-foreground italic">No chats yet</p>
                 </div>
               )}
             </div>
           </ScrollArea>
         </aside>
 
-        {/* Chat Interface */}
         <section className={cn(
           "flex-1 flex flex-col bg-[#f8fafc] relative",
           !selectedConnectionId && "hidden md:flex"
         )}>
           {selectedConnectionId ? (
             <>
-              {/* Header */}
               <header className="h-24 border-b bg-white/80 backdrop-blur-md px-6 flex items-center justify-between sticky top-0 z-10 shadow-sm">
                 <div className="flex items-center gap-4">
                   <Button 
@@ -242,12 +221,10 @@ export default function MessagesPage() {
                     <ArrowLeft className="w-5 h-5" />
                   </Button>
                   
-                  {/* Identity Avatar */}
                   <div className="relative">
                     <div className="w-12 h-12 rounded-full bg-primary/5 flex items-center justify-center border-2 border-primary/10 overflow-hidden shrink-0 shadow-inner">
                       <User className="w-6 h-6 text-primary opacity-40" />
                     </div>
-                    {/* Active Status Indicator */}
                     <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full shadow-sm" />
                   </div>
 
@@ -255,19 +232,18 @@ export default function MessagesPage() {
                     <h3 className="font-black text-lg tracking-tight leading-none text-foreground">{partnerName}</h3>
                     <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                      <p className="text-[10px] font-black uppercase tracking-[0.1em] text-emerald-600">Online & Authenticated</p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.1em] text-emerald-600">Active Now</p>
                     </div>
                   </div>
                 </div>
                 
                 <div className="hidden sm:block">
                   <Badge variant="outline" className="bg-primary/5 text-primary border-primary/10 rounded-lg px-4 py-1.5 font-black text-[9px] uppercase tracking-[0.2em] shadow-sm">
-                    <ShieldCheck className="w-3.5 h-3.5 mr-2" /> Identity Verified
+                    <ShieldCheck className="w-3.5 h-3.5 mr-2" /> Verified Profile
                   </Badge>
                 </div>
               </header>
 
-              {/* Dialogue Stream */}
               <ScrollArea className="flex-1 p-6">
                 <div className="max-w-4xl mx-auto space-y-1">
                   {loadingMessages ? (
@@ -290,7 +266,7 @@ export default function MessagesPage() {
                               "text-[8px] font-black uppercase tracking-widest mt-1 opacity-40",
                               isMe ? "text-right" : "text-left"
                             )}>
-                              {msg.timestamp?.toDate ? format(msg.timestamp.toDate(), 'HH:mm') : 'Syncing...'}
+                              {msg.timestamp?.toDate ? format(msg.timestamp.toDate(), 'HH:mm') : 'Sending...'}
                             </p>
                           </div>
                         </div>
@@ -299,14 +275,13 @@ export default function MessagesPage() {
                   ) : (
                     <div className="text-center py-20 flex flex-col items-center gap-4 opacity-30">
                       <Zap className="w-10 h-10 text-primary" />
-                      <p className="italic font-black text-sm uppercase tracking-widest">Initiate secure dialogue.</p>
+                      <p className="italic font-black text-sm uppercase tracking-widest">Start chatting.</p>
                     </div>
                   )}
                   <div ref={scrollRef} className="h-4" />
                 </div>
               </ScrollArea>
 
-              {/* Message Input */}
               <footer className="p-6 bg-white border-t">
                 <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative flex items-center bg-muted/30 rounded-full p-1.5 shadow-sm border border-muted group focus-within:ring-2 focus-within:ring-primary/20 transition-all">
                   <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
@@ -331,7 +306,7 @@ export default function MessagesPage() {
                   <Input 
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
-                    placeholder="Enter strategic message..."
+                    placeholder="Type a message..."
                     className="flex-1 h-12 bg-transparent border-none shadow-none focus-visible:ring-0 px-4 text-md font-medium"
                   />
                   <Button 
@@ -351,9 +326,9 @@ export default function MessagesPage() {
                 <div className="absolute inset-0 bg-primary/5 rounded-full blur-3xl animate-pulse" />
               </div>
               <div className="max-w-sm space-y-2">
-                <h3 className="text-2xl font-black tracking-tight">Professional Message Hub</h3>
+                <h3 className="text-2xl font-black tracking-tight">Your Messages</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed italic border-l-4 border-primary/20 pl-6">
-                  Select a verified partner to initiate secure communications.
+                  Select a chat to start talking with a connection.
                 </p>
               </div>
             </div>

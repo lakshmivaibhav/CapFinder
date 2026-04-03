@@ -30,7 +30,7 @@ export default function RequestsPage() {
         toast({
           variant: "destructive",
           title: "Access Restricted",
-          description: "This interface is reserved for venture management."
+          description: "This page is for startups only."
         });
         router.push('/dashboard');
       }
@@ -50,8 +50,8 @@ export default function RequestsPage() {
   const handleUpdateStatus = (req: any, status: 'accepted' | 'rejected') => {
     updateDocumentNonBlocking(doc(db, 'contactRequests', req.id), { status });
     toast({
-      title: `Identity Access ${status === 'accepted' ? 'Granted' : 'Revoked'}`,
-      description: status === 'accepted' ? 'The investor has been granted identity verification.' : 'The inquiry has been declined.',
+      title: `Request ${status === 'accepted' ? 'Accepted' : 'Declined'}`,
+      description: status === 'accepted' ? 'You can now chat with this investor.' : 'The request has been removed.',
     });
   };
 
@@ -63,13 +63,13 @@ export default function RequestsPage() {
       <Navbar />
       <main className="flex-1 p-6 md:p-10 max-w-6xl mx-auto w-full space-y-12">
         <div className="space-y-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Inbound Queue</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Incoming</p>
           <h1 className="text-4xl font-black tracking-tighter flex items-center gap-4">
             <Inbox className="w-10 h-10 text-primary" />
-            Venture Inquiries
+            Requests
           </h1>
           <p className="text-muted-foreground text-xl max-w-2xl leading-relaxed italic border-l-4 border-primary/20 pl-6">
-            Review and authenticate strategic capital partners interested in your portfolio.
+            Review investors who want to connect with your startup.
           </p>
         </div>
 
@@ -88,10 +88,10 @@ export default function RequestsPage() {
                     <div className="flex items-center justify-between mb-8">
                       <Badge variant={req.status === 'pending' ? 'secondary' : req.status === 'accepted' ? 'default' : 'destructive'} className="capitalize px-4 py-1.5 rounded-xl font-black text-[9px] uppercase tracking-widest">
                         {req.status === 'pending' ? <Clock className="w-3.5 h-3.5 mr-2 animate-pulse" /> : req.status === 'accepted' ? <CheckCircle2 className="w-3.5 h-3.5 mr-2" /> : <XCircle className="w-3.5 h-3.5 mr-2" />}
-                        {req.status === 'pending' ? 'Verification Pending' : req.status === 'accepted' ? 'Connected' : 'Access Restricted'}
+                        {req.status === 'pending' ? 'Pending' : req.status === 'accepted' ? 'Connected' : 'Declined'}
                       </Badge>
                       <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                        {req.timestamp?.toDate ? format(req.timestamp.toDate(), 'MMM d, HH:mm') : 'Syncing...'}
+                        {req.timestamp?.toDate ? format(req.timestamp.toDate(), 'MMM d, HH:mm') : 'Recently'}
                       </span>
                     </div>
                     
@@ -109,12 +109,12 @@ export default function RequestsPage() {
                               </Button>
                             </Link>
                           </h2>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Certified Investor Identity</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Investor</p>
                         </div>
                       </div>
 
                       <div className="p-6 bg-muted/30 rounded-2xl border-l-4 border-primary/20 space-y-2">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Target Venture</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Venture</p>
                         <p className="text-xl font-black text-foreground">{req.startupName}</p>
                       </div>
                     </div>
@@ -127,32 +127,32 @@ export default function RequestsPage() {
                           className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-500/20 rounded-2xl font-black uppercase text-xs tracking-widest"
                           onClick={() => handleUpdateStatus(req, 'accepted')}
                         >
-                          <CheckCircle2 className="w-5 h-5 mr-3" /> Approve Access
+                          <CheckCircle2 className="w-5 h-5 mr-3" /> Accept
                         </Button>
                         <Button 
                           variant="outline" 
                           className="w-full h-14 border-2 border-red-100 text-red-600 hover:bg-red-50 bg-white rounded-2xl font-black uppercase text-xs tracking-widest"
                           onClick={() => handleUpdateStatus(req, 'rejected')}
                         >
-                          <XCircle className="w-5 h-5 mr-3" /> Decline Inquiry
+                          <XCircle className="w-5 h-5 mr-3" /> Decline
                         </Button>
                       </div>
                     ) : req.status === 'accepted' ? (
                       <div className="text-center space-y-6 w-full">
                         <div className="p-4 bg-emerald-50 rounded-2xl border-2 border-emerald-100">
                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center justify-center gap-2">
-                             <ShieldCheck className="w-4 h-4" /> Secure Connection Active
+                             <ShieldCheck className="w-4 h-4" /> Connected
                            </p>
                         </div>
                         <div className="flex flex-col gap-3">
                           <Link href="/messages" className="w-full">
                             <Button className="w-full h-12 rounded-xl bg-primary shadow-lg shadow-primary/20 font-black uppercase text-[10px] tracking-widest">
-                              <MessageSquare className="w-4 h-4 mr-3" /> Secure Hub
+                              <MessageSquare className="w-4 h-4 mr-3" /> Go to Chat
                             </Button>
                           </Link>
                           <Button variant="outline" className="w-full h-12 rounded-xl font-bold border-2" asChild>
                             <a href={`mailto:${req.investorEmail}`}>
-                              <Mail className="w-4 h-4 mr-3" /> External Email
+                              <Mail className="w-4 h-4 mr-3" /> Send Email
                             </a>
                           </Button>
                         </div>
@@ -162,7 +162,7 @@ export default function RequestsPage() {
                         <div className="p-4 bg-red-50 rounded-2xl">
                            <XCircle className="w-10 h-10 text-red-300 mx-auto" />
                         </div>
-                        <p className="text-sm font-black text-muted-foreground uppercase tracking-widest">Access Terminated</p>
+                        <p className="text-sm font-black text-muted-foreground uppercase tracking-widest">Declined</p>
                       </div>
                     )}
                   </div>
@@ -175,13 +175,13 @@ export default function RequestsPage() {
             <div className="w-24 h-24 bg-muted/10 rounded-full flex items-center justify-center mb-8">
               <Inbox className="w-12 h-12 text-muted-foreground opacity-20" />
             </div>
-            <h3 className="text-3xl font-black text-foreground mb-4">No Inbound Interest</h3>
+            <h3 className="text-3xl font-black text-foreground mb-4">No Requests Yet</h3>
             <p className="text-muted-foreground text-lg max-w-md leading-relaxed">
-              When investors initiate interest in your ventures, their authentication requests will appear in this secure queue.
+              When investors want to connect with your startup, their requests will appear here.
             </p>
             <Link href="/pitches/new" className="mt-10">
               <Button size="lg" className="rounded-2xl px-10 h-14 bg-primary shadow-xl shadow-primary/20 font-black flex gap-3">
-                <Zap className="w-6 h-6" /> Create New Venture
+                <Zap className="w-6 h-6" /> Create a Pitch
               </Button>
             </Link>
           </div>
