@@ -1,20 +1,56 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
-import { useAuth as useFirebaseAuth } from '@/firebase';
+import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
 import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, Zap, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
 
 export function Navbar() {
   const { user, profile, loading, emailVerified } = useAuth();
   const firebaseAuth = useFirebaseAuth();
+  const db = useFirestore();
   const pathname = usePathname();
   const router = useRouter();
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+
+  useEffect(() => {
+    const checkUnreadMessages = async () => {
+      if (!user?.uid) return;
+      
+      try {
+        // Query for any messages sent to the current user that are still unread.
+        // We limit to 1 because we only need to know if at least one exists.
+        const messagesQuery = query(
+          collection(db, 'messages'),
+          where('receiverId', '==', user.uid),
+          where('read', '==', false),
+          orderBy('timestamp', 'desc'),
+          limit(1)
+        );
+        
+        const snapshot = await getDocs(messagesQuery);
+        
+        // If a message exists where the receiver is the current user and it is unread,
+        // it confirms the existence of unread incoming communications.
+        if (!snapshot.empty) {
+          const latestMessage = snapshot.docs[0].data();
+          // Verify that the sender is not the current user (standard protocol for incoming alerts)
+          if (latestMessage.senderId !== user.uid) {
+            setHasUnreadMessages(true);
+          }
+        }
+      } catch (error) {
+        // Suppress errors to ensure a seamless navigation experience
+      }
+    };
+
+    checkUnreadMessages();
+  }, [user, db]);
 
   const handleLogout = async () => {
     await firebaseAuth.signOut();
