@@ -8,7 +8,7 @@ import { useAuth } from '@/components/auth-provider';
 import { useAuth as useFirebaseAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, Zap, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { collection, query, where, onSnapshot, limit } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 export function Navbar() {
   const { user, profile, loading, emailVerified } = useAuth();
@@ -16,19 +16,19 @@ export function Navbar() {
   const db = useFirestore();
   const pathname = usePathname();
   const router = useRouter();
-  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Clear unread indicator when user navigates to the messages page
   useEffect(() => {
     if (pathname === '/messages') {
-      setHasUnreadMessages(false);
+      setUnreadCount(0);
     }
   }, [pathname]);
 
   // Real-time listener for unread messages
   useEffect(() => {
     if (!user?.uid || pathname === '/messages') {
-      if (pathname === '/messages') setHasUnreadMessages(false);
+      if (pathname === '/messages') setUnreadCount(0);
       return;
     }
 
@@ -36,8 +36,7 @@ export function Navbar() {
     const q = query(
       collection(db, 'messages'),
       where('receiverId', '==', user.uid),
-      where('read', '==', false),
-      limit(1)
+      where('read', '==', false)
     );
 
     const unsubscribe = onSnapshot(
@@ -45,7 +44,7 @@ export function Navbar() {
       (snapshot) => {
         // Only update if not on the messages page
         if (pathname !== '/messages') {
-          setHasUnreadMessages(!snapshot.empty);
+          setUnreadCount(snapshot.size);
         }
       },
       async (error) => {
@@ -113,16 +112,10 @@ export function Navbar() {
               >
                 <div className="relative">
                   <item.icon className={cn("w-4 h-4", pathname === item.href ? "text-primary" : "text-muted-foreground")} />
-                  {hasUnreadMessages && item.href === '/messages' && (
-                    <div style={{
-                      position: "absolute",
-                      top: "0px",
-                      right: "0px",
-                      width: "8px",
-                      height: "8px",
-                      backgroundColor: "red",
-                      borderRadius: "50%"
-                    }} />
+                  {unreadCount > 0 && item.href === '/messages' && (
+                    <div className="absolute -top-2 -right-2 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-destructive text-[9px] font-black text-white border-2 border-white shadow-sm animate-in zoom-in duration-300">
+                      {unreadCount}
+                    </div>
                   )}
                 </div>
                 <span className="hidden xl:inline">{item.label}</span>
@@ -150,19 +143,13 @@ export function Navbar() {
             <div className="flex lg:hidden gap-1">
                {navItems.slice(0, 3).map((item) => (
                  <Link key={item.href} href={item.href}>
-                   <Button variant="ghost" size="icon" className={cn("h-11 w-11 rounded-xl", pathname === item.href ? "bg-primary/10 text-primary" : "text-muted-foreground")}>
+                   <Button variant="ghost" size="icon" className={cn("h-11 w-11 rounded-xl relative", pathname === item.href ? "bg-primary/10 text-primary" : "text-muted-foreground")}>
                      <div className="relative">
                        <item.icon className="w-5 h-5" />
-                       {hasUnreadMessages && item.href === '/messages' && (
-                         <div style={{
-                           position: "absolute",
-                           top: "0px",
-                           right: "0px",
-                           width: "8px",
-                           height: "8px",
-                           backgroundColor: "red",
-                           borderRadius: "50%"
-                         }} />
+                       {unreadCount > 0 && item.href === '/messages' && (
+                         <div className="absolute -top-2 -right-2 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-destructive text-[9px] font-black text-white border-2 border-white shadow-sm animate-in zoom-in duration-300">
+                           {unreadCount}
+                         </div>
                        )}
                      </div>
                    </Button>
