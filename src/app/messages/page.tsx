@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, orderBy, limit, and, or, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, and, or, serverTimestamp, onSnapshot, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +38,7 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [unreadPartners, setUnreadPartners] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,6 +47,25 @@ export default function MessagesPage() {
       else if (!emailVerified) router.push('/verify-email');
     }
   }, [user, authLoading, emailVerified, router]);
+
+  // Real-time listener for ALL unread messages directed to the current user
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const q = query(
+      collection(db, 'messages'),
+      where('receiverId', '==', user.uid),
+      where('read', '==', false)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const senders = new Set<string>();
+      snapshot.docs.forEach(doc => senders.add(doc.data().senderId));
+      setUnreadPartners(senders);
+    });
+
+    return () => unsubscribe();
+  }, [db, user?.uid]);
 
   const connectionsQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -110,6 +130,36 @@ export default function MessagesPage() {
     }
   }, [messages]);
 
+  const markMessagesAsRead = async (pId: string, pitchId: string) => {
+    if (!user?.uid) return;
+    try {
+      const q = query(
+        collection(db, 'messages'),
+        where('receiverId', '==', user.uid),
+        where('senderId', '==', pId),
+        where('pitchId', '==', pitchId),
+        where('read', '==', false)
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const batch = writeBatch(db);
+        snapshot.docs.forEach((d) => {
+          batch.update(doc(db, 'messages', d.id), { read: true });
+        });
+        await batch.commit();
+      }
+    } catch (error) {
+      console.error("Failed to mark messages as read:", error);
+    }
+  };
+
+  const handleSelectChat = (conn: any) => {
+    const pId = user?.uid === conn.senderId ? conn.receiverId : conn.senderId;
+    setSelectedConnectionId(conn.id);
+    setSelectedPitchId(conn.pitchId);
+    markMessagesAsRead(pId, conn.pitchId);
+  };
+
   const partnerName = activeConnection 
     ? (user?.uid === activeConnection.senderId ? activeConnection.startupName : activeConnection.investorEmail)
     : 'Select Chat';
@@ -156,18 +206,17 @@ export default function MessagesPage() {
               ) : connections && connections.length > 0 ? (
                 connections.map((conn) => {
                   const isUserInvestor = user?.uid === conn.senderId;
+                  const currentPartnerId = isUserInvestor ? conn.receiverId : conn.senderId;
                   const displayName = isUserInvestor ? conn.startupName : conn.investorEmail;
                   const role = isUserInvestor ? 'Startup' : 'Investor';
+                  const hasUnread = unreadPartners.has(currentPartnerId);
 
                   return (
                     <button
                       key={conn.id}
-                      onClick={() => {
-                        setSelectedConnectionId(conn.id);
-                        setSelectedPitchId(conn.pitchId);
-                      }}
+                      onClick={() => handleSelectChat(conn)}
                       className={cn(
-                        "w-full p-4 rounded-2xl flex items-center gap-4 transition-all text-left group",
+                        "w-full p-4 rounded-2xl flex items-center gap-4 transition-all text-left group relative",
                         selectedConnectionId === conn.id 
                           ? "bg-primary text-white shadow-xl shadow-primary/20 scale-[1.02]" 
                           : "hover:bg-muted/50"
@@ -179,8 +228,13 @@ export default function MessagesPage() {
                       )}>
                         {isUserInvestor ? <Building className="w-6 h-6" /> : <User className="w-6 h-6" />}
                       </div>
-                      <div className="overflow-hidden">
-                        <p className="font-black text-sm truncate leading-none mb-1">{displayName}</p>
+                      <div className="overflow-hidden flex-1">
+                        <div className="flex justify-between items-center mb-1">
+                          <p className="font-black text-sm truncate leading-none">{displayName}</p>
+                          {hasUnread && (
+                            <div className="w-2 h-2 rounded-full bg-destructive shadow-sm animate-in zoom-in duration-300 shrink-0 ml-2" />
+                          )}
+                        </div>
                         <p className={cn(
                           "text-[9px] font-black uppercase tracking-widest",
                           selectedConnectionId === conn.id ? "text-white/60" : "text-muted-foreground"
