@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
-import { useAuth as useFirebaseAuth, useFirestore } from '@/firebase';
+import { useAuth as useFirebaseAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, Zap, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { collection, query, where, getDocs, limit, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, limit } from 'firebase/firestore';
 
 export function Navbar() {
   const { user, profile, loading, emailVerified } = useAuth();
@@ -25,38 +25,40 @@ export function Navbar() {
     }
   }, [pathname]);
 
+  // Real-time listener for unread messages
   useEffect(() => {
-    const checkUnreadMessages = async () => {
-      if (!user?.uid || pathname === '/messages') return;
-      
-      try {
-        // Query for any messages sent to the current user that are still unread.
-        // We limit to 1 because we only need to know if at least one exists.
-        const messagesQuery = query(
-          collection(db, 'messages'),
-          where('receiverId', '==', user.uid),
-          where('read', '==', false),
-          orderBy('timestamp', 'desc'),
-          limit(1)
-        );
-        
-        const snapshot = await getDocs(messagesQuery);
-        
-        // If a message exists where the receiver is the current user and it is unread,
-        // it confirms the existence of unread incoming communications.
-        if (!snapshot.empty) {
-          const latestMessage = snapshot.docs[0].data();
-          // Verify that the sender is not the current user (standard protocol for incoming alerts)
-          if (latestMessage.senderId !== user.uid) {
-            setHasUnreadMessages(true);
-          }
-        }
-      } catch (error) {
-        // Suppress errors to ensure a seamless navigation experience
-      }
-    };
+    if (!user?.uid || pathname === '/messages') {
+      if (pathname === '/messages') setHasUnreadMessages(false);
+      return;
+    }
 
-    checkUnreadMessages();
+    // Query for any messages sent to the current user that are still unread.
+    const q = query(
+      collection(db, 'messages'),
+      where('receiverId', '==', user.uid),
+      where('read', '==', false),
+      limit(1)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        // Only update if not on the messages page
+        if (pathname !== '/messages') {
+          setHasUnreadMessages(!snapshot.empty);
+        }
+      },
+      async (error) => {
+        // Handle permission errors silently in background for the indicator
+        const permissionError = new FirestorePermissionError({
+          path: 'messages',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      }
+    );
+
+    return () => unsubscribe();
   }, [user, db, pathname]);
 
   const handleLogout = async () => {
@@ -65,8 +67,6 @@ export function Navbar() {
   };
 
   if (!user) return null;
-
-  const isAdmin = profile?.role === 'admin';
 
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -114,7 +114,15 @@ export function Navbar() {
                 <div className="relative">
                   <item.icon className={cn("w-4 h-4", pathname === item.href ? "text-primary" : "text-muted-foreground")} />
                   {hasUnreadMessages && item.href === '/messages' && (
-                    <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm" />
+                    <div style={{
+                      position: "absolute",
+                      top: "0px",
+                      right: "0px",
+                      width: "8px",
+                      height: "8px",
+                      backgroundColor: "red",
+                      borderRadius: "50%"
+                    }} />
                   )}
                 </div>
                 <span className="hidden xl:inline">{item.label}</span>
@@ -146,7 +154,15 @@ export function Navbar() {
                      <div className="relative">
                        <item.icon className="w-5 h-5" />
                        {hasUnreadMessages && item.href === '/messages' && (
-                         <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white shadow-sm" />
+                         <div style={{
+                           position: "absolute",
+                           top: "0px",
+                           right: "0px",
+                           width: "8px",
+                           height: "8px",
+                           backgroundColor: "red",
+                           borderRadius: "50%"
+                         }} />
                        )}
                      </div>
                    </Button>
