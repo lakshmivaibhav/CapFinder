@@ -8,7 +8,7 @@ import { useAuth } from '@/components/auth-provider';
 import { useAuth as useFirebaseAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, Zap, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, writeBatch, doc } from 'firebase/firestore';
 
 export function Navbar() {
   const { user, profile, loading, emailVerified } = useAuth();
@@ -16,23 +16,44 @@ export function Navbar() {
   const db = useFirestore();
   const pathname = usePathname();
   const router = useRouter();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
-  // Clear unread indicator when user navigates to the messages page
+  // Clear unread indicator and mark messages as read when user navigates to the messages page
   useEffect(() => {
-    if (pathname === '/messages') {
-      setUnreadCount(0);
+    if (pathname === '/messages' && user?.uid) {
+      setHasUnreadMessages(false);
+      
+      // Batch update unread messages to read status in the database
+      const markMessagesAsRead = async () => {
+        try {
+          const q = query(
+            collection(db, 'messages'),
+            where('receiverId', '==', user.uid),
+            where('read', '==', false)
+          );
+          const snapshot = await getDocs(q);
+          if (!snapshot.empty) {
+            const batch = writeBatch(db);
+            snapshot.docs.forEach((d) => {
+              batch.update(doc(db, 'messages', d.id), { read: true });
+            });
+            await batch.commit();
+          }
+        } catch (error) {
+          console.error("Failed to sync message read status:", error);
+        }
+      };
+      markMessagesAsRead();
     }
-  }, [pathname]);
+  }, [pathname, user, db]);
 
-  // Real-time listener for unread messages
+  // Real-time listener for incoming unread communications
   useEffect(() => {
     if (!user?.uid || pathname === '/messages') {
-      if (pathname === '/messages') setUnreadCount(0);
+      if (pathname === '/messages') setHasUnreadMessages(false);
       return;
     }
 
-    // Query for any messages sent to the current user that are still unread.
     const q = query(
       collection(db, 'messages'),
       where('receiverId', '==', user.uid),
@@ -42,13 +63,12 @@ export function Navbar() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        // Only update if not on the messages page
+        // Update presence indicator if not currently in the inbox
         if (pathname !== '/messages') {
-          setUnreadCount(snapshot.size);
+          setHasUnreadMessages(snapshot.size > 0);
         }
       },
       async (error) => {
-        // Handle permission errors silently in background for the indicator
         const permissionError = new FirestorePermissionError({
           path: 'messages',
           operation: 'list',
@@ -112,10 +132,8 @@ export function Navbar() {
               >
                 <div className="relative">
                   <item.icon className={cn("w-4 h-4", pathname === item.href ? "text-primary" : "text-muted-foreground")} />
-                  {unreadCount > 0 && item.href === '/messages' && (
-                    <div className="absolute -top-2 -right-2 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-destructive text-[9px] font-black text-white border-2 border-white shadow-sm animate-in zoom-in duration-300">
-                      {unreadCount}
-                    </div>
+                  {hasUnreadMessages && item.href === '/messages' && (
+                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-destructive border-2 border-white shadow-sm animate-in zoom-in duration-300" />
                   )}
                 </div>
                 <span className="hidden xl:inline">{item.label}</span>
@@ -146,10 +164,8 @@ export function Navbar() {
                    <Button variant="ghost" size="icon" className={cn("h-11 w-11 rounded-xl relative", pathname === item.href ? "bg-primary/10 text-primary" : "text-muted-foreground")}>
                      <div className="relative">
                        <item.icon className="w-5 h-5" />
-                       {unreadCount > 0 && item.href === '/messages' && (
-                         <div className="absolute -top-2 -right-2 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-destructive text-[9px] font-black text-white border-2 border-white shadow-sm animate-in zoom-in duration-300">
-                           {unreadCount}
-                         </div>
+                       {hasUnreadMessages && item.href === '/messages' && (
+                         <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-destructive border-2 border-white shadow-sm animate-in zoom-in duration-300" />
                        )}
                      </div>
                    </Button>
