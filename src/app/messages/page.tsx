@@ -153,6 +153,13 @@ export default function MessagesPage() {
     }
   };
 
+  // Automatically mark as read if the partner sends a message while the chat is open
+  useEffect(() => {
+    if (selectedConnectionId && partnerId && unreadPartners.has(partnerId)) {
+      markMessagesAsRead(partnerId, selectedPitchId!);
+    }
+  }, [unreadPartners, selectedConnectionId, partnerId, selectedPitchId]);
+
   const handleSelectChat = (conn: any) => {
     const pId = user?.uid === conn.senderId ? conn.receiverId : conn.senderId;
     setSelectedConnectionId(conn.id);

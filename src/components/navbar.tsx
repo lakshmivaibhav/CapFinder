@@ -8,7 +8,7 @@ import { useAuth } from '@/components/auth-provider';
 import { useAuth as useFirebaseAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, Zap, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { collection, query, where, onSnapshot, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 export function Navbar() {
   const { user, profile, loading, emailVerified } = useAuth();
@@ -18,34 +18,12 @@ export function Navbar() {
   const router = useRouter();
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
-  // Clear unread indicator and mark messages as read when user navigates to the messages page
+  // Clear visual indicator locally when viewing messages
   useEffect(() => {
-    if (pathname === '/messages' && user?.uid) {
+    if (pathname === '/messages') {
       setHasUnreadMessages(false);
-      
-      // Batch update unread messages to read status in the database
-      const markMessagesAsRead = async () => {
-        try {
-          const q = query(
-            collection(db, 'messages'),
-            where('receiverId', '==', user.uid),
-            where('read', '==', false)
-          );
-          const snapshot = await getDocs(q);
-          if (!snapshot.empty) {
-            const batch = writeBatch(db);
-            snapshot.docs.forEach((d) => {
-              batch.update(doc(db, 'messages', d.id), { read: true });
-            });
-            await batch.commit();
-          }
-        } catch (error) {
-          console.error("Failed to sync message read status:", error);
-        }
-      };
-      markMessagesAsRead();
     }
-  }, [pathname, user, db]);
+  }, [pathname]);
 
   // Real-time listener for incoming unread communications
   useEffect(() => {
@@ -63,7 +41,7 @@ export function Navbar() {
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        // Update presence indicator if not currently in the inbox
+        // Update global presence indicator
         if (pathname !== '/messages') {
           setHasUnreadMessages(snapshot.size > 0);
         }
