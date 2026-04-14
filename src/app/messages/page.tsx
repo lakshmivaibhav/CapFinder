@@ -38,7 +38,7 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<any[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-  const [unreadPartners, setUnreadPartners] = useState<Set<string>>(new Set());
+  const [unreadConversations, setUnreadConversations] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,9 +59,13 @@ export default function MessagesPage() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const senders = new Set<string>();
-      snapshot.docs.forEach(doc => senders.add(doc.data().senderId));
-      setUnreadPartners(senders);
+      const convos = new Set<string>();
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        // Track unread status as a combination of sender and pitch
+        convos.add(`${data.senderId}_${data.pitchId}`);
+      });
+      setUnreadConversations(convos);
     });
 
     return () => unsubscribe();
@@ -155,10 +159,10 @@ export default function MessagesPage() {
 
   // Automatically mark as read if the partner sends a message while the chat is open
   useEffect(() => {
-    if (selectedConnectionId && partnerId && unreadPartners.has(partnerId)) {
-      markMessagesAsRead(partnerId, selectedPitchId!);
+    if (selectedConnectionId && partnerId && selectedPitchId && unreadConversations.has(`${partnerId}_${selectedPitchId}`)) {
+      markMessagesAsRead(partnerId, selectedPitchId);
     }
-  }, [unreadPartners, selectedConnectionId, partnerId, selectedPitchId]);
+  }, [unreadConversations, selectedConnectionId, partnerId, selectedPitchId]);
 
   const handleSelectChat = (conn: any) => {
     const pId = user?.uid === conn.senderId ? conn.receiverId : conn.senderId;
@@ -216,7 +220,8 @@ export default function MessagesPage() {
                   const currentPartnerId = isUserInvestor ? conn.receiverId : conn.senderId;
                   const displayName = isUserInvestor ? conn.startupName : conn.investorEmail;
                   const role = isUserInvestor ? 'Startup' : 'Investor';
-                  const hasUnread = unreadPartners.has(currentPartnerId);
+                  // Check unread status for this specific partner AND pitch
+                  const hasUnread = unreadConversations.has(`${currentPartnerId}_${conn.pitchId}`);
 
                   return (
                     <button
