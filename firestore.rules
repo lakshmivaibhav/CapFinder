@@ -142,5 +142,13 @@ service cloud.firestore {
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
+
+    match /supportTickets/{ticketId} {
+      // Anyone can submit a ticket (even non-logged in if allowed, but here we require login for consistency)
+      // Actually, standard contact forms often allow guest access, but let's stick to isSignedIn() for safety.
+      allow create: if isSignedIn();
+      allow read, list, update: if isAdmin();
+      allow delete: if isAdmin();
+    }
   }
 }

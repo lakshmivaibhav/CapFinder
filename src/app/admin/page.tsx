@@ -1,21 +1,44 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, limit, doc, getDoc, where } from 'firebase/firestore';
+import { collection, query, limit, doc, getDoc, where, orderBy } from 'firebase/firestore';
 import { Navbar } from '@/components/navbar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Trash2, ShieldAlert, UserX, UserCheck, ShieldCheck, UserCog, Megaphone, Inbox, Users, AlertTriangle, Zap, Building } from 'lucide-react';
+import { 
+  Loader2, 
+  Trash2, 
+  ShieldAlert, 
+  UserX, 
+  UserCheck, 
+  ShieldCheck, 
+  UserCog, 
+  Megaphone, 
+  Inbox, 
+  Users, 
+  AlertTriangle, 
+  Zap, 
+  Building, 
+  LifeBuoy, 
+  ExternalLink,
+  MessageSquare,
+  Clock,
+  CheckCircle2,
+  MoreVertical
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours } from 'date-fns';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function AdminDashboardPage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -70,6 +93,8 @@ function AdminDashboardContent() {
   const db = useFirestore();
   const { toast } = useToast();
   const [processingStale, setProcessingStale] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [adminNote, setAdminNote] = useState('');
 
   const usersQuery = useMemoFirebase(() => {
     if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
@@ -91,10 +116,16 @@ function AdminDashboardContent() {
     return query(collection(db, 'deleteRequests'), where('status', '==', 'pending'), limit(100));
   }, [db, user, profile]);
 
+  const ticketsQuery = useMemoFirebase(() => {
+    if (!user?.uid || !profile || profile.role !== 'admin' || profile.disabled) return null;
+    return query(collection(db, 'supportTickets'), orderBy('createdAt', 'desc'), limit(100));
+  }, [db, user, profile]);
+
   const { data: allUsers, isLoading: loadingUsers } = useCollection(usersQuery);
   const { data: allPitches, isLoading: loadingPitches } = useCollection(pitchesQuery);
   const { data: allRequests, isLoading: loadingRequests } = useCollection(requestsQuery);
   const { data: allDeleteRequests, isLoading: loadingDeleteRequests } = useCollection(deleteRequestsQuery);
+  const { data: allTickets, isLoading: loadingTickets } = useCollection(ticketsQuery);
 
   const staleRequests = useMemo(() => {
     if (!allDeleteRequests) return [];
@@ -105,6 +136,10 @@ function AdminDashboardContent() {
       return differenceInHours(now, ts) >= 24;
     });
   }, [allDeleteRequests]);
+
+  const newTicketsCount = useMemo(() => {
+    return allTickets?.filter(t => t.status === 'new').length || 0;
+  }, [allTickets]);
 
   const handleDeletePitch = (pitchId: string, name: string, requestId?: string, isAuto = false) => {
     if (isAuto || confirm(`Confirm PERMANENT deletion of venture: "${name}"?`)) {
@@ -156,6 +191,14 @@ function AdminDashboardContent() {
     }
   };
 
+  const handleUpdateTicket = (ticketId: string, updates: any) => {
+    updateDocumentNonBlocking(doc(db, 'supportTickets', ticketId), updates);
+    if (selectedTicket && selectedTicket.id === ticketId) {
+      setSelectedTicket({ ...selectedTicket, ...updates });
+    }
+    toast({ title: "Ticket Updated" });
+  };
+
   const stats = [
     { label: 'Total Members', value: allUsers?.length || 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Live Ventures', value: allPitches?.length || 0, icon: Megaphone, color: 'text-amber-600', bg: 'bg-amber-50' },
@@ -200,6 +243,12 @@ function AdminDashboardContent() {
             <TabsList className="bg-muted/50 p-1 md:p-1.5 rounded-xl md:rounded-2xl h-12 md:h-14 w-fit min-w-full sm:min-w-0">
               <TabsTrigger value="users" className="gap-2 px-4 md:px-8 h-10 md:h-11 rounded-lg md:rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all"><UserCog className="w-4 h-4" /> Identity</TabsTrigger>
               <TabsTrigger value="pitches" className="gap-2 px-4 md:px-8 h-10 md:h-11 rounded-lg md:rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all"><Building className="w-4 h-4" /> Ventures</TabsTrigger>
+              <TabsTrigger value="support" className="gap-2 px-4 md:px-8 h-10 md:h-11 rounded-lg md:rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all relative">
+                <LifeBuoy className="w-4 h-4" /> Support
+                {newTicketsCount > 0 && (
+                  <Badge variant="destructive" className="absolute -top-1 -right-1 rounded-full h-4 min-w-4 p-1 flex items-center justify-center text-[8px] border-2 border-white">{newTicketsCount}</Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="delete-requests" className="gap-2 px-4 md:px-8 h-10 md:h-11 rounded-lg md:rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all relative">
                 <AlertTriangle className="w-4 h-4" /> Purge
                 {allDeleteRequests && allDeleteRequests.length > 0 && (
@@ -299,6 +348,73 @@ function AdminDashboardContent() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="support">
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">User Inquiries ({allTickets?.length || 0})</h3>
+              </div>
+              <Card className="border-none shadow-xl overflow-hidden rounded-[2rem] bg-white">
+                <ScrollArea className="w-full">
+                  <Table>
+                    <TableHeader className="bg-muted/40">
+                      <TableRow>
+                        <TableHead className="px-6 md:px-8 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Submitted</TableHead>
+                        <TableHead className="font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Member</TableHead>
+                        <TableHead className="font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Subject</TableHead>
+                        <TableHead className="font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Status</TableHead>
+                        <TableHead className="text-right px-6 md:px-8 font-black uppercase tracking-widest text-[10px] whitespace-nowrap">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loadingTickets ? (
+                        <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="animate-spin mx-auto opacity-20" /></TableCell></TableRow>
+                      ) : allTickets?.length === 0 ? (
+                        <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground font-black italic">No support tickets found.</TableCell></TableRow>
+                      ) : allTickets?.map((ticket) => (
+                        <TableRow key={ticket.id} className={cn("hover:bg-muted/10 transition-colors", ticket.status === 'new' && "bg-primary/5")}>
+                          <TableCell className="px-6 md:px-8 text-[10px] font-black uppercase text-muted-foreground whitespace-nowrap">
+                            {ticket.createdAt?.toDate ? format(ticket.createdAt.toDate(), 'MMM d, HH:mm') : 'Recently'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-black text-xs md:text-sm">{ticket.name}</span>
+                              <Badge variant="outline" className="w-fit text-[8px] uppercase px-1.5 rounded-sm mt-1">{ticket.role}</Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate font-medium text-xs">{ticket.subject}</TableCell>
+                          <TableCell>
+                            <Badge className={cn(
+                              "text-[8px] uppercase font-black px-2 py-0.5 rounded-lg",
+                              ticket.status === 'new' ? "bg-primary text-white" :
+                              ticket.status === 'in-progress' ? "bg-amber-500 text-white" :
+                              "bg-emerald-500 text-white"
+                            )}>
+                              {ticket.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right px-6 md:px-8">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-10 px-4 rounded-xl font-black uppercase text-[10px] tracking-widest"
+                              onClick={() => {
+                                setSelectedTicket(ticket);
+                                setAdminNote(ticket.adminNotes || '');
+                              }}
+                            >
+                              Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              </Card>
+            </div>
+          </TabsContent>
+
           <TabsContent value="delete-requests">
             <div className="space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -354,6 +470,88 @@ function AdminDashboardContent() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Dialog open={!!selectedTicket} onOpenChange={(open) => !open && setSelectedTicket(null)}>
+        <DialogContent className="max-w-2xl rounded-[2rem] border-none shadow-2xl p-0 overflow-hidden">
+          <DialogHeader className="p-8 bg-muted/30 border-b">
+            <div className="flex justify-between items-start">
+              <div>
+                <DialogTitle className="text-2xl font-black tracking-tight">{selectedTicket?.subject}</DialogTitle>
+                <DialogDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mt-1">
+                  Ticket #{selectedTicket?.id?.slice(-6)} • {selectedTicket?.createdAt?.toDate ? format(selectedTicket.createdAt.toDate(), 'PPP p') : ''}
+                </DialogDescription>
+              </div>
+              <Badge className={cn(
+                "uppercase font-black px-3 py-1 rounded-xl text-[10px]",
+                selectedTicket?.status === 'new' ? "bg-primary" : selectedTicket?.status === 'in-progress' ? "bg-amber-500" : "bg-emerald-500"
+              )}>
+                {selectedTicket?.status}
+              </Badge>
+            </div>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[60vh]">
+            <div className="p-8 space-y-8">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Sender</p>
+                  <p className="font-bold text-sm">{selectedTicket?.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Email</p>
+                  <p className="font-bold text-sm">{selectedTicket?.email}</p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-[9px] font-black uppercase text-muted-foreground tracking-widest">Message</p>
+                <div className="p-6 bg-muted/20 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap italic">
+                  "{selectedTicket?.message}"
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-6 border-t border-dashed">
+                <Label className="text-[10px] font-black uppercase tracking-widest">Administrative Notes</Label>
+                <Textarea 
+                  placeholder="Internal notes for this ticket..." 
+                  className="min-h-[120px] rounded-xl bg-muted/10 border-muted focus:ring-primary/20 italic p-6"
+                  value={adminNote}
+                  onChange={(e) => setAdminNote(e.target.value)}
+                />
+              </div>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="p-8 bg-muted/10 border-t flex flex-wrap gap-3 sm:justify-between items-center">
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-12 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest border-2"
+                onClick={() => handleUpdateTicket(selectedTicket.id, { status: 'in-progress', adminNotes: adminNote })}
+                disabled={selectedTicket?.status === 'in-progress'}
+              >
+                In Progress
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-12 px-6 rounded-xl font-black uppercase text-[10px] tracking-widest border-2 text-emerald-600 border-emerald-100 hover:bg-emerald-50"
+                onClick={() => handleUpdateTicket(selectedTicket.id, { status: 'resolved', adminNotes: adminNote })}
+                disabled={selectedTicket?.status === 'resolved'}
+              >
+                Resolve
+              </Button>
+            </div>
+            <Button 
+              className="h-12 px-8 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"
+              onClick={() => handleUpdateTicket(selectedTicket.id, { adminNotes: adminNote })}
+            >
+              Save Note
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

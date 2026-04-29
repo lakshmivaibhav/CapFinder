@@ -13,20 +13,50 @@ import { Textarea } from '@/components/ui/textarea';
 import { Mail, MessageSquare, ShieldCheck, Zap, ArrowLeft, Send, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp } from 'firebase/firestore';
 
 export default function ContactPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const db = useFirestore();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    name: profile?.name || '',
+    email: profile?.email || user?.email || '',
+    subject: '',
+    message: ''
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) {
+      toast({ variant: "destructive", title: "Authentication required", description: "Please sign in to submit a support request." });
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      addDocumentNonBlocking(collection(db, 'supportTickets'), {
+        userId: user.uid,
+        name: formData.name,
+        email: formData.email,
+        subject: formData.subject,
+        message: formData.message,
+        role: profile?.role || 'guest',
+        status: 'new',
+        priority: 'normal',
+        createdAt: serverTimestamp()
+      });
+
       toast({ title: "Message Sent", description: "Our support team will get back to you within 24-48 hours." });
-      (e.target as HTMLFormElement).reset();
-    }, 1500);
+      setFormData({ ...formData, subject: '', message: '' });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Submission failed", description: error.message || "Please try again later." });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -104,22 +134,22 @@ export default function ContactPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-3">
                     <Label htmlFor="name" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</Label>
-                    <Input id="name" required className="h-14 rounded-2xl bg-muted/30 border-none shadow-inner focus:ring-4 focus:ring-primary/10 text-lg font-medium px-6" placeholder="Your Name" />
+                    <Input id="name" required className="h-14 rounded-2xl bg-muted/30 border-none shadow-inner focus:ring-4 focus:ring-primary/10 text-lg font-medium px-6" placeholder="Your Name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
                   </div>
                   <div className="space-y-3">
                     <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email Address</Label>
-                    <Input id="email" type="email" required className="h-14 rounded-2xl bg-muted/30 border-none shadow-inner focus:ring-4 focus:ring-primary/10 text-lg font-medium px-6" placeholder="name@company.com" />
+                    <Input id="email" type="email" required className="h-14 rounded-2xl bg-muted/30 border-none shadow-inner focus:ring-4 focus:ring-primary/10 text-lg font-medium px-6" placeholder="name@company.com" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} />
                   </div>
                 </div>
 
                 <div className="space-y-3">
                   <Label htmlFor="subject" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Subject</Label>
-                  <Input id="subject" required className="h-14 rounded-2xl bg-muted/30 border-none shadow-inner focus:ring-4 focus:ring-primary/10 text-lg font-medium px-6" placeholder="How can we help?" />
+                  <Input id="subject" required className="h-14 rounded-2xl bg-muted/30 border-none shadow-inner focus:ring-4 focus:ring-primary/10 text-lg font-medium px-6" placeholder="How can we help?" value={formData.subject} onChange={(e) => setFormData({...formData, subject: e.target.value})} />
                 </div>
 
                 <div className="space-y-3">
                   <Label htmlFor="message" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Message</Label>
-                  <Textarea id="message" required className="min-h-[200px] rounded-[1.5rem] bg-muted/30 border-none shadow-inner focus:ring-4 focus:ring-primary/10 text-lg font-medium p-8 italic" placeholder="Provide as much detail as possible..." />
+                  <Textarea id="message" required className="min-h-[200px] rounded-[1.5rem] bg-muted/30 border-none shadow-inner focus:ring-4 focus:ring-primary/10 text-lg font-medium p-8 italic" placeholder="Provide as much detail as possible..." value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})} />
                 </div>
 
                 <Button type="submit" className="w-full h-16 bg-primary shadow-xl shadow-primary/20 rounded-2xl font-black text-lg gap-3 transition-all hover:scale-[1.01] active:scale-95 uppercase tracking-widest" disabled={loading}>

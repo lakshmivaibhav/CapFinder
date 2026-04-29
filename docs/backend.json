@@ -364,6 +364,26 @@
         "status",
         "timestamp"
       ]
+    },
+    "SupportTicket": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SupportTicket",
+      "type": "object",
+      "description": "A support request submitted by a user via the contact form.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "in-progress", "resolved"] },
+        "priority": { "type": "string", "enum": ["normal", "high"] },
+        "adminNotes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "subject", "message", "status", "createdAt"]
     }
   },
   "auth": {
@@ -442,6 +462,16 @@
             "$ref": "#/backend/entities/DeleteRequest"
           },
           "description": "User requests for data deletion."
+        }
+      },
+      {
+        "path": "/supportTickets/{ticketId}",
+        "definition": {
+          "entityName": "SupportTicket",
+          "schema": {
+            "$ref": "#/backend/entities/SupportTicket"
+          },
+          "description": "User support inquiries for administrative review."
         }
       }
     ]

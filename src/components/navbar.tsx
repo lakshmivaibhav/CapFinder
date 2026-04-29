@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -17,6 +18,7 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
+  const [hasNewSupportTickets, setHasNewSupportTickets] = useState(false);
 
   // Clear visual indicator locally when viewing messages
   useEffect(() => {
@@ -57,6 +59,37 @@ export function Navbar() {
 
     return () => unsubscribe();
   }, [user, db, pathname]);
+
+  // Real-time listener for new support tickets (Admin Only)
+  useEffect(() => {
+    if (!user?.uid || profile?.role !== 'admin' || pathname === '/admin') {
+      if (pathname === '/admin') setHasNewSupportTickets(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, 'supportTickets'),
+      where('status', '==', 'new')
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        if (pathname !== '/admin') {
+          setHasNewSupportTickets(snapshot.size > 0);
+        }
+      },
+      async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'supportTickets',
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user, db, pathname, profile]);
 
   const handleLogout = async () => {
     await firebaseAuth.signOut();
@@ -117,6 +150,9 @@ export function Navbar() {
                 <div className="relative">
                   <item.icon className={cn("w-4 h-4", pathname === item.href ? (item.href === '/admin' ? "text-destructive" : "text-primary") : "text-muted-foreground")} />
                   {hasUnreadMessages && item.href === '/messages' && (
+                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-destructive border-2 border-white shadow-sm animate-in zoom-in duration-300" />
+                  )}
+                  {hasNewSupportTickets && item.href === '/admin' && (
                     <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-destructive border-2 border-white shadow-sm animate-in zoom-in duration-300" />
                   )}
                 </div>
