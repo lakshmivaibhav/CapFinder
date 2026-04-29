@@ -1,11 +1,21 @@
-
 "use client";
 
 import Link from 'next/link';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Zap, Users, ShieldCheck, Target, TrendingUp, Sparkles, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Zap, 
+  Users, 
+  ShieldCheck, 
+  Target, 
+  TrendingUp, 
+  Sparkles, 
+  ArrowLeft, 
+  CheckCircle2 
+} from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 
 export default function AboutPage() {
@@ -39,7 +49,7 @@ export default function AboutPage() {
           <div className="p-2 bg-muted rounded-lg group-hover:bg-primary/10 transition-all">
             <ArrowLeft className="w-4 h-4" />
           </div>
-          Back to {user ? "Dashboard" : "Gateway"}
+          Back to {user ? "Dashboard" : "Home"}
         </Link>
 
         <section className="space-y-6 text-center md:text-left">
@@ -136,6 +146,3 @@ export default function AboutPage() {
     </div>
   );
 }
-
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
