@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { useAuth as useFirebaseAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, Zap, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, Zap, MessageSquare, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
@@ -79,10 +79,16 @@ export function Navbar() {
       icon: Inbox, 
       show: profile?.role === 'startup' 
     },
+    { 
+      label: 'Console', 
+      href: '/admin', 
+      icon: ShieldAlert, 
+      show: profile?.role === 'admin' 
+    },
     { label: 'Profile', href: '/profile', icon: User },
   ].filter(item => {
     if (item.show === false) return false;
-    if (!emailVerified && item.href !== '/profile' && item.href !== '/dashboard') return false;
+    if (!emailVerified && item.href !== '/profile' && item.href !== '/dashboard' && item.href !== '/admin') return false;
     return true;
   });
 
@@ -109,7 +115,7 @@ export function Navbar() {
                 )}
               >
                 <div className="relative">
-                  <item.icon className={cn("w-4 h-4", pathname === item.href ? "text-primary" : "text-muted-foreground")} />
+                  <item.icon className={cn("w-4 h-4", pathname === item.href ? (item.href === '/admin' ? "text-destructive" : "text-primary") : "text-muted-foreground")} />
                   {hasUnreadMessages && item.href === '/messages' && (
                     <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-destructive border-2 border-white shadow-sm animate-in zoom-in duration-300" />
                   )}

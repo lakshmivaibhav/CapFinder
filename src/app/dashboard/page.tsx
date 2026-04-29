@@ -8,7 +8,7 @@ import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking
 import { collection, query, where, limit, doc, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap } from 'lucide-react';
+import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -151,6 +151,13 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+            {isAdmin && (
+              <Link href="/admin" className="w-full sm:w-auto">
+                <Button className="w-full gap-3 h-14 px-8 rounded-xl bg-destructive shadow-xl shadow-destructive/20 hover:shadow-destructive/30 transition-all font-black uppercase tracking-widest text-[10px]">
+                  <ShieldAlert className="w-5 h-5" /> Admin Panel
+                </Button>
+              </Link>
+            )}
             {isStartup && (
               <Link href="/pitches/new" className="w-full sm:w-auto">
                 <Button className="w-full gap-3 h-14 px-8 rounded-xl bg-primary shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all font-black uppercase tracking-widest text-[10px]">
