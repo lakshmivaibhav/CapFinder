@@ -125,6 +125,10 @@
             "rejected"
           ],
           "description": "The approval status of the pitch."
+        },
+        "views": {
+          "type": "number",
+          "description": "The number of times this pitch has been viewed by investors."
         }
       },
       "required": [

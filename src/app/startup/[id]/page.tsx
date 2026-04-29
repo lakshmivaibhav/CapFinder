@@ -1,14 +1,15 @@
+
 "use client";
 
-import { use, useState, useMemo } from 'react';
-import { doc, collection, query, where, serverTimestamp, getDocs } from 'firebase/firestore';
+import { use, useState, useMemo, useEffect } from 'react';
+import { doc, collection, query, where, serverTimestamp, getDocs, increment } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
-import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { Navbar } from '@/components/navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Mail, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info, ShieldCheck, Image as ImageIcon, Wallet, PieChart, FastForward, Target, TrendingUp } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, Clock, CheckCircle2, Bookmark, BookmarkCheck, Sparkles, XCircle, User, DollarSign, Building2, Trash2, Zap, LayoutGrid, Info, ShieldCheck, Image as ImageIcon, Wallet, PieChart, FastForward, Target, TrendingUp, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -26,6 +27,15 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
 
   const pitchRef = useMemoFirebase(() => doc(db, 'pitches', id), [db, id]);
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
+
+  // Track view if investor
+  useEffect(() => {
+    if (pitch && profile?.role === 'investor') {
+      updateDocumentNonBlocking(doc(db, 'pitches', pitch.id), {
+        views: increment(1)
+      });
+    }
+  }, [pitch, profile, db]);
 
   const founderRef = useMemoFirebase(() => {
     if (!pitch?.ownerId) return null;
@@ -216,16 +226,24 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
           </Link>
           <div className="flex items-center gap-4">
             {isOwner && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-destructive hover:bg-destructive/10 h-10 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all"
-                onClick={handleDeletePitch}
-                disabled={checking}
-              >
-                {checking ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                Archive
-              </Button>
+              <>
+                <Link href={`/pitches/${pitch.id}/analytics`}>
+                  <Button variant="outline" size="sm" className="h-10 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all border-2 border-primary/20 text-primary hover:bg-primary/5">
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Analytics
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-destructive hover:bg-destructive/10 h-10 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all"
+                  onClick={handleDeletePitch}
+                  disabled={checking}
+                >
+                  {checking ? <Loader2 className="animate-spin w-4 h-4 mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                  Archive
+                </Button>
+              </>
             )}
           </div>
         </div>

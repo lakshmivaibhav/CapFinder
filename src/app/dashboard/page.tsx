@@ -9,7 +9,7 @@ import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking
 import { collection, query, where, limit, doc, getDocs } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert } from 'lucide-react';
+import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -271,6 +271,11 @@ export default function DashboardPage() {
               <TabsTrigger value="secondary" className="flex-1 sm:flex-none gap-3 px-8 h-11 rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
                 {isStartup ? <><Users className="w-4 h-4" /> My Partners</> : <><Star className="w-4 h-4" /> Saved Pitches</>}
               </TabsTrigger>
+              {isStartup && (
+                <TabsTrigger value="analytics" className="flex-1 sm:flex-none gap-3 px-8 h-11 rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
+                  <BarChart3 className="w-4 h-4" /> Analytics Overview
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
 
@@ -290,22 +295,31 @@ export default function DashboardPage() {
                       <CardHeader className="p-8 pb-4">
                         <div className="flex justify-between items-start mb-4">
                           <Badge variant="outline" className="border-primary/20 text-primary font-black uppercase text-[9px] tracking-[0.2em] px-4 py-1.5 rounded-lg bg-primary/5">{pitch.category || pitch.industry || 'Other'}</Badge>
-                          {hasActiveConnection && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-amber-600 hover:bg-amber-50 rounded-full z-10 border-2 border-amber-100 shadow-sm"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleResolveConnection(pitch.id, pitch.ownerId, pitch.startupName);
-                              }}
-                              disabled={!!resolving && resolving === pitch.id}
-                            >
-                              {resolving === pitch.id ? <Loader2 className="animate-spin w-3 h-3" /> : <Zap className="w-3 h-3 mr-2" />}
-                              <span className="hidden sm:inline">Disconnect</span>
-                            </Button>
-                          )}
+                          <div className="flex gap-2">
+                            {isStartup && (
+                              <Link href={`/pitches/${pitch.id}/analytics`}>
+                                <Button variant="ghost" size="icon" className="h-10 w-10 text-muted-foreground hover:text-primary rounded-full border bg-white shadow-sm">
+                                  <BarChart3 className="w-4 h-4" />
+                                </Button>
+                              </Link>
+                            )}
+                            {hasActiveConnection && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-10 px-4 text-[9px] font-black uppercase tracking-widest text-amber-600 hover:bg-amber-50 rounded-full z-10 border-2 border-amber-100 shadow-sm"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleResolveConnection(pitch.id, pitch.ownerId, pitch.startupName);
+                                }}
+                                disabled={!!resolving && resolving === pitch.id}
+                              >
+                                {resolving === pitch.id ? <Loader2 className="animate-spin w-3 h-3" /> : <Zap className="w-3 h-3 mr-2" />}
+                                <span className="hidden sm:inline">Disconnect</span>
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         <CardTitle className="text-2xl font-black group-hover:text-primary transition-colors leading-none tracking-tight">{pitch.startupName}</CardTitle>
                       </CardHeader>
@@ -368,6 +382,46 @@ export default function DashboardPage() {
               </div>
             )}
           </TabsContent>
+
+          {isStartup && (
+            <TabsContent value="analytics" className="mt-0 outline-none space-y-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <Card className="p-8 rounded-[2rem] border-none shadow-xl bg-white space-y-4">
+                  <div className="p-3 bg-blue-50 w-fit rounded-xl"><Plus className="w-5 h-5 text-blue-600" /></div>
+                  <div>
+                    <p className="text-3xl font-black">{(startupPitches?.length || 0)}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Total Ventures</p>
+                  </div>
+                </Card>
+                <Card className="p-8 rounded-[2rem] border-none shadow-xl bg-white space-y-4">
+                  <div className="p-3 bg-amber-50 w-fit rounded-xl"><Sparkles className="w-5 h-5 text-amber-600" /></div>
+                  <div>
+                    <p className="text-3xl font-black">{(startupInterests?.length || 0)}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Interest Inquiries</p>
+                  </div>
+                </Card>
+                <Card className="p-8 rounded-[2rem] border-none shadow-xl bg-white space-y-4">
+                  <div className="p-3 bg-emerald-50 w-fit rounded-xl"><Zap className="w-5 h-5 text-emerald-600" /></div>
+                  <div>
+                    <p className="text-3xl font-black">{(startupContactRequests?.length || 0)}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Strategic Connections</p>
+                  </div>
+                </Card>
+                <Card className="p-8 rounded-[2rem] border-none shadow-xl bg-white space-y-4">
+                  <div className="p-3 bg-indigo-50 w-fit rounded-xl"><Users className="w-5 h-5 text-indigo-600" /></div>
+                  <div>
+                    <p className="text-3xl font-black">{(startupContactRequests?.filter(r => r.status === 'accepted').length || 0)}</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Hubs</p>
+                  </div>
+                </Card>
+              </div>
+              <div className="p-12 bg-white rounded-[3rem] border-4 border-dashed text-center flex flex-col items-center">
+                 <BarChart3 className="w-16 h-16 text-muted-foreground opacity-20 mb-6" />
+                 <h3 className="text-2xl font-black tracking-tight mb-2">Aggregate Venture Intelligence</h3>
+                 <p className="text-muted-foreground max-w-sm font-medium italic">Detailed analytics per pitch are available by clicking the analytics icon in the pitch cards above.</p>
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
       </main>
 
