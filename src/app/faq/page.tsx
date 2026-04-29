@@ -8,6 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Zap, HelpCircle, ArrowLeft, Search } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 const FAQS = [
   {
