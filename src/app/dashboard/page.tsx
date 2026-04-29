@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from '@/components/auth-provider';
@@ -11,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
+import { Footer } from '@/components/footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 
@@ -368,6 +370,8 @@ export default function DashboardPage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      <Footer />
     </div>
   );
 }

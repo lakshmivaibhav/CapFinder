@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -11,10 +12,14 @@ import {
   Zap, 
   CheckCircle2, 
   Star,
+  HelpCircle,
+  Mail,
+  Info
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Footer } from '@/components/footer';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -93,11 +98,18 @@ export default function HomePage() {
           </div>
           <span className="text-2xl font-black tracking-tighter text-foreground group-hover:text-primary transition-colors">CapFinder</span>
         </Link>
+        
+        <nav className="hidden lg:flex gap-8 items-center mr-8">
+          <Link href="/about" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">About</Link>
+          <Link href="/faq" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">FAQ</Link>
+          <Link href="/contact" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Contact</Link>
+        </nav>
+
         <nav className="flex gap-6 items-center">
           {user ? (
             <Link href="/dashboard">
               <Button className="bg-primary hover:bg-primary/90 font-black h-12 px-8 rounded-xl shadow-xl shadow-primary/20 transition-all active:scale-95 uppercase text-[10px] tracking-widest">
-                Go to Dashboard
+                Dashboard
               </Button>
             </Link>
           ) : (
@@ -141,9 +153,9 @@ export default function HomePage() {
                   Get Started <ArrowRight className="ml-3 w-6 h-6" />
                 </Button>
               </Link>
-              <Link href={browseLink}>
+              <Link href="/about">
                 <Button size="lg" variant="outline" className="h-20 px-12 text-xl font-black border-4 border-muted rounded-[1.5rem] hover:bg-white hover:border-primary/20 transition-all shadow-sm uppercase tracking-widest">
-                  Browse Pitches
+                  Learn More
                 </Button>
               </Link>
             </div>
@@ -248,63 +260,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="py-24 border-t bg-white px-8">
-        <div className="max-w-7xl mx-auto grid md:grid-cols-12 gap-20 mb-20">
-          <div className="md:col-span-5 space-y-10">
-            <Link href="/" className="flex items-center gap-4 group">
-              <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center shadow-2xl shadow-primary/20 group-hover:scale-110 transition-all duration-500">
-                <Zap className="text-white w-8 h-8 fill-current" />
-              </div>
-              <span className="text-3xl font-black tracking-tighter text-foreground group-hover:text-primary transition-colors">CapFinder</span>
-            </Link>
-            <p className="text-muted-foreground max-w-md text-lg font-medium italic leading-relaxed border-l-4 border-primary/10 pl-6">
-              Empowering the global startup ecosystem through direct connections between founders and investors.
-            </p>
-          </div>
-          
-          <div className="md:col-span-2 space-y-8">
-            <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Menu</h5>
-            <div className="flex flex-col gap-5">
-              <Link href="/pitches" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">Explore</Link>
-              <Link href="/login" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">Login</Link>
-              <Link href="/signup" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">Sign Up</Link>
-            </div>
-          </div>
-
-          <div className="md:col-span-2 space-y-8">
-            <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Company</h5>
-            <div className="flex flex-col gap-5">
-              <Link href="/privacy" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">Privacy Policy</Link>
-              <span className="text-sm font-bold text-muted-foreground hover:text-primary cursor-pointer transition-colors">Terms of Use</span>
-            </div>
-          </div>
-
-          <div className="md:col-span-3 space-y-8">
-            <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Status</h5>
-            <div className="p-8 bg-muted/20 rounded-2xl border-2 border-muted space-y-4 shadow-inner">
-               <div className="flex items-center gap-3">
-                 <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
-                 <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">All Systems Online</span>
-               </div>
-               <p className="text-[9px] text-muted-foreground font-medium uppercase tracking-[0.1em] leading-relaxed italic">The platform is secure and active.</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12 pt-12 border-t-2 border-muted/50">
-          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.3em]">
-            © 2024 CapFinder • Secure Startup Platform
-          </p>
-          <div className="flex gap-12">
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-3">
-               <ShieldCheck className="w-5 h-5 text-primary" /> SECURE
-            </span>
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground flex items-center gap-3">
-               <CheckCircle2 className="w-5 h-5 text-accent" /> VERIFIED
-            </span>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
