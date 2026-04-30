@@ -27,7 +27,9 @@ import {
   User,
   ExternalLink,
   Flame,
-  Clock
+  Clock,
+  BarChart3,
+  MousePointer2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -44,36 +46,39 @@ import {
   AreaChart,
   CartesianGrid,
   Line,
-  LineChart
+  LineChart,
+  Legend
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { format, subDays, startOfDay, eachDayOfInterval, formatDistanceToNow } from 'date-fns';
+import { format, subDays, startOfDay, eachDayOfInterval, formatDistanceToNow, isSameDay } from 'date-fns';
 
 const chartConfig: ChartConfig = {
   interests: {
     label: "Interests",
-    color: "hsl(var(--primary))",
+    color: "#39C4E0", // Accent Turquoise
   },
   requests: {
     label: "Requests",
-    color: "#10b981",
+    color: "#10b981", // Emerald
   },
   messages: {
     label: "Messages",
-    color: "hsl(var(--primary))",
+    color: "#2959A3", // Primary Blue
   },
   views: {
     label: "Views",
-    color: "#2563eb",
+    color: "#2563eb", // Blue
   },
 };
+
+type TimeRange = '7d' | '30d' | '90d';
 
 export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user, profile, loading: authLoading } = useAuth();
   const db = useFirestore();
   const router = useRouter();
-  const [timeRange, setTimeRange] = useState<'weekly' | 'monthly'>('weekly');
+  const [timeRange, setTimeRange] = useState<TimeRange>('7d');
 
   const pitchRef = useMemoFirebase(() => doc(db, 'pitches', id), [db, id]);
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
@@ -93,12 +98,6 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
   }, [db, id, pitch]);
   const { data: requests } = useCollection(requestsQuery);
 
-  const favoritesQuery = useMemoFirebase(() => {
-    if (!pitch) return null;
-    return query(collection(db, 'favorites'), where('pitchId', '==', id));
-  }, [db, id, pitch]);
-  const { data: favorites } = useCollection(favoritesQuery);
-
   const messagesQuery = useMemoFirebase(() => {
     if (!pitch) return null;
     return query(collection(db, 'messages'), where('pitchId', '==', id), orderBy('timestamp', 'asc'));
@@ -117,7 +116,6 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
 
     const grouped = new Map<string, any>();
 
-    // Process Views
     pitchViews?.forEach(v => {
       if (!grouped.has(v.investorId)) {
         grouped.set(v.investorId, { 
@@ -137,7 +135,6 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
       if (ts > lead.lastSeen) lead.lastSeen = ts;
     });
 
-    // Process Interests
     interests?.forEach(i => {
       if (!grouped.has(i.investorId)) {
         grouped.set(i.investorId, { id: i.investorId, name: 'Lead', email: i.investorEmail, viewCount: 0, hasInterest: true, hasRequest: false, messageCount: 0, lastSeen: i.timestamp?.toDate ? i.timestamp.toDate() : new Date(0) });
@@ -148,9 +145,8 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
       if (ts > lead.lastSeen) lead.lastSeen = ts;
     });
 
-    // Process Requests
     requests?.forEach(r => {
-      const investorId = r.senderId; // In contactRequests, sender is usually the investor
+      const investorId = r.senderId;
       if (!grouped.has(investorId)) {
         grouped.set(investorId, { id: investorId, name: 'Lead', email: r.investorEmail, viewCount: 0, hasInterest: false, hasRequest: true, messageCount: 0, lastSeen: r.timestamp?.toDate ? r.timestamp.toDate() : new Date(0) });
       }
@@ -160,45 +156,29 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
       if (ts > lead.lastSeen) lead.lastSeen = ts;
     });
 
-    // Process Messages
     messages?.forEach(m => {
       const investorId = m.senderId === pitch.ownerId ? m.receiverId : m.senderId;
-      if (!grouped.has(investorId)) return; // Only track leads we've identified through views/interests
+      if (!grouped.has(investorId)) return;
       const lead = grouped.get(investorId);
       lead.messageCount += 1;
       const ts = m.timestamp?.toDate ? m.timestamp.toDate() : new Date(0);
       if (ts > lead.lastSeen) lead.lastSeen = ts;
     });
 
-    // Calculate Engagement Score
     return Array.from(grouped.values()).map(lead => {
       let score = 0;
       score += lead.viewCount;
       if (lead.hasInterest) score += 10;
       if (lead.hasRequest) score += 5;
       score += (lead.messageCount * 2);
-      
       return { ...lead, score };
     }).sort((a, b) => b.score - a.score);
   }, [pitch, interests, requests, messages, pitchViews]);
 
   const hotLeads = useMemo(() => leadIntelligence.filter(l => l.score >= 10).slice(0, 5), [leadIntelligence]);
 
-  // Original Chart & Score Logic
-  const maturityIndex = useMemo(() => {
-    if (!pitch) return 0;
-    let score = 0;
-    if (pitch.founderInvestment && Number(pitch.founderInvestment) > 0) score += 2;
-    else if (pitch.noInvestmentReason) score += 1;
-    if (pitch.fundUsage && pitch.fundUsage.length > 20) score += 2;
-    if (pitch.longTermVision && pitch.longTermVision.length > 20) score += 2;
-    if (pitch.description && pitch.description.length > 50) score += 1;
-    if (pitch.startupName && pitch.category && pitch.fundingNeeded) score += 1;
-    return parseFloat(((score / 8) * 10).toFixed(1));
-  }, [pitch]);
-
   const trendData = useMemo(() => {
-    const daysToLookBack = timeRange === 'weekly' ? 7 : 30;
+    const daysToLookBack = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
     const end = startOfDay(new Date());
     const start = subDays(end, daysToLookBack - 1);
     const dateRange = eachDayOfInterval({ start, end });
@@ -233,10 +213,10 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
         interests: dayInterests,
         requests: dayRequests,
         messages: dayMessages,
-        views: dayViews || Math.round((pitch?.views || 0) / 30) // Fallback to average if collection empty
+        views: dayViews
       };
     });
-  }, [timeRange, interests, requests, messages, pitch, pitchViews]);
+  }, [timeRange, interests, requests, messages, pitchViews]);
 
   const stats = [
     { label: 'Pitch Views', value: pitch?.views || 0, icon: Eye, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -244,7 +224,7 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
     { label: 'Contact Requests', value: requests?.length || 0, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Active Hubs', value: requests?.filter(r => r.status === 'accepted').length || 0, icon: MessageSquare, color: 'text-indigo-600', bg: 'bg-indigo-50' },
     { label: 'Identified Leads', value: leadIntelligence.length, icon: User, color: 'text-rose-600', bg: 'bg-rose-50' },
-    { label: 'Trust Score', value: `${maturityIndex}/10`, icon: CheckCircle2, color: 'text-emerald-700', bg: 'bg-emerald-50' },
+    { label: 'Live Engagement', value: hotLeads.length, icon: Flame, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
 
   if (authLoading || loadingPitch) {
@@ -265,7 +245,7 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
           <AlertCircle className="w-16 h-16 text-destructive opacity-20" />
           <h2 className="text-3xl font-black tracking-tight">Access Restricted</h2>
-          <p className="text-muted-foreground max-sm">Analytics are only available to the authorized venture owner.</p>
+          <p className="text-muted-foreground">Analytics are only available to the authorized venture owner.</p>
           <Link href="/dashboard">
             <Button variant="outline" className="rounded-xl border-2 px-8 font-black uppercase text-[10px] tracking-widest h-12">Return to Gateway</Button>
           </Link>
@@ -291,83 +271,33 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
           </div>
           
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="bg-muted/50 p-1 rounded-xl flex items-center shadow-inner">
-              <Button 
-                variant={timeRange === 'weekly' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                onClick={() => setTimeRange('weekly')}
-                className="h-10 px-6 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all"
-              >
-                Weekly
-              </Button>
-              <Button 
-                variant={timeRange === 'monthly' ? 'secondary' : 'ghost'} 
-                size="sm" 
-                onClick={() => setTimeRange('monthly')}
-                className="h-10 px-6 rounded-lg font-black uppercase text-[9px] tracking-widest transition-all"
-              >
-                Monthly
-              </Button>
+            <div className="bg-muted/50 p-1.5 rounded-2xl flex items-center shadow-inner ring-1 ring-black/5">
+              {(['7d', '30d', '90d'] as TimeRange[]).map((range) => (
+                <Button 
+                  key={range}
+                  variant={timeRange === range ? 'secondary' : 'ghost'} 
+                  size="sm" 
+                  onClick={() => setTimeRange(range)}
+                  className={cn(
+                    "h-10 px-6 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all",
+                    timeRange === range ? "bg-white shadow-lg text-primary" : "text-muted-foreground"
+                  )}
+                >
+                  {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
+                </Button>
+              ))}
             </div>
             <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 h-12 px-6 rounded-xl font-black uppercase tracking-[0.2em] text-[10px]">
-              Live Lead Sync
+              Live Ecosystem Sync
             </Badge>
           </div>
         </div>
 
-        {/* Hot Leads Header */}
-        {hotLeads.length > 0 && (
-          <section className="space-y-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-100 rounded-xl shadow-sm"><Flame className="w-6 h-6 text-red-600" /></div>
-              <h2 className="text-2xl font-black tracking-tight">Hot Leads</h2>
-              <Badge className="bg-red-500 text-white border-none rounded-lg px-2 py-0.5 text-[8px] font-black uppercase">High Signal</Badge>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {hotLeads.map((lead) => (
-                <Card key={lead.id} className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden group hover:-translate-y-1 transition-all">
-                  <CardHeader className="p-8 pb-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center border-2 border-white shadow-inner"><User className="text-muted-foreground w-6 h-6" /></div>
-                        <div>
-                          <CardTitle className="text-lg font-black leading-none">{lead.name}</CardTitle>
-                          <p className="text-[10px] font-black uppercase text-muted-foreground mt-1 tracking-widest">{lead.email}</p>
-                        </div>
-                      </div>
-                      <Badge className="bg-emerald-50 text-emerald-700 border-none font-black text-[8px] px-2 py-0.5 rounded-md">Score: {lead.score}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-8 pt-0 space-y-6">
-                    <div className="grid grid-cols-3 gap-4 py-4 border-y border-dashed">
-                      <div className="text-center">
-                        <p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Views</p>
-                        <p className="font-black text-xl">{lead.viewCount}</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Status</p>
-                        {lead.hasRequest ? <Badge className="bg-primary text-white text-[8px] px-1">Connected</Badge> : lead.hasInterest ? <Badge className="bg-amber-500 text-white text-[8px] px-1">Interested</Badge> : <Badge variant="outline" className="text-[8px] px-1">Exploring</Badge>}
-                      </div>
-                      <div className="text-center">
-                        <p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Chats</p>
-                        <p className="font-black text-xl">{lead.messageCount}</p>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                      <span className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> Seen {formatDistanceToNow(lead.lastSeen, { addSuffix: true })}</span>
-                      <Link href={`/investor/${lead.id}`} className="text-primary hover:underline flex items-center gap-1">Analyze Profile <ExternalLink className="w-3 h-3" /></Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-        )}
-
+        {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {stats.map((stat, i) => (
-            <Card key={i} className="border-none shadow-xl rounded-[2.5rem] overflow-hidden relative group">
-              <div className={cn("absolute top-0 right-0 w-32 h-32 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl opacity-5 group-hover:scale-150 transition-transform duration-700", stat.bg)} />
+            <Card key={i} className="border-none shadow-xl rounded-[2.5rem] overflow-hidden relative group hover:shadow-2xl transition-all duration-500">
+              <div className={cn("absolute top-0 right-0 w-32 h-32 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl opacity-10 group-hover:scale-150 transition-transform duration-700", stat.bg)} />
               <CardHeader className="pb-2">
                 <CardDescription className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">{stat.label}</CardDescription>
                 <CardTitle className="text-4xl font-black tracking-tighter">{stat.value}</CardTitle>
@@ -381,133 +311,245 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-8">
-          {/* Trend Chart */}
-          <Card className="lg:col-span-8 border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden flex flex-col">
+        {/* Primary Trend Charts */}
+        <div className="grid lg:grid-cols-2 gap-10">
+          <Card className="border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden flex flex-col">
             <CardHeader className="p-10 border-b bg-muted/20">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-50 rounded-xl"><Eye className="w-5 h-5 text-blue-600" /></div>
                 <div className="space-y-1">
-                  <div className="flex items-center gap-4 mb-2">
-                    <TrendingUp className="w-6 h-6 text-primary" />
-                    <CardTitle className="text-2xl font-black tracking-tight">Discovery & Conversion Trend</CardTitle>
-                  </div>
-                  <CardDescription className="font-medium">Tracking verified views against strategic inquiry volume.</CardDescription>
+                  <CardTitle className="text-2xl font-black tracking-tight">Discovery Momentum</CardTitle>
+                  <CardDescription className="font-medium">Venture views over the selected period.</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-10 flex-1">
-              <div className="h-[400px] w-full mt-6">
+              <div className="h-[300px] w-full">
                 <ChartContainer config={chartConfig}>
                   <AreaChart data={trendData}>
                     <defs>
                       <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15}/>
                         <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                      </linearGradient>
-                      <linearGradient id="colorInterests" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                    <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} className="font-black uppercase tracking-widest" dy={10} />
-                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                    <ChartTooltip content={<ChartTooltipContent className="rounded-xl border-none shadow-2xl" />} />
+                    <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent className="rounded-2xl border-none shadow-2xl" />} />
                     <Area type="monotone" dataKey="views" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorViews)" />
-                    <Area type="monotone" dataKey="interests" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorInterests)" />
                   </AreaChart>
                 </ChartContainer>
               </div>
             </CardContent>
           </Card>
 
-          {/* Lead List / Engagement Sidebar */}
-          <Card className="lg:col-span-4 border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden flex flex-col">
-            <CardHeader className="p-10 pb-4 border-b bg-muted/10">
-              <div className="flex items-center gap-4">
-                <LayoutGrid className="w-6 h-6 text-primary" />
-                <CardTitle className="text-xl font-black tracking-tight">Lead Intelligence</CardTitle>
-              </div>
-              <CardDescription className="mt-1 font-medium">Verified professional engagements</CardDescription>
-            </CardHeader>
-            <CardContent className="p-0 flex-1">
-              <div className="divide-y overflow-auto max-h-[500px]">
-                {leadIntelligence.length > 0 ? leadIntelligence.map((lead) => (
-                  <div key={lead.id} className="p-6 hover:bg-muted/5 transition-colors flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center border shadow-inner"><User className="w-4 h-4 text-primary" /></div>
-                      <div className="space-y-0.5">
-                        <p className="font-black text-sm">{lead.name}</p>
-                        <div className="flex items-center gap-2">
-                           <Badge variant="outline" className="text-[7px] font-black uppercase px-1 py-0 rounded-sm">{(lead.viewCount as number) > 1 ? `Return Visitor (${lead.viewCount})` : 'New Discovery'}</Badge>
-                           {lead.hasInterest && <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" title="Interest Logged" />}
-                        </div>
-                      </div>
-                    </div>
-                    <Link href={`/investor/${lead.id}`}>
-                       <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg"><ExternalLink className="w-4 h-4 text-muted-foreground" /></Button>
-                    </Link>
-                  </div>
-                )) : (
-                  <div className="p-20 text-center space-y-4 opacity-30">
-                    <User className="w-12 h-12 mx-auto" />
-                    <p className="font-black text-[10px] uppercase tracking-widest italic">Waiting for discovery...</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-8">
-           <Card className="border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden">
+          <Card className="border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden flex flex-col">
             <CardHeader className="p-10 border-b bg-muted/20">
-              <div className="flex items-center gap-4 mb-2">
-                <Target className="w-6 h-6 text-primary" />
-                <CardTitle className="text-2xl font-black tracking-tight">Active Strategic Hubs</CardTitle>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-amber-50 rounded-xl"><Sparkles className="w-5 h-5 text-amber-600" /></div>
+                <div className="space-y-1">
+                  <CardTitle className="text-2xl font-black tracking-tight">Strategic Interest Growth</CardTitle>
+                  <CardDescription className="font-medium">Cumulative growth in unique investor interests.</CardDescription>
+                </div>
               </div>
-              <CardDescription className="font-medium">Direct communication volume with capital partners.</CardDescription>
             </CardHeader>
-            <CardContent className="p-10">
-              <div className="h-[300px] w-full mt-6">
+            <CardContent className="p-10 flex-1">
+              <div className="h-[300px] w-full">
                 <ChartContainer config={chartConfig}>
                   <LineChart data={trendData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                    <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} className="font-black uppercase tracking-widest" dy={10} />
+                    <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} dy={10} />
                     <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="messages" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: 'white', strokeWidth: 2 }} />
+                    <Line type="stepAfter" dataKey="interests" stroke="#39C4E0" strokeWidth={4} dot={{ r: 4, fill: '#39C4E0', strokeWidth: 0 }} />
                   </LineChart>
                 </ChartContainer>
               </div>
             </CardContent>
           </Card>
+        </div>
 
-          <Card className="border-none shadow-2xl rounded-[3rem] bg-primary text-white overflow-hidden relative group">
-            <Zap className="absolute -right-10 -bottom-10 w-64 h-64 text-white/10 -rotate-12 transition-transform duration-1000 group-hover:rotate-0" />
-            <CardHeader className="p-10 pb-4">
+        {/* Engagement Charts */}
+        <div className="grid lg:grid-cols-2 gap-10">
+          <Card className="border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden flex flex-col">
+            <CardHeader className="p-10 border-b bg-muted/20">
               <div className="flex items-center gap-4">
-                <Sparkles className="w-6 h-6 text-white" />
-                <CardTitle className="text-2xl font-black tracking-tight text-white">Venture Ecosystem Insights</CardTitle>
+                <div className="p-3 bg-indigo-50 rounded-xl"><MessageSquare className="w-5 h-5 text-indigo-600" /></div>
+                <div className="space-y-1">
+                  <CardTitle className="text-2xl font-black tracking-tight">Communication Volume</CardTitle>
+                  <CardDescription className="font-medium">Direct messages exchanged with potential partners.</CardDescription>
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="p-10 pt-4 space-y-8">
-              <div className="grid gap-6">
-                <div className="p-6 bg-white/10 rounded-2xl border border-white/20">
-                  <p className="font-black text-sm uppercase tracking-widest text-white">Engagement Quality</p>
-                  <p className="text-sm opacity-90 leading-relaxed font-medium mt-1">
-                    Your conversion rate from View to Interest is <span className="font-black">{(interests?.length || 0) > 0 && (pitch?.views || 0) > 0 ? ((interests!.length / pitch!.views) * 100).toFixed(1) : '0'}%</span>.
-                  </p>
-                </div>
-                <div className="p-6 bg-white/10 rounded-2xl border border-white/20">
-                  <p className="font-black text-sm uppercase tracking-widest text-white">Lead Retention</p>
-                  <p className="text-sm opacity-90 leading-relaxed font-medium mt-1">
-                    <span className="font-black">{leadIntelligence.filter(l => l.viewCount > 1).length}</span> investors have visited your pitch multiple times.
-                  </p>
+            <CardContent className="p-10 flex-1">
+              <div className="h-[300px] w-full">
+                <ChartContainer config={chartConfig}>
+                  <BarChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
+                    <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="messages" fill="#2959A3" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ChartContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden flex flex-col">
+            <CardHeader className="p-10 border-b bg-muted/20">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-50 rounded-xl"><Target className="w-5 h-5 text-emerald-600" /></div>
+                <div className="space-y-1">
+                  <CardTitle className="text-2xl font-black tracking-tight">Connection Request Trend</CardTitle>
+                  <CardDescription className="font-medium">Daily volume of institutional inquiry requests.</CardDescription>
                 </div>
               </div>
-              <div className="p-8 bg-black/20 rounded-[2rem] border-l-8 border-white italic text-sm opacity-80 leading-relaxed">
-                "High-signal investors typically view a pitch 2.4 times before initiating a direct connection request."
+            </CardHeader>
+            <CardContent className="p-10 flex-1">
+              <div className="h-[300px] w-full">
+                <ChartContainer config={chartConfig}>
+                  <LineChart data={trendData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
+                    <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Line type="monotone" dataKey="requests" stroke="#10b981" strokeWidth={3} dot={{ r: 6, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} />
+                  </LineChart>
+                </ChartContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Hot Leads Section */}
+        {hotLeads.length > 0 && (
+          <section className="space-y-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-4 bg-red-100 rounded-[1.5rem] shadow-sm"><Flame className="w-8 h-8 text-red-600" /></div>
+                <div>
+                  <h2 className="text-3xl font-black tracking-tight">Priority Leads</h2>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Highest Signal Investors</p>
+                </div>
+              </div>
+              <Badge className="bg-red-500 text-white border-none rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20">Institutional Engagement</Badge>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {hotLeads.map((lead) => (
+                <Card key={lead.id} className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden group hover:-translate-y-2 transition-all duration-500">
+                  <CardHeader className="p-10 pb-6">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center border-2 border-white shadow-inner relative overflow-hidden group-hover:scale-105 transition-transform">
+                          <User className="text-muted-foreground w-8 h-8" />
+                          <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-xl font-black leading-none">{lead.name}</CardTitle>
+                          <p className="text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest opacity-60">{lead.email}</p>
+                        </div>
+                      </div>
+                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 border px-3 py-1 rounded-xl text-[10px] font-black">Score: {lead.score}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-10 pt-0 space-y-8">
+                    <div className="grid grid-cols-3 gap-6 py-6 border-y border-dashed border-muted/50">
+                      <div className="text-center space-y-1">
+                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-50 tracking-widest">Discovery</p>
+                        <p className="font-black text-2xl tracking-tighter">{lead.viewCount}</p>
+                      </div>
+                      <div className="text-center space-y-1">
+                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-50 tracking-widest">Protocol</p>
+                        <div className="flex justify-center">
+                          {lead.hasRequest ? <Badge className="bg-primary text-white text-[8px] px-2 py-0.5 rounded-lg">Connected</Badge> : lead.hasInterest ? <Badge className="bg-accent text-white text-[8px] px-2 py-0.5 rounded-lg">Interested</Badge> : <Badge variant="outline" className="text-[8px] px-2 py-0.5 rounded-lg">Exploratory</Badge>}
+                        </div>
+                      </div>
+                      <div className="text-center space-y-1">
+                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-50 tracking-widest">Dialogue</p>
+                        <p className="font-black text-2xl tracking-tighter">{lead.messageCount}</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                      <span className="flex items-center gap-2 text-muted-foreground"><Clock className="w-3.5 h-3.5 text-primary" /> {formatDistanceToNow(lead.lastSeen, { addSuffix: true })}</span>
+                      <Link href={`/investor/${lead.id}`} className="text-primary hover:underline flex items-center gap-1.5 group/link">
+                        Profile <ExternalLink className="w-3.5 h-3.5 group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform" />
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Insights Summary */}
+        <div className="grid lg:grid-cols-3 gap-10">
+          <Card className="lg:col-span-1 border-none shadow-2xl rounded-[3rem] bg-primary text-white overflow-hidden relative group">
+            <Zap className="absolute -right-10 -bottom-10 w-64 h-64 text-white/10 -rotate-12 transition-transform duration-1000 group-hover:rotate-0" />
+            <CardHeader className="p-10 pb-6 relative z-10">
+              <div className="flex items-center gap-4">
+                <Sparkles className="w-6 h-6 text-white" />
+                <CardTitle className="text-2xl font-black text-white">Venture Intelligence</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-10 pt-0 space-y-8 relative z-10">
+              <div className="space-y-6">
+                <div className="p-6 bg-white/10 rounded-2xl border border-white/20 shadow-inner">
+                  <p className="font-black text-[10px] uppercase tracking-widest text-white/70">Conversion Rate</p>
+                  <p className="text-3xl font-black mt-2">
+                    {(interests?.length || 0) > 0 && (pitch?.views || 0) > 0 ? ((interests!.length / pitch!.views) * 100).toFixed(1) : '0'}%
+                  </p>
+                  <p className="text-[10px] mt-1 font-medium opacity-60 italic">View to Interest conversion</p>
+                </div>
+                <div className="p-6 bg-white/10 rounded-2xl border border-white/20 shadow-inner">
+                  <p className="font-black text-[10px] uppercase tracking-widest text-white/70">Retention Signal</p>
+                  <p className="text-3xl font-black mt-2">
+                    {leadIntelligence.filter(l => l.viewCount > 1).length}
+                  </p>
+                  <p className="text-[10px] mt-1 font-medium opacity-60 italic">Repeat institutional visitors</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-2 border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden flex flex-col">
+            <CardHeader className="p-10 border-b bg-muted/10">
+              <div className="flex items-center gap-4">
+                <LayoutGrid className="w-6 h-6 text-primary" />
+                <CardTitle className="text-xl font-black tracking-tight">Full Lead Intelligence</CardTitle>
+              </div>
+              <CardDescription className="mt-1 font-medium italic">Comprehensive log of verified professional engagements</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 flex-1">
+              <div className="divide-y overflow-auto max-h-[480px] scrollbar-hide">
+                {leadIntelligence.length > 0 ? leadIntelligence.map((lead) => (
+                  <div key={lead.id} className="p-8 hover:bg-muted/5 transition-colors flex items-center justify-between group">
+                    <div className="flex items-center gap-6">
+                      <div className="w-12 h-12 rounded-full bg-primary/5 flex items-center justify-center border shadow-inner transition-transform group-hover:scale-110"><User className="w-6 h-6 text-primary/40" /></div>
+                      <div className="space-y-1">
+                        <p className="font-black text-lg">{lead.name}</p>
+                        <div className="flex items-center gap-3">
+                           <Badge variant="outline" className="text-[8px] font-black uppercase px-2 py-0 rounded-lg bg-white">
+                             {(lead.viewCount as number) > 1 ? `Return Visitor (${lead.viewCount})` : 'New Discovery'}
+                           </Badge>
+                           {lead.hasInterest && <Badge className="bg-amber-500/10 text-amber-600 border-none text-[8px] px-2 py-0">Interest Logged</Badge>}
+                           {lead.hasRequest && <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[8px] px-2 py-0">Connected</Badge>}
+                        </div>
+                      </div>
+                    </div>
+                    <Link href={`/investor/${lead.id}`}>
+                       <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl hover:bg-primary/5 hover:text-primary transition-all border border-transparent hover:border-primary/20"><ExternalLink className="w-5 h-5" /></Button>
+                    </Link>
+                  </div>
+                )) : (
+                  <div className="p-24 text-center space-y-4 opacity-20">
+                    <MousePointer2 className="w-16 h-16 mx-auto animate-bounce" />
+                    <p className="font-black text-xs uppercase tracking-widest italic">Monitoring for market discovery...</p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -516,3 +558,4 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
     </div>
   );
 }
+
