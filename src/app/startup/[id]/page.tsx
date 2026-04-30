@@ -1,7 +1,6 @@
-
 "use client";
 
-import { use, useState, useMemo, useEffect } from 'react';
+import { use, useState, useMemo, useEffect, useRef } from 'react';
 import { doc, collection, query, where, serverTimestamp, getDocs, increment } from 'firebase/firestore';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
@@ -24,18 +23,22 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
   const { toast } = useToast();
   const [resolving, setResolving] = useState(false);
   const [checking, setChecking] = useState(false);
+  const viewTracked = useRef<string | null>(null);
 
   const pitchRef = useMemoFirebase(() => doc(db, 'pitches', id), [db, id]);
   const { data: pitch, isLoading: loadingPitch } = useDoc(pitchRef);
 
-  // Track view if investor
+  const isOwner = user?.uid === pitch?.ownerId;
+
+  // Track view if investor (broken infinite loop fix)
   useEffect(() => {
-    if (pitch && profile?.role === 'investor') {
-      updateDocumentNonBlocking(doc(db, 'pitches', pitch.id), {
+    if (pitch && profile?.role === 'investor' && !isOwner && viewTracked.current !== id) {
+      viewTracked.current = id;
+      updateDocumentNonBlocking(doc(db, 'pitches', id), {
         views: increment(1)
       });
     }
-  }, [pitch, profile, db]);
+  }, [id, pitch?.id, profile?.role, isOwner, db]);
 
   const founderRef = useMemoFirebase(() => {
     if (!pitch?.ownerId) return null;
@@ -44,7 +47,6 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
   const { data: founder, isLoading: loadingFounder } = useDoc(founderRef);
 
   const isInvestor = profile?.role === 'investor';
-  const isOwner = user?.uid === pitch?.ownerId;
 
   const interestsQuery = useMemoFirebase(() => {
     if (!user || !isInvestor || !pitch) return null;
@@ -90,7 +92,6 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
   }, [pitch]);
 
   const scoreLabel = maturityIndex >= 8 ? "Strong" : maturityIndex >= 5 ? "Moderate" : "Needs Improvement";
-  const scoreColor = maturityIndex >= 8 ? "text-emerald-400" : maturityIndex >= 5 ? "text-amber-400" : "text-red-400";
   const barColor = maturityIndex >= 8 ? "bg-emerald-400" : maturityIndex >= 5 ? "bg-amber-400" : "bg-red-400";
   
   const scoreBadgeStyles = maturityIndex >= 8 

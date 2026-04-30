@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useMemo, useState, useEffect } from 'react';
@@ -42,8 +41,27 @@ import {
   Line,
   LineChart
 } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { format, subDays, startOfDay, isWithinInterval, eachDayOfInterval } from 'date-fns';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { format, subDays, startOfDay, eachDayOfInterval } from 'date-fns';
+
+const chartConfig: ChartConfig = {
+  interests: {
+    label: "Interests",
+    color: "hsl(var(--primary))",
+  },
+  requests: {
+    label: "Requests",
+    color: "#10b981",
+  },
+  messages: {
+    label: "Messages",
+    color: "hsl(var(--primary))",
+  },
+  views: {
+    label: "Views",
+    color: "#2563eb",
+  },
+};
 
 export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -125,8 +143,6 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
         return ts && ts >= dayStart && ts <= dayEnd;
       }).length || 0;
 
-      // Mock views trend based on total views and date posted
-      // In a real app, you'd track views with timestamps
       const totalViews = pitch?.views || 0;
       const daysSincePosted = pitch?.createdAt?.toDate ? 
         Math.max(1, Math.floor((new Date().getTime() - pitch.createdAt.toDate().getTime()) / (1000 * 60 * 60 * 24))) : 30;
@@ -170,7 +186,7 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center space-y-6">
           <AlertCircle className="w-16 h-16 text-destructive opacity-20" />
           <h2 className="text-3xl font-black tracking-tight">Access Restricted</h2>
-          <p className="text-muted-foreground max-w-sm">Analytics are only available to the authorized venture owner.</p>
+          <p className="text-muted-foreground max-sm">Analytics are only available to the authorized venture owner.</p>
           <Link href="/dashboard">
             <Button variant="outline" className="rounded-xl border-2 px-8 font-black uppercase text-[10px] tracking-widest h-12">Return to Gateway</Button>
           </Link>
@@ -254,7 +270,7 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
                     <span className="text-[9px] font-black uppercase text-muted-foreground">Interests</span>
                   </div>
                   <div className="flex items-center gap-1.5 ml-4">
-                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
                     <span className="text-[9px] font-black uppercase text-muted-foreground">Requests</span>
                   </div>
                 </div>
@@ -262,7 +278,7 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
             </CardHeader>
             <CardContent className="p-10 flex-1">
               <div className="h-[400px] w-full mt-6">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer config={chartConfig}>
                   <AreaChart data={trendData}>
                     <defs>
                       <linearGradient id="colorInterests" x1="0" y1="0" x2="0" y2="1">
@@ -289,9 +305,8 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
                       fontSize={12}
                       tickLine={false}
                       axisLine={false}
-                      tickFormatter={(value) => `${value}`}
                     />
-                    <Tooltip 
+                    <ChartTooltip 
                       content={<ChartTooltipContent className="rounded-xl border-none shadow-2xl" />}
                     />
                     <Area 
@@ -311,7 +326,7 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
                       fill="url(#colorRequests)" 
                     />
                   </AreaChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </div>
             </CardContent>
           </Card>
@@ -356,9 +371,9 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
               </CardHeader>
               <CardContent className="p-10 pt-4">
                 <div className="h-[180px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ChartContainer config={chartConfig}>
                     <LineChart data={trendData}>
-                      <Tooltip 
+                      <ChartTooltip 
                         content={<ChartTooltipContent className="rounded-xl border-none shadow-2xl" />}
                       />
                       <Line 
@@ -369,7 +384,7 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
                         dot={false} 
                       />
                     </LineChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </div>
                 <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest text-center mt-4">Message volume per day</p>
               </CardContent>
@@ -388,7 +403,7 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
             </CardHeader>
             <CardContent className="p-10">
               <div className="h-[300px] w-full mt-6">
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartContainer config={chartConfig}>
                   <LineChart data={trendData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
                     <XAxis 
@@ -401,11 +416,11 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
                       dy={10}
                     />
                     <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
-                    <Tooltip content={<ChartTooltipContent />} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
                     <Line type="monotone" dataKey="views" stroke="#2563eb" strokeWidth={2} dot={{ r: 4 }} />
                     <Line type="monotone" dataKey="interests" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
                   </LineChart>
-                </ResponsiveContainer>
+                </ChartContainer>
               </div>
               <div className="flex justify-center gap-8 mt-8">
                 <div className="flex items-center gap-2">
@@ -464,4 +479,3 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
     </div>
   );
 }
-
