@@ -22,7 +22,9 @@ import {
   BarChart3,
   CheckCircle2,
   Lightbulb,
-  Target
+  Target,
+  Mail,
+  Star
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 
