@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from 'next/link';
@@ -27,6 +26,7 @@ export function Footer() {
           <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground">Resources</h5>
           <div className="flex flex-col gap-4">
             <Link href="/about" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">About Us</Link>
+            <Link href="/guide" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">How it Works</Link>
             <Link href="/faq" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">FAQ</Link>
             <Link href="/safety" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">Trust & Safety</Link>
             <Link href="/contact" className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">Support</Link>
