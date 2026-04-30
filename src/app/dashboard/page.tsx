@@ -9,7 +9,7 @@ import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking
 import { collection, query, where, limit, doc, getDocs, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert, BarChart3, Eye, Bookmark, MessageSquare, Clock, TrendingUp, Target, Activity, CheckCircle2, Circle, Trophy, Flame } from 'lucide-react';
+import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert, BarChart3, Eye, Bookmark, MessageSquare, Clock, TrendingUp, Target, Activity, CheckCircle2, Circle, Trophy, Flame, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -253,7 +253,7 @@ export default function DashboardPage() {
 
   if (authLoading || (user && !profile)) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen items-center justify-center flex bg-background">
         <Loader2 className="animate-spin w-12 h-12 text-primary opacity-20" />
       </div>
     );
@@ -277,6 +277,11 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+            <Link href="/guide" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full gap-3 h-14 px-8 rounded-xl border-2 hover:bg-primary/5 transition-all font-black uppercase tracking-widest text-[10px]">
+                <BookOpen className="w-5 h-5" /> Platform Guide
+              </Button>
+            </Link>
             {isAdmin && (
               <Link href="/admin" className="w-full sm:w-auto">
                 <Button className="w-full gap-3 h-14 px-8 rounded-xl bg-destructive shadow-xl shadow-destructive/20 hover:shadow-destructive/30 transition-all font-black uppercase tracking-widest text-[10px]">
@@ -293,7 +298,7 @@ export default function DashboardPage() {
             )}
             {(isInvestor || isAdmin) && (
               <Link href="/pitches" className="w-full sm:w-auto">
-                <Button variant="outline" className="w-full gap-3 h-14 px-8 rounded-xl border-2 hover:bg-primary/5 transition-all font-black uppercase tracking-widest text-[10px]">
+                <Button variant="default" className="w-full gap-3 h-14 px-8 rounded-xl bg-primary shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all font-black uppercase tracking-widest text-[10px]">
                   <Search className="w-5 h-5" /> Browse Pitches
                 </Button>
               </Link>

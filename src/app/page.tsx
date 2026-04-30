@@ -25,7 +25,8 @@ import {
   ShieldAlert,
   Trophy,
   Flame,
-  Image as ImageIcon
+  Image as ImageIcon,
+  BookOpen
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore } from '@/firebase';
@@ -164,6 +165,7 @@ export default function HomePage() {
         </Link>
         
         <nav className="hidden lg:flex gap-8 items-center mr-8">
+          <Link href="/guide" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Guide</Link>
           <Link href="/about" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">About</Link>
           <Link href="/faq" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">FAQ</Link>
           <Link href="/contact" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">Contact</Link>
@@ -218,9 +220,9 @@ export default function HomePage() {
                   Get Started <ArrowRight className="ml-3 w-6 h-6" />
                 </Button>
               </Link>
-              <Link href="/about">
+              <Link href="/guide">
                 <Button size="lg" variant="outline" className="h-20 px-12 text-xl font-black border-4 border-muted rounded-[1.5rem] hover:bg-white hover:border-primary/20 transition-all shadow-sm uppercase tracking-widest">
-                  Learn More
+                  Platform Guide
                 </Button>
               </Link>
             </div>

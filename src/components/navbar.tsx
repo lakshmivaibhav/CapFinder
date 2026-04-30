@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth-provider';
 import { useAuth as useFirebaseAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, Zap, MessageSquare, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Search, User, LogOut, PlusCircle, Loader2, Inbox, Zap, MessageSquare, ShieldAlert, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
@@ -101,6 +101,7 @@ export function Navbar() {
   const navItems = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { label: 'Explore', href: '/pitches', icon: Search },
+    { label: 'Guide', href: '/guide', icon: BookOpen },
     { 
       label: 'Messages', 
       href: '/messages', 
@@ -121,7 +122,7 @@ export function Navbar() {
     { label: 'Profile', href: '/profile', icon: User },
   ].filter(item => {
     if (item.show === false) return false;
-    if (!emailVerified && item.href !== '/profile' && item.href !== '/dashboard' && item.href !== '/admin') return false;
+    if (!emailVerified && item.href !== '/profile' && item.href !== '/dashboard' && item.href !== '/admin' && item.href !== '/guide') return false;
     return true;
   });
 
