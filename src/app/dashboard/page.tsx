@@ -9,13 +9,26 @@ import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking
 import { collection, query, where, limit, doc, getDocs, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert, BarChart3, Eye, Bookmark, MessageSquare, Clock, TrendingUp } from 'lucide-react';
+import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert, BarChart3, Eye, Bookmark, MessageSquare, Clock, TrendingUp, Target, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format, subDays, startOfDay, eachDayOfInterval } from 'date-fns';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+
+const investorChartConfig: ChartConfig = {
+  requests: {
+    label: "Requests",
+    color: "hsl(var(--primary))",
+  },
+  interests: {
+    label: "Interests",
+    color: "hsl(var(--accent))",
+  },
+};
 
 export default function DashboardPage() {
   const { user, profile, loading: authLoading, emailVerified } = useAuth();
@@ -153,6 +166,54 @@ export default function DashboardPage() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
   }, [isInvestor, allPitches, profile]);
+
+  // --- INVESTOR INSIGHTS CALCULATIONS ---
+  const investorEngagementScore = useMemo(() => {
+    if (!isInvestor) return 0;
+    let score = 0;
+    score += (investorViews?.length || 0) * 1;
+    score += (investorInterests?.length || 0) * 10;
+    score += (investorContactRequests?.length || 0) * 5;
+    score += (investorContactRequests?.filter(r => r.status === 'accepted').length || 0) * 10;
+    score += (recentMessages?.length || 0) * 2;
+    return score;
+  }, [isInvestor, investorViews, investorInterests, investorContactRequests, recentMessages]);
+
+  const investorResponseRate = useMemo(() => {
+    if (!isInvestor || !investorContactRequests || investorContactRequests.length === 0) return 0;
+    const total = investorContactRequests.length;
+    const responded = investorContactRequests.filter(r => r.status !== 'pending').length;
+    return Math.round((responded / total) * 100);
+  }, [isInvestor, investorContactRequests]);
+
+  const investorActivityTrend = useMemo(() => {
+    if (!isInvestor) return [];
+    const end = startOfDay(new Date());
+    const start = subDays(end, 6);
+    const dateRange = eachDayOfInterval({ start, end });
+
+    return dateRange.map(date => {
+      const dateStr = format(date, 'MMM dd');
+      const dayStart = startOfDay(date);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+      const dayRequests = investorContactRequests?.filter(r => {
+        const ts = r.timestamp?.toDate ? r.timestamp.toDate() : null;
+        return ts && ts >= dayStart && ts <= dayEnd;
+      }).length || 0;
+
+      const dayInterests = investorInterests?.filter(i => {
+        const ts = i.timestamp?.toDate ? i.timestamp.toDate() : null;
+        return ts && ts >= dayStart && ts <= dayEnd;
+      }).length || 0;
+
+      return {
+        date: dateStr,
+        requests: dayRequests,
+        interests: dayInterests
+      };
+    });
+  }, [isInvestor, investorContactRequests, investorInterests]);
 
   if (authLoading || (user && !profile)) {
     return (
@@ -321,6 +382,11 @@ export default function DashboardPage() {
                 <TabsTrigger value="secondary" className="flex-1 sm:flex-none gap-3 px-8 h-11 rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
                   {isStartup ? <><Users className="w-4 h-4" /> My Partners</> : <><Star className="w-4 h-4" /> Saved Pitches</>}
                 </TabsTrigger>
+                {isInvestor && (
+                  <TabsTrigger value="insights" className="flex-1 sm:flex-none gap-3 px-8 h-11 rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
+                    <Activity className="w-4 h-4" /> Market Insights
+                  </TabsTrigger>
+                )}
                 {isStartup && (
                   <TabsTrigger value="analytics" className="flex-1 sm:flex-none gap-3 px-8 h-11 rounded-xl font-black uppercase text-[10px] tracking-widest data-[state=active]:bg-white data-[state=active]:shadow-lg transition-all">
                     <BarChart3 className="w-4 h-4" /> Global Intelligence
@@ -424,6 +490,67 @@ export default function DashboardPage() {
                     <h3 className="text-3xl font-black tracking-tight text-muted-foreground">Your watchlist is empty.</h3>
                   </div>
                 )}
+              </TabsContent>
+
+              <TabsContent value="insights" className="outline-none">
+                <div className="space-y-10">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <Card className="border-none shadow-xl bg-white rounded-2xl overflow-hidden p-8 text-center space-y-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Startups Contacted</p>
+                      <p className="text-4xl font-black text-primary">{investorContactRequests?.length || 0}</p>
+                    </Card>
+                    <Card className="border-none shadow-xl bg-white rounded-2xl overflow-hidden p-8 text-center space-y-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Response Rate</p>
+                      <p className="text-4xl font-black text-emerald-500">{investorResponseRate}%</p>
+                    </Card>
+                    <Card className="border-none shadow-xl bg-white rounded-2xl overflow-hidden p-8 text-center space-y-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Active Hubs</p>
+                      <p className="text-4xl font-black text-accent">{investorContactRequests?.filter(r => r.status === 'accepted').length || 0}</p>
+                    </Card>
+                    <Card className="border-none shadow-xl bg-white rounded-2xl overflow-hidden p-8 text-center space-y-2">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Engagement Score</p>
+                      <p className="text-4xl font-black text-orange-500">{investorEngagementScore}</p>
+                    </Card>
+                  </div>
+
+                  <Card className="border-none shadow-xl bg-white rounded-[2.5rem] overflow-hidden">
+                    <CardHeader className="p-10 border-b bg-muted/20">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-primary/10 rounded-xl">
+                          <Activity className="w-6 h-6 text-primary" />
+                        </div>
+                        <div>
+                          <CardTitle className="text-2xl font-black tracking-tight">Market Participation Trend</CardTitle>
+                          <CardDescription className="text-sm font-medium">Activity volume over the last 7 days.</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-10 h-[400px]">
+                      <ChartContainer config={investorChartConfig}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={investorActivityTrend}>
+                            <defs>
+                              <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.15}/>
+                                <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                              </linearGradient>
+                              <linearGradient id="colorInterests" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.15}/>
+                                <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
+                            <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} dy={10} />
+                            <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
+                            <ChartTooltip content={<ChartTooltipContent className="rounded-2xl border-none shadow-2xl" />} />
+                            <Area type="monotone" dataKey="requests" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorRequests)" />
+                            <Area type="monotone" dataKey="interests" stroke="hsl(var(--accent))" strokeWidth={3} fillOpacity={1} fill="url(#colorInterests)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
             </Tabs>
           </div>
