@@ -14,18 +14,27 @@ import {
   Star,
   HelpCircle,
   Mail,
-  Info
+  Info,
+  Search,
+  PlusCircle,
+  Eye,
+  MessageSquare,
+  Inbox,
+  TrendingUp,
+  LayoutGrid,
+  ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore } from '@/firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { Footer } from '@/components/footer';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 export default function HomePage() {
   const { user } = useAuth();
   const db = useFirestore();
-  const browseLink = user ? '/pitches' : '/login';
-
+  
   const [counts, setCounts] = useState({
     pitches: 0,
     users: 0,
@@ -82,11 +91,52 @@ export default function HomePage() {
     }
   ];
 
-  const steps = [
-    { title: 'Create Account', description: 'Join as a Founder or Investor and complete your professional profile.' },
-    { title: 'Find Matches', description: 'Explore startups or investors tailored to your industry and goals.' },
-    { title: 'Start Chatting', description: 'Send connection requests and start talking through our secure messaging.' },
-    { title: 'Get Funded', description: 'Finalize deals and grow your startup or portfolio with CapFinder.' },
+  const startupSteps = [
+    { 
+      title: 'Create Pitch', 
+      description: 'Build a compelling profile with our AI assistant to showcase your unique value proposition.',
+      icon: PlusCircle,
+      color: 'text-primary',
+      bg: 'bg-primary/10'
+    },
+    { 
+      title: 'Get Discovered', 
+      description: 'Your venture is shared with a curated feed of verified, high-intent capital partners.',
+      icon: Eye,
+      color: 'text-primary',
+      bg: 'bg-primary/10'
+    },
+    { 
+      title: 'Connect with Investors', 
+      description: 'Initiate secure dialogues, share metrics, and finalize your next funding round.',
+      icon: MessageSquare,
+      color: 'text-primary',
+      bg: 'bg-primary/10'
+    },
+  ];
+
+  const investorSteps = [
+    { 
+      title: 'Explore Startups', 
+      description: 'Browse a high-signal feed of vetted ventures filtered by sector, stage, and capital goals.',
+      icon: Search,
+      color: 'text-accent',
+      bg: 'bg-accent/10'
+    },
+    { 
+      title: 'Receive Requests', 
+      description: 'Monitor your pipeline for institutional-grade proposals from high-growth founders.',
+      icon: Inbox,
+      color: 'text-accent',
+      bg: 'bg-accent/10'
+    },
+    { 
+      title: 'Invest & Connect', 
+      description: 'Open secure hubs to perform due diligence and finalize strategic partnerships.',
+      icon: TrendingUp,
+      color: 'text-accent',
+      bg: 'bg-accent/10'
+    },
   ];
 
   return (
@@ -128,6 +178,7 @@ export default function HomePage() {
       </header>
 
       <main className="flex-1">
+        {/* Hero Section */}
         <section className="relative py-24 px-6 md:py-40 overflow-hidden bg-[#f8fafc]">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl">
             <div className="absolute top-20 left-20 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] animate-pulse" />
@@ -162,6 +213,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Stats Section */}
         <section className="py-20 px-6 border-y bg-white relative z-20">
           <div className="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-4 gap-12 md:gap-20">
             {stats.map((stat, i) => (
@@ -178,6 +230,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Features Section */}
         <section className="py-32 px-6 max-w-7xl mx-auto space-y-32">
           <div className="text-center space-y-6">
             <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-none">Built for Success</h2>
@@ -211,33 +264,72 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="py-32 px-6 bg-muted/20">
-          <div className="max-w-7xl mx-auto space-y-32">
+        {/* How It Works Section */}
+        <section className="py-32 px-6 bg-[#f8fafc] border-y">
+          <div className="max-w-7xl mx-auto space-y-24">
             <div className="text-center space-y-6">
-              <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-none">How It Works</h2>
+              <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-none">Venture Lifecycle</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto text-xl font-medium italic border-r-8 border-accent/20 pr-8 text-right">
-                From creating your profile to finishing the deal, our workflow is simple.
+                Dual roadmaps designed for frictionless strategic matching.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-4 gap-12">
-              {steps.map((step, i) => (
-                <div key={i} className="relative space-y-8 group">
-                  <div className="text-[10rem] font-black text-primary/5 absolute -top-20 -left-8 select-none transition-transform duration-700 group-hover:translate-x-4">0{i + 1}</div>
-                  <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary font-black text-2xl relative z-10 border-2 border-primary/5 group-hover:scale-110 transition-transform">
-                    {i + 1}
+            <div className="grid md:grid-cols-2 gap-20 relative">
+              <div className="absolute left-1/2 top-0 bottom-0 w-px bg-muted hidden lg:block" />
+              
+              {/* Startup Column */}
+              <div className="space-y-12">
+                <div className="flex items-center gap-4 mb-12">
+                  <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center text-white shadow-xl">
+                    <Briefcase className="w-7 h-7" />
                   </div>
-                  <div className="space-y-4 relative z-10">
-                    <h4 className="text-2xl font-black tracking-tighter leading-none">{step.title}</h4>
-                    <p className="text-muted-foreground text-md leading-relaxed font-medium italic">{step.description}</p>
-                  </div>
+                  <h3 className="text-3xl font-black tracking-tight">Founder Path</h3>
                 </div>
-              ))}
+
+                <div className="space-y-10">
+                  {startupSteps.map((step, i) => (
+                    <div key={i} className="flex gap-8 group">
+                      <div className={cn("w-16 h-16 shrink-0 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110", step.bg)}>
+                        <step.icon className={cn("w-8 h-8", step.color)} />
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="text-xl font-black tracking-tight">{step.title}</h4>
+                        <p className="text-muted-foreground font-medium italic leading-relaxed text-sm">{step.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Investor Column */}
+              <div className="space-y-12">
+                <div className="flex items-center gap-4 mb-12">
+                  <div className="w-14 h-14 bg-accent rounded-2xl flex items-center justify-center text-white shadow-xl">
+                    <ShieldCheck className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-3xl font-black tracking-tight">Investor Path</h3>
+                </div>
+
+                <div className="space-y-10">
+                  {investorSteps.map((step, i) => (
+                    <div key={i} className="flex gap-8 group">
+                      <div className={cn("w-16 h-16 shrink-0 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110", step.bg)}>
+                        <step.icon className={cn("w-8 h-8", step.color)} />
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="text-xl font-black tracking-tight">{step.title}</h4>
+                        <p className="text-muted-foreground font-medium italic leading-relaxed text-sm">{step.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="py-32 px-6 text-center">
+        {/* CTA Section */}
+        <section className="py-32 px-6 text-center bg-white">
           <div className="max-w-6xl mx-auto p-20 rounded-[3rem] bg-primary text-white space-y-12 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.3)] shadow-primary/40 relative overflow-hidden group">
              <Zap className="absolute -right-20 -bottom-20 w-96 h-96 text-white/10 -rotate-12 transition-transform duration-1000 group-hover:rotate-0 group-hover:scale-110" />
              <h2 className="text-5xl md:text-7xl font-black tracking-tighter relative z-10 leading-[0.95]">Ready to Fuel the <br /><span className="italic text-white/80">Future?</span></h2>
