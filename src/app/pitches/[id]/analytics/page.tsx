@@ -29,7 +29,9 @@ import {
   Flame,
   Clock,
   BarChart3,
-  MousePointer2
+  MousePointer2,
+  ShieldCheck,
+  Bookmark
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -110,6 +112,12 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
   }, [db, id, pitch]);
   const { data: pitchViews } = useCollection(viewsQuery);
 
+  const favoritesQuery = useMemoFirebase(() => {
+    if (!pitch) return null;
+    return query(collection(db, 'favorites'), where('pitchId', '==', id));
+  }, [db, id, pitch]);
+  const { data: favorites } = useCollection(favoritesQuery);
+
   // Identity-Aware Investor Engagement Processing
   const leadIntelligence = useMemo(() => {
     if (!pitch || (!interests && !requests && !pitchViews)) return [];
@@ -125,6 +133,8 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
           viewCount: 0, 
           hasInterest: false, 
           hasRequest: false, 
+          requestStatus: null,
+          hasFavorite: false,
           messageCount: 0,
           lastSeen: v.timestamp?.toDate ? v.timestamp.toDate() : new Date(0)
         });
@@ -137,7 +147,7 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
 
     interests?.forEach(i => {
       if (!grouped.has(i.investorId)) {
-        grouped.set(i.investorId, { id: i.investorId, name: 'Lead', email: i.investorEmail, viewCount: 0, hasInterest: true, hasRequest: false, messageCount: 0, lastSeen: i.timestamp?.toDate ? i.timestamp.toDate() : new Date(0) });
+        grouped.set(i.investorId, { id: i.investorId, name: 'Lead', email: i.investorEmail, viewCount: 0, hasInterest: true, hasRequest: false, requestStatus: null, hasFavorite: false, messageCount: 0, lastSeen: i.timestamp?.toDate ? i.timestamp.toDate() : new Date(0) });
       }
       const lead = grouped.get(i.investorId);
       lead.hasInterest = true;
@@ -148,11 +158,22 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
     requests?.forEach(r => {
       const investorId = r.senderId;
       if (!grouped.has(investorId)) {
-        grouped.set(investorId, { id: investorId, name: 'Lead', email: r.investorEmail, viewCount: 0, hasInterest: false, hasRequest: true, messageCount: 0, lastSeen: r.timestamp?.toDate ? r.timestamp.toDate() : new Date(0) });
+        grouped.set(investorId, { id: investorId, name: 'Lead', email: r.investorEmail, viewCount: 0, hasInterest: false, hasRequest: true, requestStatus: r.status, hasFavorite: false, messageCount: 0, lastSeen: r.timestamp?.toDate ? r.timestamp.toDate() : new Date(0) });
       }
       const lead = grouped.get(investorId);
       lead.hasRequest = true;
+      lead.requestStatus = r.status;
       const ts = r.timestamp?.toDate ? r.timestamp.toDate() : new Date(0);
+      if (ts > lead.lastSeen) lead.lastSeen = ts;
+    });
+
+    favorites?.forEach(f => {
+      if (!grouped.has(f.investorId)) {
+        grouped.set(f.investorId, { id: f.investorId, name: 'Lead', email: f.investorEmail || 'Lead', viewCount: 0, hasInterest: false, hasRequest: false, requestStatus: null, hasFavorite: true, messageCount: 0, lastSeen: f.timestamp?.toDate ? f.timestamp.toDate() : new Date(0) });
+      }
+      const lead = grouped.get(f.investorId);
+      lead.hasFavorite = true;
+      const ts = f.timestamp?.toDate ? f.timestamp.toDate() : new Date(0);
       if (ts > lead.lastSeen) lead.lastSeen = ts;
     });
 
@@ -169,13 +190,21 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
       let score = 0;
       score += lead.viewCount;
       if (lead.hasInterest) score += 10;
-      if (lead.hasRequest) score += 5;
+      if (lead.hasFavorite) score += 10;
+      if (lead.hasRequest) {
+        score += lead.requestStatus === 'accepted' ? 15 : 5;
+      }
       score += (lead.messageCount * 2);
-      return { ...lead, score };
-    }).sort((a, b) => b.score - a.score);
-  }, [pitch, interests, requests, messages, pitchViews]);
 
-  const hotLeads = useMemo(() => leadIntelligence.filter(l => l.score >= 10).slice(0, 5), [leadIntelligence]);
+      let level: 'High' | 'Medium' | 'Low' = 'Low';
+      if (score >= 20) level = 'High';
+      else if (score >= 10) level = 'Medium';
+
+      return { ...lead, score, level };
+    }).sort((a, b) => b.score - a.score);
+  }, [pitch, interests, requests, messages, pitchViews, favorites]);
+
+  const hotInvestors = useMemo(() => leadIntelligence.filter(l => l.score >= 10), [leadIntelligence]);
 
   const trendData = useMemo(() => {
     const daysToLookBack = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
@@ -221,10 +250,10 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
   const stats = [
     { label: 'Pitch Views', value: pitch?.views || 0, icon: Eye, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Investor Interests', value: interests?.length || 0, icon: Sparkles, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Saved Pitches', value: favorites?.length || 0, icon: Bookmark, color: 'text-indigo-600', bg: 'bg-indigo-50' },
     { label: 'Contact Requests', value: requests?.length || 0, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Active Hubs', value: requests?.filter(r => r.status === 'accepted').length || 0, icon: MessageSquare, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { label: 'Identified Leads', value: leadIntelligence.length, icon: User, color: 'text-rose-600', bg: 'bg-rose-50' },
-    { label: 'Live Engagement', value: hotLeads.length, icon: Flame, color: 'text-orange-600', bg: 'bg-orange-50' },
+    { label: 'Total Leads', value: leadIntelligence.length, icon: User, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: 'High Intent', value: hotInvestors.filter(i => i.level === 'High').length, icon: Flame, color: 'text-orange-600', bg: 'bg-orange-50' },
   ];
 
   if (authLoading || loadingPitch) {
@@ -257,7 +286,7 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="flex-1 max-w-7xl mx-auto py-12 px-6 w-full space-y-12">
+      <main className="flex-1 max-w-7xl mx-auto py-12 px-6 w-full space-y-16">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 border-b pb-10">
           <div className="space-y-4">
             <Link href={`/startup/${id}`} className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-all w-fit font-black text-[10px] uppercase tracking-widest group">
@@ -310,6 +339,99 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
             </Card>
           ))}
         </div>
+
+        {/* Hot Investors Section */}
+        <section className="space-y-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="p-4 bg-orange-100 rounded-[1.5rem] shadow-sm"><Flame className="w-8 h-8 text-orange-600" /></div>
+              <div>
+                <h2 className="text-3xl font-black tracking-tight">Hot Investors</h2>
+                <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Priority Partners by Engagement Depth</p>
+              </div>
+            </div>
+            <Badge className="bg-orange-500 text-white border-none rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-orange-500/20">High Intent Identification</Badge>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {hotInvestors.length > 0 ? hotInvestors.map((investor) => (
+              <Card key={investor.id} className={cn(
+                "border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden group hover:-translate-y-2 transition-all duration-500",
+                investor.level === 'High' && "ring-4 ring-orange-500/10"
+              )}>
+                <CardHeader className="p-10 pb-6">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center border-2 border-white shadow-inner relative overflow-hidden">
+                        <User className="text-muted-foreground w-8 h-8" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl font-black leading-none">{investor.name}</CardTitle>
+                        <p className="text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest opacity-60 truncate max-w-[150px]">{investor.email}</p>
+                      </div>
+                    </div>
+                    <Badge className={cn(
+                      "border px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest",
+                      investor.level === 'High' ? "bg-orange-50 text-orange-600 border-orange-100" :
+                      investor.level === 'Medium' ? "bg-blue-50 text-blue-600 border-blue-100" :
+                      "bg-muted text-muted-foreground border-muted"
+                    )}>
+                      {investor.level} Intent
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-10 pt-0 space-y-8">
+                  <div className="grid grid-cols-2 gap-4 py-6 border-y border-dashed border-muted/50">
+                    <div className="space-y-1">
+                      <p className="text-[8px] font-black uppercase text-muted-foreground opacity-50 tracking-widest">Score</p>
+                      <p className="font-black text-2xl tracking-tighter text-orange-600">{investor.score}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[8px] font-black uppercase text-muted-foreground opacity-50 tracking-widest">Protocol</p>
+                      <div className="flex flex-wrap gap-1">
+                        {investor.hasRequest && <Badge className="bg-emerald-500 text-white text-[7px] px-1.5 py-0 rounded-md">Connected</Badge>}
+                        {investor.hasInterest && <Badge className="bg-amber-500 text-white text-[7px] px-1.5 py-0 rounded-md">Interested</Badge>}
+                        {investor.hasFavorite && <Badge className="bg-indigo-500 text-white text-[7px] px-1.5 py-0 rounded-md">Saved</Badge>}
+                        {investor.viewCount > 1 && <Badge className="bg-blue-500 text-white text-[7px] px-1.5 py-0 rounded-md">Return Discovery</Badge>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                      <span className="flex items-center gap-2 text-muted-foreground"><Clock className="w-3.5 h-3.5 text-primary" /> {formatDistanceToNow(investor.lastSeen, { addSuffix: true })}</span>
+                      <Link href={`/investor/${investor.id}`} className="text-primary hover:underline flex items-center gap-1.5 group/link">
+                        Profile <ExternalLink className="w-3.5 h-3.5 group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform" />
+                      </Link>
+                    </div>
+                    
+                    {investor.requestStatus === 'accepted' ? (
+                      <Link href="/messages" className="block">
+                        <Button className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-500/20 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-2">
+                          <MessageSquare className="w-4 h-4" /> Message Partner
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Link href={`/investor/${investor.id}`} className="block">
+                        <Button variant="outline" className="w-full h-12 border-2 rounded-2xl font-black uppercase text-[10px] tracking-widest gap-2 hover:bg-primary hover:text-white transition-all">
+                          <Zap className="w-4 h-4" /> Analyze Credentials
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )) : (
+              <div className="col-span-full py-20 text-center space-y-6 bg-muted/20 rounded-[3rem] border-4 border-dashed">
+                <MousePointer2 className="w-16 h-16 mx-auto text-muted-foreground opacity-20" />
+                <div className="space-y-2">
+                   <h3 className="text-xl font-black text-muted-foreground">Lead Identification Active</h3>
+                   <p className="text-sm italic text-muted-foreground/60">Priority leads will appear here as they cross the engagement threshold.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* Primary Trend Charts */}
         <div className="grid lg:grid-cols-2 gap-10">
@@ -423,68 +545,6 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
           </Card>
         </div>
 
-        {/* Hot Leads Section */}
-        {hotLeads.length > 0 && (
-          <section className="space-y-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="p-4 bg-red-100 rounded-[1.5rem] shadow-sm"><Flame className="w-8 h-8 text-red-600" /></div>
-                <div>
-                  <h2 className="text-3xl font-black tracking-tight">Priority Leads</h2>
-                  <p className="text-[10px] font-black uppercase text-muted-foreground tracking-[0.2em]">Highest Signal Investors</p>
-                </div>
-              </div>
-              <Badge className="bg-red-500 text-white border-none rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-500/20">Institutional Engagement</Badge>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {hotLeads.map((lead) => (
-                <Card key={lead.id} className="border-none shadow-xl rounded-[2.5rem] bg-white overflow-hidden group hover:-translate-y-2 transition-all duration-500">
-                  <CardHeader className="p-10 pb-6">
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center border-2 border-white shadow-inner relative overflow-hidden group-hover:scale-105 transition-transform">
-                          <User className="text-muted-foreground w-8 h-8" />
-                          <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-xl font-black leading-none">{lead.name}</CardTitle>
-                          <p className="text-[10px] font-black uppercase text-muted-foreground mt-2 tracking-widest opacity-60">{lead.email}</p>
-                        </div>
-                      </div>
-                      <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 border px-3 py-1 rounded-xl text-[10px] font-black">Score: {lead.score}</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-10 pt-0 space-y-8">
-                    <div className="grid grid-cols-3 gap-6 py-6 border-y border-dashed border-muted/50">
-                      <div className="text-center space-y-1">
-                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-50 tracking-widest">Discovery</p>
-                        <p className="font-black text-2xl tracking-tighter">{lead.viewCount}</p>
-                      </div>
-                      <div className="text-center space-y-1">
-                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-50 tracking-widest">Protocol</p>
-                        <div className="flex justify-center">
-                          {lead.hasRequest ? <Badge className="bg-primary text-white text-[8px] px-2 py-0.5 rounded-lg">Connected</Badge> : lead.hasInterest ? <Badge className="bg-accent text-white text-[8px] px-2 py-0.5 rounded-lg">Interested</Badge> : <Badge variant="outline" className="text-[8px] px-2 py-0.5 rounded-lg">Exploratory</Badge>}
-                        </div>
-                      </div>
-                      <div className="text-center space-y-1">
-                        <p className="text-[8px] font-black uppercase text-muted-foreground opacity-50 tracking-widest">Dialogue</p>
-                        <p className="font-black text-2xl tracking-tighter">{lead.messageCount}</p>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                      <span className="flex items-center gap-2 text-muted-foreground"><Clock className="w-3.5 h-3.5 text-primary" /> {formatDistanceToNow(lead.lastSeen, { addSuffix: true })}</span>
-                      <Link href={`/investor/${lead.id}`} className="text-primary hover:underline flex items-center gap-1.5 group/link">
-                        Profile <ExternalLink className="w-3.5 h-3.5 group-hover/link:translate-x-1 group-hover/link:-translate-y-1 transition-transform" />
-                      </Link>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* Insights Summary */}
         <div className="grid lg:grid-cols-3 gap-10">
           <Card className="lg:col-span-1 border-none shadow-2xl rounded-[3rem] bg-primary text-white overflow-hidden relative group">
@@ -507,9 +567,9 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
                 <div className="p-6 bg-white/10 rounded-2xl border border-white/20 shadow-inner">
                   <p className="font-black text-[10px] uppercase tracking-widest text-white/70">Retention Signal</p>
                   <p className="text-3xl font-black mt-2">
-                    {leadIntelligence.filter(l => l.viewCount > 1).length}
+                    {leadIntelligence.filter(l => l.viewCount > 1 || l.hasFavorite).length}
                   </p>
-                  <p className="text-[10px] mt-1 font-medium opacity-60 italic">Repeat institutional visitors</p>
+                  <p className="text-[10px] mt-1 font-medium opacity-60 italic">Repeat / Saved visitors</p>
                 </div>
               </div>
             </CardContent>
@@ -536,13 +596,24 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
                              {(lead.viewCount as number) > 1 ? `Return Visitor (${lead.viewCount})` : 'New Discovery'}
                            </Badge>
                            {lead.hasInterest && <Badge className="bg-amber-500/10 text-amber-600 border-none text-[8px] px-2 py-0">Interest Logged</Badge>}
+                           {lead.hasFavorite && <Badge className="bg-indigo-500/10 text-indigo-600 border-none text-[8px] px-2 py-0">Saved Pitch</Badge>}
                            {lead.hasRequest && <Badge className="bg-emerald-500/10 text-emerald-600 border-none text-[8px] px-2 py-0">Connected</Badge>}
                         </div>
                       </div>
                     </div>
-                    <Link href={`/investor/${lead.id}`}>
-                       <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl hover:bg-primary/5 hover:text-primary transition-all border border-transparent hover:border-primary/20"><ExternalLink className="w-5 h-5" /></Button>
-                    </Link>
+                    <div className="flex items-center gap-4">
+                      <Badge className={cn(
+                        "text-[9px] font-black uppercase px-3 py-1 rounded-lg",
+                        lead.level === 'High' ? "bg-orange-500 text-white" :
+                        lead.level === 'Medium' ? "bg-blue-500 text-white" :
+                        "bg-muted text-muted-foreground"
+                      )}>
+                        {lead.level} Tier
+                      </Badge>
+                      <Link href={`/investor/${lead.id}`}>
+                        <Button variant="ghost" size="icon" className="h-12 w-12 rounded-2xl hover:bg-primary/5 hover:text-primary transition-all border border-transparent hover:border-primary/20"><ExternalLink className="w-5 h-5" /></Button>
+                      </Link>
+                    </div>
                   </div>
                 )) : (
                   <div className="p-24 text-center space-y-4 opacity-20">
@@ -558,4 +629,3 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
     </div>
   );
 }
-

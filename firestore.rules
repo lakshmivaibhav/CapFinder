@@ -79,8 +79,8 @@ service cloud.firestore {
     }
 
     match /favorites/{favoriteId} {
-      allow list: if isSignedIn() && resource.data.investorId == request.auth.uid;
-      allow get: if isSignedIn() && resource.data.investorId == request.auth.uid;
+      allow list: if isSignedIn() && (resource.data.investorId == request.auth.uid || isOwnerOfPitch(resource.data.pitchId) || isAdmin());
+      allow get: if isSignedIn() && (resource.data.investorId == request.auth.uid || isOwnerOfPitch(resource.data.pitchId) || isAdmin());
       allow create: if isAuthorized() && request.resource.data.investorId == request.auth.uid;
       allow delete: if isAuthorized() && (resource.data.investorId == request.auth.uid || isAdmin());
     }
