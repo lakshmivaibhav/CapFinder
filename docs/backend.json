@@ -141,6 +141,21 @@
         "postedDate"
       ]
     },
+    "PitchView": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PitchView",
+      "type": "object",
+      "description": "Represents a record of an investor viewing a startup pitch.",
+      "properties": {
+        "id": { "type": "string" },
+        "pitchId": { "type": "string" },
+        "investorId": { "type": "string" },
+        "investorName": { "type": "string" },
+        "investorEmail": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["pitchId", "investorId", "timestamp"]
+    },
     "Interest": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Interest",
@@ -416,6 +431,16 @@
             "$ref": "#/backend/entities/StartupPitch"
           },
           "description": "Contains all investment pitches posted by startups."
+        }
+      },
+      {
+        "path": "/pitchViews/{viewId}",
+        "definition": {
+          "entityName": "PitchView",
+          "schema": {
+            "$ref": "#/backend/entities/PitchView"
+          },
+          "description": "Identity-aware records of investor pitch discovery."
         }
       },
       {

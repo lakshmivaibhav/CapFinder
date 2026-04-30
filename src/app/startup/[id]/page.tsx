@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useState, useMemo, useEffect, useRef } from 'react';
@@ -30,15 +31,26 @@ export default function StartupProfilePage({ params }: { params: Promise<{ id: s
 
   const isOwner = user?.uid === pitch?.ownerId;
 
-  // Track view if investor (broken infinite loop fix)
+  // Track view if investor (Identity-Aware)
   useEffect(() => {
     if (pitch && profile?.role === 'investor' && !isOwner && viewTracked.current !== id) {
       viewTracked.current = id;
+      
+      // Update global counter
       updateDocumentNonBlocking(doc(db, 'pitches', id), {
         views: increment(1)
       });
+
+      // Record identity-aware visit
+      addDocumentNonBlocking(collection(db, 'pitchViews'), {
+        pitchId: id,
+        investorId: user?.uid,
+        investorName: profile?.name || 'Anonymous Investor',
+        investorEmail: user?.email,
+        timestamp: serverTimestamp()
+      });
     }
-  }, [id, pitch?.id, profile?.role, isOwner, db]);
+  }, [id, pitch, profile, user, isOwner, db]);
 
   const founderRef = useMemoFirebase(() => {
     if (!pitch?.ownerId) return null;

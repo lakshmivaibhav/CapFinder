@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useMemo, useState, useEffect } from 'react';
@@ -22,7 +23,11 @@ import {
   LayoutGrid, 
   Zap,
   Calendar,
-  Filter
+  Filter,
+  User,
+  ExternalLink,
+  Flame,
+  Clock
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -42,7 +47,7 @@ import {
   LineChart
 } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { format, subDays, startOfDay, eachDayOfInterval } from 'date-fns';
+import { format, subDays, startOfDay, eachDayOfInterval, formatDistanceToNow } from 'date-fns';
 
 const chartConfig: ChartConfig = {
   interests: {
@@ -75,35 +80,111 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
 
   const isOwner = user?.uid === pitch?.ownerId;
 
-  // Interests
+  // Collection Queries
   const interestsQuery = useMemoFirebase(() => {
     if (!pitch) return null;
     return query(collection(db, 'interests'), where('pitchId', '==', id));
   }, [db, id, pitch]);
   const { data: interests } = useCollection(interestsQuery);
 
-  // Contact Requests
   const requestsQuery = useMemoFirebase(() => {
     if (!pitch) return null;
     return query(collection(db, 'contactRequests'), where('pitchId', '==', id));
   }, [db, id, pitch]);
   const { data: requests } = useCollection(requestsQuery);
 
-  // Favorites
   const favoritesQuery = useMemoFirebase(() => {
     if (!pitch) return null;
     return query(collection(db, 'favorites'), where('pitchId', '==', id));
   }, [db, id, pitch]);
   const { data: favorites } = useCollection(favoritesQuery);
 
-  // Messages (for trend data)
   const messagesQuery = useMemoFirebase(() => {
     if (!pitch) return null;
     return query(collection(db, 'messages'), where('pitchId', '==', id), orderBy('timestamp', 'asc'));
   }, [db, id, pitch]);
   const { data: messages } = useCollection(messagesQuery);
 
-  // Calculate Maturity/Completion Score
+  const viewsQuery = useMemoFirebase(() => {
+    if (!pitch) return null;
+    return query(collection(db, 'pitchViews'), where('pitchId', '==', id));
+  }, [db, id, pitch]);
+  const { data: pitchViews } = useCollection(viewsQuery);
+
+  // Identity-Aware Investor Engagement Processing
+  const leadIntelligence = useMemo(() => {
+    if (!pitch || (!interests && !requests && !pitchViews)) return [];
+
+    const grouped = new Map<string, any>();
+
+    // Process Views
+    pitchViews?.forEach(v => {
+      if (!grouped.has(v.investorId)) {
+        grouped.set(v.investorId, { 
+          id: v.investorId, 
+          name: v.investorName, 
+          email: v.investorEmail, 
+          viewCount: 0, 
+          hasInterest: false, 
+          hasRequest: false, 
+          messageCount: 0,
+          lastSeen: v.timestamp?.toDate ? v.timestamp.toDate() : new Date(0)
+        });
+      }
+      const lead = grouped.get(v.investorId);
+      lead.viewCount += 1;
+      const ts = v.timestamp?.toDate ? v.timestamp.toDate() : new Date(0);
+      if (ts > lead.lastSeen) lead.lastSeen = ts;
+    });
+
+    // Process Interests
+    interests?.forEach(i => {
+      if (!grouped.has(i.investorId)) {
+        grouped.set(i.investorId, { id: i.investorId, name: 'Lead', email: i.investorEmail, viewCount: 0, hasInterest: true, hasRequest: false, messageCount: 0, lastSeen: i.timestamp?.toDate ? i.timestamp.toDate() : new Date(0) });
+      }
+      const lead = grouped.get(i.investorId);
+      lead.hasInterest = true;
+      const ts = i.timestamp?.toDate ? i.timestamp.toDate() : new Date(0);
+      if (ts > lead.lastSeen) lead.lastSeen = ts;
+    });
+
+    // Process Requests
+    requests?.forEach(r => {
+      const investorId = r.senderId; // In contactRequests, sender is usually the investor
+      if (!grouped.has(investorId)) {
+        grouped.set(investorId, { id: investorId, name: 'Lead', email: r.investorEmail, viewCount: 0, hasInterest: false, hasRequest: true, messageCount: 0, lastSeen: r.timestamp?.toDate ? r.timestamp.toDate() : new Date(0) });
+      }
+      const lead = grouped.get(investorId);
+      lead.hasRequest = true;
+      const ts = r.timestamp?.toDate ? r.timestamp.toDate() : new Date(0);
+      if (ts > lead.lastSeen) lead.lastSeen = ts;
+    });
+
+    // Process Messages
+    messages?.forEach(m => {
+      const investorId = m.senderId === pitch.ownerId ? m.receiverId : m.senderId;
+      if (!grouped.has(investorId)) return; // Only track leads we've identified through views/interests
+      const lead = grouped.get(investorId);
+      lead.messageCount += 1;
+      const ts = m.timestamp?.toDate ? m.timestamp.toDate() : new Date(0);
+      if (ts > lead.lastSeen) lead.lastSeen = ts;
+    });
+
+    // Calculate Engagement Score
+    return Array.from(grouped.values()).map(lead => {
+      let score = 0;
+      score += lead.viewCount;
+      if (lead.hasInterest) score += 10;
+      if (lead.hasRequest) score += 5;
+      score += (lead.messageCount * 2);
+      
+      return { ...lead, score };
+    }).sort((a, b) => b.score - a.score);
+  }, [pitch, interests, requests, messages, pitchViews]);
+
+  const hotLeads = useMemo(() => leadIntelligence.filter(l => l.score >= 10).slice(0, 5), [leadIntelligence]);
+
+  // Original Chart & Score Logic
   const maturityIndex = useMemo(() => {
     if (!pitch) return 0;
     let score = 0;
@@ -116,7 +197,6 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
     return parseFloat(((score / 8) * 10).toFixed(1));
   }, [pitch]);
 
-  // Process time-series data
   const trendData = useMemo(() => {
     const daysToLookBack = timeRange === 'weekly' ? 7 : 30;
     const end = startOfDay(new Date());
@@ -143,28 +223,27 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
         return ts && ts >= dayStart && ts <= dayEnd;
       }).length || 0;
 
-      const totalViews = pitch?.views || 0;
-      const daysSincePosted = pitch?.createdAt?.toDate ? 
-        Math.max(1, Math.floor((new Date().getTime() - pitch.createdAt.toDate().getTime()) / (1000 * 60 * 60 * 24))) : 30;
-      const avgViewsPerDay = totalViews / daysSincePosted;
-      const dayViews = Math.round(avgViewsPerDay * (0.8 + Math.random() * 0.4));
+      const dayViews = pitchViews?.filter(v => {
+        const ts = v.timestamp?.toDate ? v.timestamp.toDate() : null;
+        return ts && ts >= dayStart && ts <= dayEnd;
+      }).length || 0;
 
       return {
         date: dateStr,
         interests: dayInterests,
         requests: dayRequests,
         messages: dayMessages,
-        views: dayViews
+        views: dayViews || Math.round((pitch?.views || 0) / 30) // Fallback to average if collection empty
       };
     });
-  }, [timeRange, interests, requests, messages, pitch]);
+  }, [timeRange, interests, requests, messages, pitch, pitchViews]);
 
   const stats = [
     { label: 'Pitch Views', value: pitch?.views || 0, icon: Eye, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Investor Interests', value: interests?.length || 0, icon: Sparkles, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: 'Contact Requests', value: requests?.length || 0, icon: Target, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Active Hubs', value: requests?.filter(r => r.status === 'accepted').length || 0, icon: MessageSquare, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { label: 'Saved by Investors', value: favorites?.length || 0, icon: Star, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: 'Identified Leads', value: leadIntelligence.length, icon: User, color: 'text-rose-600', bg: 'bg-rose-50' },
     { label: 'Trust Score', value: `${maturityIndex}/10`, icon: CheckCircle2, color: 'text-emerald-700', bg: 'bg-emerald-50' },
   ];
 
@@ -231,10 +310,59 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
               </Button>
             </div>
             <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 h-12 px-6 rounded-xl font-black uppercase tracking-[0.2em] text-[10px]">
-              Live Sync Active
+              Live Lead Sync
             </Badge>
           </div>
         </div>
+
+        {/* Hot Leads Header */}
+        {hotLeads.length > 0 && (
+          <section className="space-y-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-red-100 rounded-xl shadow-sm"><Flame className="w-6 h-6 text-red-600" /></div>
+              <h2 className="text-2xl font-black tracking-tight">Hot Leads</h2>
+              <Badge className="bg-red-500 text-white border-none rounded-lg px-2 py-0.5 text-[8px] font-black uppercase">High Signal</Badge>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {hotLeads.map((lead) => (
+                <Card key={lead.id} className="border-none shadow-xl rounded-[2rem] bg-white overflow-hidden group hover:-translate-y-1 transition-all">
+                  <CardHeader className="p-8 pb-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center border-2 border-white shadow-inner"><User className="text-muted-foreground w-6 h-6" /></div>
+                        <div>
+                          <CardTitle className="text-lg font-black leading-none">{lead.name}</CardTitle>
+                          <p className="text-[10px] font-black uppercase text-muted-foreground mt-1 tracking-widest">{lead.email}</p>
+                        </div>
+                      </div>
+                      <Badge className="bg-emerald-50 text-emerald-700 border-none font-black text-[8px] px-2 py-0.5 rounded-md">Score: {lead.score}</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-8 pt-0 space-y-6">
+                    <div className="grid grid-cols-3 gap-4 py-4 border-y border-dashed">
+                      <div className="text-center">
+                        <p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Views</p>
+                        <p className="font-black text-xl">{lead.viewCount}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Status</p>
+                        {lead.hasRequest ? <Badge className="bg-primary text-white text-[8px] px-1">Connected</Badge> : lead.hasInterest ? <Badge className="bg-amber-500 text-white text-[8px] px-1">Interested</Badge> : <Badge variant="outline" className="text-[8px] px-1">Exploring</Badge>}
+                      </div>
+                      <div className="text-center">
+                        <p className="text-[8px] font-black uppercase text-muted-foreground mb-1">Chats</p>
+                        <p className="font-black text-xl">{lead.messageCount}</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      <span className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> Seen {formatDistanceToNow(lead.lastSeen, { addSuffix: true })}</span>
+                      <Link href={`/investor/${lead.id}`} className="text-primary hover:underline flex items-center gap-1">Analyze Profile <ExternalLink className="w-3 h-3" /></Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {stats.map((stat, i) => (
@@ -254,25 +382,16 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="grid lg:grid-cols-12 gap-8">
+          {/* Trend Chart */}
           <Card className="lg:col-span-8 border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden flex flex-col">
             <CardHeader className="p-10 border-b bg-muted/20">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <div className="flex items-center gap-4 mb-2">
                     <TrendingUp className="w-6 h-6 text-primary" />
-                    <CardTitle className="text-2xl font-black tracking-tight">Growth & Engagement Trend</CardTitle>
+                    <CardTitle className="text-2xl font-black tracking-tight">Discovery & Conversion Trend</CardTitle>
                   </div>
-                  <CardDescription className="font-medium">Monitoring investor discovery and communication volume.</CardDescription>
-                </div>
-                <div className="hidden sm:flex items-center gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-primary" />
-                    <span className="text-[9px] font-black uppercase text-muted-foreground">Interests</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 ml-4">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
-                    <span className="text-[9px] font-black uppercase text-muted-foreground">Requests</span>
-                  </div>
+                  <CardDescription className="font-medium">Tracking verified views against strategic inquiry volume.</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -281,196 +400,114 @@ export default function PitchAnalyticsPage({ params }: { params: Promise<{ id: s
                 <ChartContainer config={chartConfig}>
                   <AreaChart data={trendData}>
                     <defs>
+                      <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                      </linearGradient>
                       <linearGradient id="colorInterests" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1}/>
                         <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
                       </linearGradient>
-                      <linearGradient id="colorRequests" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.1}/>
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                      </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="#888888" 
-                      fontSize={10} 
-                      tickLine={false} 
-                      axisLine={false} 
-                      className="font-black uppercase tracking-widest"
-                      dy={10}
-                    />
-                    <YAxis
-                      stroke="#888888"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <ChartTooltip 
-                      content={<ChartTooltipContent className="rounded-xl border-none shadow-2xl" />}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="interests" 
-                      stroke="hsl(var(--primary))" 
-                      strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorInterests)" 
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="requests" 
-                      stroke="#10b981" 
-                      strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorRequests)" 
-                    />
+                    <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} className="font-black uppercase tracking-widest" dy={10} />
+                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                    <ChartTooltip content={<ChartTooltipContent className="rounded-xl border-none shadow-2xl" />} />
+                    <Area type="monotone" dataKey="views" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorViews)" />
+                    <Area type="monotone" dataKey="interests" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorInterests)" />
                   </AreaChart>
                 </ChartContainer>
               </div>
             </CardContent>
           </Card>
 
-          <div className="lg:col-span-4 space-y-8">
-            <Card className="border-none shadow-2xl rounded-[3rem] bg-primary text-white overflow-hidden relative group">
-              <Zap className="absolute -right-10 -bottom-10 w-48 h-48 text-white/10 -rotate-12 transition-transform duration-1000 group-hover:rotate-0" />
-              <CardHeader className="p-10 relative z-10">
-                <CardTitle className="text-2xl font-black tracking-tight">Venture Health</CardTitle>
-                <CardDescription className="text-white/60 font-medium italic mt-2">Platform trust & discovery rating.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-10 pt-0 relative z-10 space-y-8">
-                <div className="space-y-4">
-                  <div className="flex justify-between items-end">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80">Completion Rating</span>
-                    <span className="text-3xl font-black tracking-tighter">{maturityIndex * 10}%</span>
+          {/* Lead List / Engagement Sidebar */}
+          <Card className="lg:col-span-4 border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden flex flex-col">
+            <CardHeader className="p-10 pb-4 border-b bg-muted/10">
+              <div className="flex items-center gap-4">
+                <LayoutGrid className="w-6 h-6 text-primary" />
+                <CardTitle className="text-xl font-black tracking-tight">Lead Intelligence</CardTitle>
+              </div>
+              <CardDescription className="mt-1 font-medium">Verified professional engagements</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 flex-1">
+              <div className="divide-y overflow-auto max-h-[500px]">
+                {leadIntelligence.length > 0 ? leadIntelligence.map((lead) => (
+                  <div key={lead.id} className="p-6 hover:bg-muted/5 transition-colors flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-primary/5 flex items-center justify-center border shadow-inner"><User className="w-4 h-4 text-primary" /></div>
+                      <div className="space-y-0.5">
+                        <p className="font-black text-sm">{lead.name}</p>
+                        <div className="flex items-center gap-2">
+                           <Badge variant="outline" className="text-[7px] font-black uppercase px-1 py-0 rounded-sm">{(lead.viewCount as number) > 1 ? `Return Visitor (${lead.viewCount})` : 'New Discovery'}</Badge>
+                           {lead.hasInterest && <div className="w-1.5 h-1.5 bg-amber-500 rounded-full" title="Interest Logged" />}
+                        </div>
+                      </div>
+                    </div>
+                    <Link href={`/investor/${lead.id}`}>
+                       <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg"><ExternalLink className="w-4 h-4 text-muted-foreground" /></Button>
+                    </Link>
                   </div>
-                  <div className="w-full h-3 bg-white/20 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-white shadow-[0_0_20px_rgba(255,255,255,0.8)] transition-all duration-1000 ease-out" 
-                      style={{ width: `${maturityIndex * 10}%` }}
-                    />
+                )) : (
+                  <div className="p-20 text-center space-y-4 opacity-30">
+                    <User className="w-12 h-12 mx-auto" />
+                    <p className="font-black text-[10px] uppercase tracking-widest italic">Waiting for discovery...</p>
                   </div>
-                </div>
-                <div className="p-6 bg-white/10 rounded-2xl border border-white/20 italic text-sm leading-relaxed">
-                  "High-scoring pitches receive 4x more engagement from institutional capital partners on CapFinder."
-                </div>
-                <Link href="/profile" className="block">
-                  <Button className="w-full h-14 bg-white text-primary hover:bg-white/90 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-2xl transition-all active:scale-95">
-                    Improve Trust Score
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden">
-              <CardHeader className="p-10 pb-4">
-                <div className="flex items-center gap-4">
-                  <MessageSquare className="w-6 h-6 text-primary" />
-                  <CardTitle className="text-xl font-black tracking-tight">Communication Trend</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="p-10 pt-4">
-                <div className="h-[180px] w-full">
-                  <ChartContainer config={chartConfig}>
-                    <LineChart data={trendData}>
-                      <ChartTooltip 
-                        content={<ChartTooltipContent className="rounded-xl border-none shadow-2xl" />}
-                      />
-                      <Line 
-                        type="stepAfter" 
-                        dataKey="messages" 
-                        stroke="hsl(var(--primary))" 
-                        strokeWidth={4} 
-                        dot={false} 
-                      />
-                    </LineChart>
-                  </ChartContainer>
-                </div>
-                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest text-center mt-4">Message volume per day</p>
-              </CardContent>
-            </Card>
-          </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-8">
            <Card className="border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden">
             <CardHeader className="p-10 border-b bg-muted/20">
               <div className="flex items-center gap-4 mb-2">
-                <LayoutGrid className="w-6 h-6 text-primary" />
-                <CardTitle className="text-2xl font-black tracking-tight">Engagement Depth</CardTitle>
+                <Target className="w-6 h-6 text-primary" />
+                <CardTitle className="text-2xl font-black tracking-tight">Active Strategic Hubs</CardTitle>
               </div>
-              <CardDescription className="font-medium">Comparing visibility vs active strategic intent.</CardDescription>
+              <CardDescription className="font-medium">Direct communication volume with capital partners.</CardDescription>
             </CardHeader>
             <CardContent className="p-10">
               <div className="h-[300px] w-full mt-6">
                 <ChartContainer config={chartConfig}>
                   <LineChart data={trendData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="#888888" 
-                      fontSize={10} 
-                      tickLine={false} 
-                      axisLine={false} 
-                      className="font-black uppercase tracking-widest"
-                      dy={10}
-                    />
+                    <XAxis dataKey="date" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} className="font-black uppercase tracking-widest" dy={10} />
                     <YAxis stroke="#888888" fontSize={10} tickLine={false} axisLine={false} />
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="views" stroke="#2563eb" strokeWidth={2} dot={{ r: 4 }} />
-                    <Line type="monotone" dataKey="interests" stroke="#f59e0b" strokeWidth={2} dot={{ r: 4 }} />
+                    <Line type="monotone" dataKey="messages" stroke="hsl(var(--primary))" strokeWidth={3} dot={{ r: 4, fill: 'white', strokeWidth: 2 }} />
                   </LineChart>
                 </ChartContainer>
-              </div>
-              <div className="flex justify-center gap-8 mt-8">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-600" />
-                  <span className="text-[10px] font-black uppercase text-muted-foreground">Estimated Views</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-amber-500" />
-                  <span className="text-[10px] font-black uppercase text-muted-foreground">Logged Interest</span>
-                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-2xl rounded-[3rem] bg-white overflow-hidden">
+          <Card className="border-none shadow-2xl rounded-[3rem] bg-primary text-white overflow-hidden relative group">
+            <Zap className="absolute -right-10 -bottom-10 w-64 h-64 text-white/10 -rotate-12 transition-transform duration-1000 group-hover:rotate-0" />
             <CardHeader className="p-10 pb-4">
               <div className="flex items-center gap-4">
-                <Sparkles className="w-6 h-6 text-primary" />
-                <CardTitle className="text-2xl font-black tracking-tight">Strategic Insights</CardTitle>
+                <Sparkles className="w-6 h-6 text-white" />
+                <CardTitle className="text-2xl font-black tracking-tight text-white">Venture Ecosystem Insights</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="p-10 pt-4 space-y-8">
               <div className="grid gap-6">
-                <div className="flex items-start gap-6 p-6 bg-emerald-50 rounded-2xl border-2 border-emerald-100 group hover:border-emerald-200 transition-all">
-                  <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><TrendingUp className="w-5 h-5 text-emerald-600" /></div>
-                  <div>
-                    <p className="font-black text-sm uppercase tracking-widest text-emerald-800">Engagement Momentum</p>
-                    <p className="text-sm text-emerald-700/80 leading-relaxed font-medium mt-1">Your pitch interest has grown by <span className="font-black">12%</span> compared to the previous period.</p>
-                  </div>
+                <div className="p-6 bg-white/10 rounded-2xl border border-white/20">
+                  <p className="font-black text-sm uppercase tracking-widest text-white">Engagement Quality</p>
+                  <p className="text-sm opacity-90 leading-relaxed font-medium mt-1">
+                    Your conversion rate from View to Interest is <span className="font-black">{(interests?.length || 0) > 0 && (pitch?.views || 0) > 0 ? ((interests!.length / pitch!.views) * 100).toFixed(1) : '0'}%</span>.
+                  </p>
                 </div>
-                
-                <div className="flex items-start gap-6 p-6 bg-blue-50 rounded-2xl border-2 border-blue-100 group hover:border-blue-200 transition-all">
-                  <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><Target className="w-5 h-5 text-blue-600" /></div>
-                  <div>
-                    <p className="font-black text-sm uppercase tracking-widest text-blue-800">Conversion Quality</p>
-                    <p className="text-sm text-blue-700/80 leading-relaxed font-medium mt-1">Founders with your profile completion score see <span className="font-black">2.4x</span> higher connection rates.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-6 p-6 bg-amber-50 rounded-2xl border-2 border-amber-100 group hover:border-amber-200 transition-all">
-                  <div className="p-3 bg-white rounded-xl shadow-sm group-hover:scale-110 transition-transform"><Eye className="w-5 h-5 text-amber-600" /></div>
-                  <div>
-                    <p className="font-black text-sm uppercase tracking-widest text-amber-800">Market Visibility</p>
-                    <p className="text-sm text-amber-700/80 leading-relaxed font-medium mt-1">Most investor views are occurring between <span className="font-black">9 AM - 11 AM</span> (EST).</p>
-                  </div>
+                <div className="p-6 bg-white/10 rounded-2xl border border-white/20">
+                  <p className="font-black text-sm uppercase tracking-widest text-white">Lead Retention</p>
+                  <p className="text-sm opacity-90 leading-relaxed font-medium mt-1">
+                    <span className="font-black">{leadIntelligence.filter(l => l.viewCount > 1).length}</span> investors have visited your pitch multiple times.
+                  </p>
                 </div>
               </div>
-              
-              <div className="p-8 bg-muted/20 rounded-[2.5rem] border-l-8 border-primary italic text-sm text-muted-foreground leading-relaxed shadow-inner">
-                "Maintaining consistent profile activity increases your discovery rank in the investor feed by up to 35%."
+              <div className="p-8 bg-black/20 rounded-[2rem] border-l-8 border-white italic text-sm opacity-80 leading-relaxed">
+                "High-signal investors typically view a pitch 2.4 times before initiating a direct connection request."
               </div>
             </CardContent>
           </Card>
