@@ -9,7 +9,7 @@ import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking
 import { collection, query, where, limit, doc, getDocs, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert, BarChart3, Eye, Bookmark, MessageSquare, Clock, TrendingUp, Target, Activity } from 'lucide-react';
+import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert, BarChart3, Eye, Bookmark, MessageSquare, Clock, TrendingUp, Target, Activity, CheckCircle2, Circle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow, format, subDays, startOfDay, eachDayOfInterval } from 'date-fns';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { cn } from '@/lib/utils';
 
 const investorChartConfig: ChartConfig = {
   requests: {
@@ -36,6 +37,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [resolving, setResolving] = useState<string | null>(null);
+  const [dismissOnboarding, setDismissOnboarding] = useState(false);
 
   useEffect(() => {
     if (!authLoading) {
@@ -167,6 +169,34 @@ export default function DashboardPage() {
       .slice(0, 3);
   }, [isInvestor, allPitches, profile]);
 
+  // --- ONBOARDING LOGIC ---
+  const onboardingSteps = useMemo(() => {
+    if (!profile) return [];
+    if (isStartup) {
+      return [
+        { id: 'profile', label: 'Finalize Member Identity', completed: !!profile.name && !!profile.bio, href: '/profile' },
+        { id: 'pitch', label: 'Construct Venture Narrative', completed: (startupPitches?.length || 0) > 0, href: '/pitches/new' },
+        { id: 'discovery', label: 'Analyze Market Discovery', completed: startupPitches?.some(p => p.views > 0), href: isStartup ? '/dashboard' : '#' }
+      ];
+    }
+    if (isInvestor) {
+      return [
+        { id: 'profile', label: 'Establish Strategic Thesis', completed: !!profile.investmentInterest, href: '/profile' },
+        { id: 'explore', label: 'Scan Global Innovation', completed: (investorViews?.length || 0) > 0, href: '/pitches' },
+        { id: 'connect', label: 'Initiate Capital Deployment', completed: (investorContactRequests?.length || 0) > 0, href: '/pitches' }
+      ];
+    }
+    return [];
+  }, [profile, isStartup, isInvestor, startupPitches, investorViews, investorContactRequests]);
+
+  const onboardingProgress = useMemo(() => {
+    if (onboardingSteps.length === 0) return 0;
+    const completed = onboardingSteps.filter(s => s.completed).length;
+    return Math.round((completed / onboardingSteps.length) * 100);
+  }, [onboardingSteps]);
+
+  const showOnboarding = !dismissOnboarding && onboardingProgress < 100 && (isStartup || isInvestor);
+
   // --- INVESTOR INSIGHTS CALCULATIONS ---
   const investorEngagementScore = useMemo(() => {
     if (!isInvestor) return 0;
@@ -230,6 +260,7 @@ export default function DashboardPage() {
       <Navbar />
 
       <main className="flex-1 p-4 md:p-10 max-w-7xl mx-auto w-full">
+        {/* --- WELCOME HEADER --- */}
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-primary">Overview</p>
@@ -263,6 +294,67 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* --- ONBOARDING GUIDE --- */}
+        {showOnboarding && (
+          <Card className="mb-12 border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden relative group">
+             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+             <CardHeader className="p-8 md:p-12 pb-4">
+               <div className="flex justify-between items-start mb-6">
+                 <div className="space-y-1">
+                   <div className="flex items-center gap-3">
+                     <div className="p-2 bg-primary/10 rounded-lg"><Zap className="w-4 h-4 text-primary" /></div>
+                     <CardTitle className="text-2xl font-black tracking-tight">Member Onboarding Protocol</CardTitle>
+                   </div>
+                   <CardDescription className="text-sm font-medium">Complete your strategic setup to unlock full platform capabilities.</CardDescription>
+                 </div>
+                 <Button variant="ghost" size="sm" className="h-8 rounded-lg text-[9px] font-black uppercase tracking-widest text-muted-foreground" onClick={() => setDismissOnboarding(true)}>Dismiss</Button>
+               </div>
+               <div className="w-full bg-muted/30 h-2.5 rounded-full overflow-hidden mb-2">
+                 <div 
+                   className="h-full bg-primary transition-all duration-1000 ease-out" 
+                   style={{ width: `${onboardingProgress}%` }}
+                 />
+               </div>
+               <p className="text-[10px] font-black uppercase tracking-widest text-primary">{onboardingProgress}% Processed</p>
+             </CardHeader>
+             <CardContent className="p-8 md:p-12 pt-4">
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 {onboardingSteps.map((step, idx) => (
+                   <Link key={step.id} href={step.href}>
+                     <div className={cn(
+                       "p-6 rounded-2xl border-2 transition-all group/step cursor-pointer flex flex-col h-full",
+                       step.completed 
+                        ? "bg-emerald-50 border-emerald-100" 
+                        : "bg-white border-muted hover:border-primary/30 shadow-sm"
+                     )}>
+                       <div className="flex justify-between items-start mb-4">
+                         <div className={cn(
+                           "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                           step.completed ? "bg-emerald-500 text-white" : "bg-muted text-muted-foreground group-hover/step:bg-primary group-hover/step:text-white transition-colors"
+                         )}>
+                           {step.completed ? <CheckCircle2 className="w-5 h-5" /> : <span className="font-black text-xs">{idx + 1}</span>}
+                         </div>
+                         {step.completed && <Badge className="bg-emerald-500 text-white text-[8px] uppercase px-2 py-0">Completed</Badge>}
+                       </div>
+                       <p className={cn(
+                         "font-black text-sm tracking-tight leading-tight mb-2",
+                         step.completed ? "text-emerald-700" : "text-foreground group-hover/step:text-primary transition-colors"
+                       )}>
+                         {step.label}
+                       </p>
+                       {!step.completed && (
+                         <div className="mt-auto flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-primary opacity-0 group-hover/step:opacity-100 transition-opacity">
+                           Initialize <ArrowRight className="w-3 h-3" />
+                         </div>
+                       )}
+                     </div>
+                   </Link>
+                 ))}
+               </div>
+             </CardContent>
+          </Card>
+        )}
 
         {/* --- METRIC GRID --- */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 mb-12">
