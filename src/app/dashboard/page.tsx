@@ -9,7 +9,7 @@ import { useFirestore, useCollection, useMemoFirebase, deleteDocumentNonBlocking
 import { collection, query, where, limit, doc, getDocs, orderBy } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card';
-import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert, BarChart3, Eye, Bookmark, MessageSquare, Clock, TrendingUp, Target, Activity, CheckCircle2, Circle } from 'lucide-react';
+import { Loader2, Plus, Megaphone, ArrowRight, Users, Star, Search, LayoutGrid, Inbox, Sparkles, Zap, ShieldAlert, BarChart3, Eye, Bookmark, MessageSquare, Clock, TrendingUp, Target, Activity, CheckCircle2, Circle, Trophy, Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Navbar } from '@/components/navbar';
 import { Footer } from '@/components/footer';
@@ -102,6 +102,11 @@ export default function DashboardPage() {
     );
   }, [db, user, profile]);
 
+  const trendingPitchesQuery = useMemoFirebase(() => {
+    if (!user || !profile || (!isInvestor && !isAdmin) || profile.disabled === true) return null;
+    return query(collection(db, 'pitches'), orderBy('views', 'desc'), limit(6));
+  }, [db, user, profile, isInvestor, isAdmin]);
+
   const allPitchesQuery = useMemoFirebase(() => {
     if (!user || !profile || (!isInvestor && !isAdmin) || profile.disabled === true) return null;
     return query(collection(db, 'pitches'), limit(50));
@@ -117,6 +122,7 @@ export default function DashboardPage() {
   const { data: investorFavorites } = useCollection(investorFavoritesQuery);
   const { data: recentMessages } = useCollection(recentMessagesQuery);
   
+  const { data: trendingPitches, isLoading: loadingTrending } = useCollection(trendingPitchesQuery);
   const { data: allPitches, isLoading: loadingAllPitches } = useCollection(allPitchesQuery);
 
   const handleResolveConnection = async (pitchId: string, startupOwnerId: string, startupName: string) => {
@@ -422,6 +428,57 @@ export default function DashboardPage() {
             </>
           )}
         </div>
+
+        {/* --- TRENDING / TOP STARTUPS SECTION --- */}
+        {isInvestor && trendingPitches && trendingPitches.length > 0 && (
+          <section className="mb-12">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-amber-50 rounded-2xl">
+                  <Trophy className="w-6 h-6 text-amber-600" />
+                </div>
+                <div className="space-y-0.5">
+                  <h2 className="text-3xl font-black tracking-tight">Market Velocity</h2>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Most discovered ventures on the platform</p>
+                </div>
+              </div>
+              <Badge className="bg-amber-500 text-white font-black uppercase text-[10px] tracking-widest px-4 py-1.5 rounded-xl shadow-lg shadow-amber-500/20">Trending Now</Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {trendingPitches.map((pitch) => (
+                <Link key={pitch.id} href={`/startup/${pitch.id}`}>
+                  <Card className="group hover:border-amber-500/20 border-2 border-transparent transition-all h-full shadow-xl hover:shadow-2xl rounded-[2rem] flex flex-col bg-white overflow-hidden">
+                    <CardHeader className="p-6 pb-2">
+                      <div className="flex justify-between items-start mb-4">
+                        <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-100 font-black text-[8px] uppercase tracking-widest px-2 py-0.5 rounded-md">
+                          {pitch.category || 'Venture'}
+                        </Badge>
+                        <div className="flex items-center gap-1.5 text-orange-500">
+                          <Flame className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-black">{pitch.views || 0}</span>
+                        </div>
+                      </div>
+                      <CardTitle className="text-xl font-black group-hover:text-primary transition-colors line-clamp-1 leading-none">{pitch.startupName}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-2 flex-1">
+                      <p className="text-sm text-muted-foreground line-clamp-2 italic leading-relaxed">&quot;{pitch.description}&quot;</p>
+                    </CardContent>
+                    <CardFooter className="p-6 pt-0 flex justify-between items-center bg-muted/5 border-t border-muted/50 mt-4">
+                       <div className="space-y-0.5">
+                         <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Goal</p>
+                         <p className="text-md font-black text-foreground">${pitch.fundingNeeded?.toLocaleString()}</p>
+                       </div>
+                       <div className="p-2 bg-white rounded-lg shadow-sm group-hover:bg-primary group-hover:text-white transition-all">
+                         <ArrowRight className="w-4 h-4" />
+                       </div>
+                    </CardFooter>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
           {/* --- MAIN CONTENT AREA --- */}

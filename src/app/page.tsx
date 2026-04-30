@@ -22,14 +22,18 @@ import {
   Inbox,
   TrendingUp,
   LayoutGrid,
-  ShieldAlert
+  ShieldAlert,
+  Trophy,
+  Flame,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useAuth } from '@/components/auth-provider';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { Footer } from '@/components/footer';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -41,6 +45,9 @@ export default function HomePage() {
     verifiedInvestors: 0,
     connections: 0
   });
+
+  const [topPitches, setTopPitches] = useState<any[]>([]);
+  const [loadingTop, setLoadingTop] = useState(true);
 
   useEffect(() => {
     async function fetchStats() {
@@ -59,8 +66,15 @@ export default function HomePage() {
           verifiedInvestors: verifiedSnap?.size || 0,
           connections: (interestsSnap?.size || 0) + (requestsSnap?.size || 0)
         });
+
+        // Fetch Top Pitches by views
+        const topSnap = await getDocs(query(collection(db, 'pitches'), orderBy('views', 'desc'), limit(3)));
+        const top = topSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setTopPitches(top);
       } catch (error) {
         // Silently handle stat loading errors
+      } finally {
+        setLoadingTop(false);
       }
     }
 
@@ -212,6 +226,70 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* Top Startups Section */}
+        {!loadingTop && topPitches.length > 0 && (
+          <section className="py-32 px-6 bg-white">
+            <div className="max-w-7xl mx-auto space-y-20">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="space-y-4 text-center md:text-left">
+                  <div className="inline-flex items-center gap-2 px-4 py-1 bg-amber-50 rounded-lg text-amber-600 font-black text-[10px] uppercase tracking-widest border border-amber-100">
+                    <Trophy className="w-3.5 h-3.5" /> Market Selection
+                  </div>
+                  <h2 className="text-4xl md:text-6xl font-black tracking-tighter leading-none">Featured <span className="text-primary italic">Ventures</span></h2>
+                  <p className="text-lg text-muted-foreground font-medium italic border-l-4 border-primary/20 pl-6">
+                    High-intent startups gaining institutional momentum.
+                  </p>
+                </div>
+                <Link href="/signup">
+                  <Button variant="outline" className="h-14 px-8 rounded-xl font-black uppercase text-[10px] tracking-widest border-2">Explore All Pitches <ArrowRight className="ml-2 w-4 h-4" /></Button>
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+                {topPitches.map((pitch) => (
+                  <div key={pitch.id} className="group relative rounded-[2.5rem] overflow-hidden bg-white shadow-2xl border border-muted hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-2">
+                    <div className="relative aspect-[16/10] w-full overflow-hidden">
+                      {pitch.imageURL ? (
+                        <Image src={pitch.imageURL} alt={pitch.startupName} fill className="object-cover transition-transform duration-700 group-hover:scale-110" unoptimized />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/10 bg-muted/20">
+                          <ImageIcon className="w-16 h-16" />
+                        </div>
+                      )}
+                      <div className="absolute top-6 left-6 flex flex-col gap-2">
+                        <Badge className="bg-black/50 backdrop-blur-md text-white border-none px-4 py-1.5 font-black uppercase text-[9px] tracking-widest">
+                          {pitch.category || pitch.industry}
+                        </Badge>
+                      </div>
+                      <div className="absolute bottom-4 right-6">
+                         <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl shadow-lg">
+                           <Flame className="w-3.5 h-3.5 text-orange-500" />
+                           <span className="text-[10px] font-black uppercase text-foreground">{pitch.views || 0} Discoveries</span>
+                         </div>
+                      </div>
+                    </div>
+                    <div className="p-10 space-y-6">
+                      <h3 className="text-2xl font-black tracking-tight group-hover:text-primary transition-colors">{pitch.startupName}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-3 italic leading-relaxed">&quot;{pitch.description}&quot;</p>
+                      <div className="pt-6 border-t border-dashed flex items-center justify-between">
+                         <div className="space-y-0.5">
+                           <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Seeking</p>
+                           <p className="text-xl font-black text-primary">${pitch.fundingNeeded?.toLocaleString()}</p>
+                         </div>
+                         <Link href={`/startup/${pitch.id}`}>
+                           <Button size="icon" className="rounded-full w-12 h-12 shadow-lg shadow-primary/20 transition-transform group-hover:translate-x-1">
+                             <ArrowRight className="w-5 h-5" />
+                           </Button>
+                         </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Stats Section */}
         <section className="py-20 px-6 border-y bg-white relative z-20">
