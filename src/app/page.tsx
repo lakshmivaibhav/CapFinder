@@ -41,9 +41,9 @@ export default function HomePage() {
   const db = useFirestore();
   
   const [counts, setCounts] = useState({
-    pitches: 0,
-    users: 0,
-    verifiedInvestors: 0,
+    startups: 0,
+    investors: 0,
+    members: 0,
     connections: 0
   });
 
@@ -53,19 +53,18 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const [pitchesSnap, usersSnap, verifiedSnap, interestsSnap, requestsSnap] = await Promise.all([
-          getDocs(collection(db, 'pitches')).catch(() => null),
-          getDocs(collection(db, 'users')).catch(() => null),
-          getDocs(query(collection(db, 'users'), where('verified', '==', true), where('role', '==', 'investor'))).catch(() => null),
-          getDocs(collection(db, 'interests')).catch(() => null),
-          getDocs(collection(db, 'contactRequests')).catch(() => null)
+        const [startupsSnap, investorsSnap, membersSnap, connectionsSnap] = await Promise.all([
+          getDocs(query(collection(db, 'users'), where('role', '==', 'startup'))).catch(() => ({ size: 0 })),
+          getDocs(query(collection(db, 'users'), where('role', '==', 'investor'))).catch(() => ({ size: 0 })),
+          getDocs(collection(db, 'users')).catch(() => ({ size: 0 })),
+          getDocs(query(collection(db, 'contactRequests'), where('status', '==', 'accepted'))).catch(() => ({ size: 0 }))
         ]);
 
         setCounts({
-          pitches: pitchesSnap?.size || 0,
-          users: usersSnap?.size || 0,
-          verifiedInvestors: verifiedSnap?.size || 0,
-          connections: (interestsSnap?.size || 0) + (requestsSnap?.size || 0)
+          startups: startupsSnap.size,
+          investors: investorsSnap.size,
+          members: membersSnap.size,
+          connections: connectionsSnap.size
         });
 
         // Fetch Top Pitches by views
@@ -83,10 +82,10 @@ export default function HomePage() {
   }, [db]);
 
   const stats = [
-    { label: 'Startups', value: counts.pitches, icon: Briefcase },
-    { label: 'Members', value: counts.users, icon: Users },
-    { label: 'Investors', value: counts.verifiedInvestors, icon: ShieldCheck },
-    { label: 'Connections', value: counts.connections, icon: Zap },
+    { label: 'Total Startups', value: counts.startups, icon: Briefcase },
+    { label: 'Total Investors', value: counts.investors, icon: ShieldCheck },
+    { label: 'Total Members', value: counts.members, icon: Users },
+    { label: 'Total Connections', value: counts.connections, icon: Zap },
   ];
 
   const features = [
@@ -273,7 +272,7 @@ export default function HomePage() {
                     </div>
                     <div className="p-10 space-y-6">
                       <h3 className="text-2xl font-black tracking-tight group-hover:text-primary transition-colors">{pitch.startupName}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-3 italic leading-relaxed">&quot;{pitch.description}&quot;</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2 italic leading-relaxed">&quot;{pitch.description}&quot;</p>
                       <div className="pt-6 border-t border-dashed flex items-center justify-between">
                          <div className="space-y-0.5">
                            <p className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Seeking</p>
