@@ -12,10 +12,9 @@ class AudioManager {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      // Referencing the local asset at /public/sounds/hover.mp3
-      // NOTE: You must manually place an 'hover.mp3' file in the /public/sounds/ directory.
+      // Static asset served from /public/sounds/hover.mp3
       this.audio = new Audio('/sounds/hover.mp3');
-      this.audio.volume = 0.12; // Slightly increased for better audibility while remaining subtle
+      this.audio.volume = 0.15; // Set to a professional, audible level
       this.audio.preload = "auto";
       
       // Detect desktop/mouse users specifically
@@ -30,7 +29,7 @@ class AudioManager {
             this.audio?.pause();
             if (this.audio) this.audio.currentTime = 0;
           }).catch(() => {
-            // Silently fail if source is missing or blocked
+            // Silently fail if source is missing (expected until file is uploaded)
           });
         }
         window.removeEventListener('click', enable);
@@ -47,13 +46,13 @@ class AudioManager {
    */
   playHover() {
     const now = Date.now();
-    // Debounce playback to ensure sound doesn't stutter during rapid mouse movement
+    // Debounce playback (70ms) to ensure sound doesn't stutter during rapid mouse movement
     if (this.enabled && this.isDesktop && this.audio && (now - this.lastPlayTime > 70)) {
       this.lastPlayTime = now;
       
       // Use a clone to allow overlapping playback for rapid interactions
       const clone = this.audio.cloneNode() as HTMLAudioElement;
-      clone.volume = 0.12;
+      clone.volume = 0.15;
       
       clone.play().catch(() => {
         // Fallback silently if the file is missing from /public/sounds/
