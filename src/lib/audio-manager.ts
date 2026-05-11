@@ -12,8 +12,8 @@ class AudioManager {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      // Static asset served from /public/sounds/hover.mp3
-      this.audio = new Audio('/sounds/hover.mp3');
+      // References hover.wav in /public/sounds/
+      this.audio = new Audio('/sounds/hover.wav');
       this.audio.volume = 0.15; // Set to a professional, audible level
       this.audio.preload = "auto";
       
